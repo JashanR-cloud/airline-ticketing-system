@@ -2,25 +2,6 @@
 CREATE DATABASE airline_ticketing;
 USE airline_ticketing;
 
--- passengers object
-CREATE TABLE Passenger (
-passenger_id   INTEGER PRIMARY KEY NOT NULL,
-first_name  VARCHAR(60) NOT NULL,
-last_name   VARCHAR(60),
-date_of_birth   DATE,
-email   VARCHAR(120),
-phone_number   VARCHAR(30),
-address   VARCHAR(30),
-id_number   VARCHAR(30) UNIQUE,
-passport_status BOOLEAN,
-visa_status   BOOLEAN,
-country_of_origin INTEGER,
-seat_preferences ENUM('Window','Middle','Aisle'),
-meal_preferences VARCHAR(60),
-special_needs VARCHAR(120)
-,FOREIGN KEY (country_of_origin) REFERENCES Country(country_id)
-);
-
 -- passenger object
 CREATE TABLE Passenger (
     passenger_id     INTEGER PRIMARY KEY NOT NULL,
@@ -87,3 +68,4 @@ CREATE TABLE Country (
     country_id   INTEGER PRIMARY KEY,
     country_name VARCHAR(60) NOT NULL
 );
+
