@@ -168,5 +168,65 @@ CREATE TABLE Insurance_Policy (
     FOREIGN KEY (booking_id) REFERENCES Bookings(booking_id)
 );
 
+-- Alan's Code
+CREATE TABLE boardingpass(
+	boarding_pass_id INTEGER PRIMARY KEY,
+	airport_id INTEGER,
+	gate_id INTEGER,
+	flight_id INTEGER,
+	airline_id INTEGER,
+	customer_support_phone VARCHAR(30),
+	seat_number VARCHAR(10),
+	boarding_group ENUM ('first', 'business', 'economy'),
+	arrival_time DATETIME,
+	departure_time DATETIME,
+	FOREIGN KEY (airport_id) 
+		REFERENCES airport (airport_id)
+		ON DELETE CASCADE
+		ON UPDATE CASCADE,
+	FOREIGN KEY (gate_id) 
+		REFERENCES gates (gate_id)
+		ON DELETE SET NULL
+		ON UPDATE CASCADE,
+	FOREIGN KEY (flight_id) 
+		REFERENCES flights (flight_id)
+		ON DELETE CASCADE
+		ON UPDATE CASCADE,
+	FOREIGN KEY (airline_id) 
+		REFERENCES airline (airline_id)
+		ON DELETE SET NULL
+		ON UPDATE CASCADE
+);
+
+CREATE TABLE routes(
+	route_id INTEGER PRIMARY KEY, 
+	departure_airport_id INTEGER,
+	destination_airport_id INTEGER,
+	demand ENUM ('Low', 'Medium', 'High'),
+	FOREIGN KEY (departure_airport_id) 
+		REFERENCES airport (airport_id)
+		ON DELETE CASCADE
+		ON UPDATE CASCADE,
+	FOREIGN KEY (destination_airport_id) 
+		REFERENCES airport (airport_id)
+		ON DELETE CASCADE
+		ON UPDATE CASCADE
+);
+
+CREATE TABLE gates(
+	gate_id INTEGER PRIMARY KEY,
+	airport_id INTEGER, 
+	gate_name VARCHAR(10),
+	FOREIGN KEY (airport_id) 
+		REFERENCES airport (airport_id)
+		ON DELETE CASCADE
+		ON UPDATE CASCADE
+);
+
+CREATE TABLE city(
+	city_id INTEGER PRIMARY KEY, 
+	city_name VARCHAR(60)
+);
+
 
 
