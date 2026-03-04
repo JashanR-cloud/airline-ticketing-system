@@ -228,5 +228,43 @@ CREATE TABLE city(
 	city_name VARCHAR(60)
 );
 
+-- Anitra's Code
+CREATE TABLE airline (
+    airline_id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    airline_name VARCHAR(60) NOT NULL,
+    airline_code VARCHAR(10) NOT NULL UNIQUE
+);
+
+CREATE TABLE loyalty_program (
+    loyalty_id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    passenger_id INTEGER NOT NULL UNIQUE,
+    membership_number VARCHAR(30) NOT NULL,
+    tier ENUM('Silver', 'Gold', 'Platinum'),
+    miles_balance INTEGER DEFAULT 0,
+    FOREIGN KEY (passenger_id) REFERENCES Passenger(passenger_id)
+);
+
+CREATE TABLE user_account (
+    user_id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    passenger_id INTEGER NOT NULL UNIQUE,
+    email VARCHAR(120) NOT NULL UNIQUE,
+    password VARCHAR(30) NOT NULL,
+    card_number VARCHAR(30),
+    card_expiration_date DATE,
+    card_security_code VARCHAR(10),
+    role ENUM('Passenger', 'Employee') NOT NULL,
+    FOREIGN KEY (passenger_id) REFERENCES Passenger(passenger_id)
+);
+
+CREATE TABLE inflight_entertainment (
+    entertainment_id INTEGER PRIMARY KEY AUTO_INCREMENT,
+    type ENUM('Movie', 'TV Series', 'Music/Live Concerts', 'Audio Book/Podcasts') NOT NULL,
+    wifi_options ENUM('No Access', 'Basic Messaging', 'Surf & Stream',
+                      'Surf & Stream Per-Hour', 'Surf & Stream Full-Flight'),
+    meal_options ENUM('Vegetarian', 'Vegan', 'Kosher', 'Halal', 'Other'),
+    title_of_type VARCHAR(60) NOT NULL,
+    description_of_type VARCHAR(120)
+);
+
 
 
