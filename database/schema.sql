@@ -110,6 +110,7 @@ CREATE TABLE Payment (
     users_currency VARCHAR(30),
     original_currency VARCHAR(30),
     transaction_date DATE,
+    refunded BOOLEAN,
     payment_status ENUM('Successful','Unsuccessful','Pending'),
     class_fare DECIMAL(5,2) CHECK (class_fare >= 0),
     base_fare DECIMAL(7,2) CHECK (base_fare >= 0),
@@ -143,19 +144,6 @@ CREATE TABLE Aircraft (
     max_baggage_capacity INT CHECK (max_baggage_capacity >= 0)
 );
 
--- Refund table:
-CREATE TABLE Refund (
-    refund_id INT PRIMARY KEY,
-    response_of_refund VARCHAR(120),
-    refund_status ENUM('Pending','Approved','Rejected','Processed') NOT NULL,
-    booking_id INT NOT NULL,
-    user_id INT NOT NULL,
-    card_number VARCHAR(30),
-    card_expiration_date DATE,
-    card_security_code VARCHAR(10),
-    FOREIGN KEY (booking_id) REFERENCES Bookings(booking_id),
-    FOREIGN KEY (user_id) REFERENCES User(user_id)
-);
 
 -- Insurance policy:
 CREATE TABLE Insurance_Policy (
