@@ -93,11 +93,13 @@ CREATE TABLE Bookings (
     ticket_number VARCHAR(30) UNIQUE,
     flight_id INT NOT NULL,
     issue_date DATE,
-    ticket_status ENUM('Issued','Refunded','Cancelled') NOT NULL,
     baggage INT CHECK (baggage >= 0),
     num_of_seats_booked INT NOT NULL CHECK (num_of_seats_booked BETWEEN 1 AND 9),
     payment_id INT,
-
+	-- new code to fit professors sugestion
+	ticket_status ENUM('Issued', 'Refunded', 'Cancelled', 'Reserved') NOT NULL,
+	reservation_expiry DATETIME DEFAULT NULL,
+	-- end of new code
     FOREIGN KEY (flight_id) REFERENCES Flights(flight_id)
 );
 
@@ -155,6 +157,9 @@ CREATE TABLE Insurance_Policy (
     coverage_type ENUM('Trip Cancellation','Medical','Baggage','Full Coverage') NOT NULL,
     FOREIGN KEY (booking_id) REFERENCES Bookings(booking_id)
 );
+
+
+
 
 -- Alan's Code
 CREATE TABLE boardingpass(
@@ -216,6 +221,9 @@ CREATE TABLE city(
 	city_name VARCHAR(60)
 );
 
+
+
+
 -- Anitra's Code
 CREATE TABLE airline (
     airline_id INTEGER PRIMARY KEY AUTO_INCREMENT,
@@ -253,6 +261,7 @@ CREATE TABLE inflight_entertainment (
     title_of_type VARCHAR(60) NOT NULL,
     description_of_type VARCHAR(120)
 );
+
 
 
 
