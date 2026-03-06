@@ -30,13 +30,12 @@ CREATE TABLE Airport (
     FOREIGN KEY (city_id)    REFERENCES City(city_id)
 );
 
-CREATE TABLE gates(
-	gate_id INTEGER PRIMARY KEY,
-	airport_id INTEGER, 
-	gate_name VARCHAR(10),
-	FOREIGN KEY (airport_id) 
-		REFERENCES airport (airport_id)
-		
+CREATE TABLE gates (
+    gate_id INT PRIMARY KEY,
+    airport_id INT,
+    gate_name VARCHAR(10),
+    FOREIGN KEY (airport_id)
+        REFERENCES Airport(airport_id)
 );
 
 -- Aircraft:
@@ -225,4 +224,5 @@ CREATE TABLE inflight_entertainment (
     title_of_type VARCHAR(60) NOT NULL,
     description_of_type VARCHAR(120)
 );
+
 
