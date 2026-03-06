@@ -36,8 +36,7 @@ CREATE TABLE gates(
 	gate_name VARCHAR(10),
 	FOREIGN KEY (airport_id) 
 		REFERENCES airport (airport_id)
-		ON DELETE CASCADE
-		ON UPDATE CASCADE
+		
 );
 
 -- Aircraft:
@@ -55,13 +54,10 @@ CREATE TABLE routes(
 	destination_airport_id INTEGER,
 	demand ENUM ('Low', 'Medium', 'High'),
 	FOREIGN KEY (departure_airport_id) 
-		REFERENCES airport (airport_id)
-		ON DELETE CASCADE
-		ON UPDATE CASCADE,
+		REFERENCES airport (airport_id),
 	FOREIGN KEY (destination_airport_id) 
 		REFERENCES airport (airport_id)
-		ON DELETE CASCADE
-		ON UPDATE CASCADE
+		
 );
 
 CREATE TABLE Flights (
@@ -191,21 +187,13 @@ CREATE TABLE boardingpass(
 	arrival_time DATETIME,
 	departure_time DATETIME,
 	FOREIGN KEY (airport_id) 
-		REFERENCES airport (airport_id)
-		ON DELETE CASCADE
-		ON UPDATE CASCADE,
+		REFERENCES airport (airport_id),
 	FOREIGN KEY (gate_id) 
-		REFERENCES gates (gate_id)
-		ON DELETE SET NULL
-		ON UPDATE CASCADE,
+		REFERENCES gates (gate_id),
 	FOREIGN KEY (flight_id) 
-		REFERENCES flights (flight_id)
-		ON DELETE CASCADE
-		ON UPDATE CASCADE,
+		REFERENCES flights (flight_id),
 	FOREIGN KEY (airline_id) 
 		REFERENCES airline (airline_id)
-		ON DELETE SET NULL
-		ON UPDATE CASCADE
 );
 
 CREATE TABLE Insurance_Policy (
@@ -237,3 +225,4 @@ CREATE TABLE inflight_entertainment (
     title_of_type VARCHAR(60) NOT NULL,
     description_of_type VARCHAR(120)
 );
+
