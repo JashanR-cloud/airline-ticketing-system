@@ -186,7 +186,7 @@ CREATE TABLE boardingpass(
 	arrival_time DATETIME,
 	departure_time DATETIME,
 	FOREIGN KEY (airport_id) 
-		REFERENCES airport (airport_id),
+		REFERENCES Airport (airport_id),
 	FOREIGN KEY (gate_id) 
 		REFERENCES gates (gate_id),
 	FOREIGN KEY (flight_id) 
@@ -224,5 +224,6 @@ CREATE TABLE inflight_entertainment (
     title_of_type VARCHAR(60) NOT NULL,
     description_of_type VARCHAR(120)
 );
+
 
 
