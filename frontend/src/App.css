@@ -5,38 +5,26 @@
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.flight-info {
+  padding-left: 15px;
+  padding-right: 15px;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.flight-info .options {
+  display: flex;
+  align-items:center;
+  justify-content: space-evenly;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.flight-info .options .destination{
+  margin-right: 50px;
 }
 
-.card {
-  padding: 2em;
+.flight-info .options .departure{
+  margin-right: 50px;
 }
 
-.read-the-docs {
-  color: #888;
+.flight-info .options .num-of-passangers{
+  margin-right: 50px;
+  margin-left: 50px;
 }
