@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import {Header} from './Header.jsx'
 
 function App() {
   const [users, setUsers] = useState([]);
@@ -13,6 +14,8 @@ function App() {
 
   return (
     <div style={{ padding: "20px" }}>
+      <Header />
+
       <h1>COSC 3380 Project Dashboard</h1>
       <h2>User List from Database:</h2>
       
