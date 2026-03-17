@@ -1,10 +1,11 @@
+// useState is a react hook, see "React useState" in tutorial
 import { useState } from 'react'
 import {Header} from './Header.jsx'
 import './Home.css'
 
 export function Home() {
     // handles flight parameters
-    // see "React Multiple Inputs" on tutorial 
+    // see "React Multiple Inputs" in tutorial 
     const [inputs, setInputs] = useState({})
 
     const handleSelections = (event) => {
@@ -84,7 +85,7 @@ export function Home() {
                     </label>
 
                     {/* Submit button */}
-                    <button type='submit'>Search</button>
+                    <button type='submit' className='search-button'>Search</button>
                 </div>
             </form>
         </div>
