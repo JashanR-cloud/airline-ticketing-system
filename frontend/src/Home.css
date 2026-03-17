@@ -1,0 +1,23 @@
+.flight-info {
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+.flight-info .options {
+  display: flex;
+  align-items:center;
+  justify-content: space-evenly;
+}
+
+.flight-info .options .destination{
+  margin-right: 50px;
+}
+
+.flight-info .options .departure{
+  margin-right: 50px;
+}
+
+.flight-info .options .num-of-passangers{
+  margin-right: 50px;
+  margin-left: 50px;
+}

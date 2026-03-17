@@ -123,7 +123,7 @@ CREATE TABLE Employee (
 
 CREATE TABLE user_account (
     user_id INTEGER PRIMARY KEY AUTO_INCREMENT,
-    passenger_id INTEGER NOT NULL UNIQUE,
+    passenger_id INTEGER UNIQUE,
     email VARCHAR(120) NOT NULL UNIQUE,
     password VARCHAR(30) NOT NULL,
     card_number VARCHAR(30),
