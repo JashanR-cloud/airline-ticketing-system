@@ -3,6 +3,8 @@ import { Header } from './Header.jsx'
 import './Login.css'
 
 export function Login(){
+    // handles login credentials
+    // see "React Multiple Inputs" in tutorial 
     const [inputs, setInputs] = useState({});
 
     const handleChange = (e) => {
