@@ -148,7 +148,6 @@ CREATE TABLE Bookings (
     flight_id INT NOT NULL,
     issue_date DATE,
     baggage INT CHECK (baggage >= 0),
-    num_of_seats_booked INT NOT NULL CHECK (num_of_seats_booked BETWEEN 1 AND 9),
     payment_id INT,
 	-- new code to fit professors sugestion
 	ticket_status ENUM('Issued', 'Refunded', 'Cancelled', 'Reserved') NOT NULL,
@@ -211,8 +210,15 @@ CREATE TABLE Booking_Passengers (
 
     PRIMARY KEY (passenger_id, booking_id),
 
-    FOREIGN KEY (passenger_id) REFERENCES Passenger(passenger_id),
-    FOREIGN KEY (booking_id) REFERENCES Bookings(booking_id)
+    FOREIGN KEY (passenger_id) 
+        REFERENCES Passenger(passenger_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+    FOREIGN KEY (booking_id) 
+        REFERENCES Bookings(booking_id)
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+
 );
 
 CREATE TABLE inflight_entertainment (
@@ -224,6 +230,32 @@ CREATE TABLE inflight_entertainment (
     title_of_type VARCHAR(60) NOT NULL,
     description_of_type VARCHAR(120)
 );
+
+--TRIGGERS
+
+DELIMETER //
+
+--Update available seats when a booking is made
+CREATE TRIGGER update_seats_after_booking
+AFTER INSERT ON booking_passengers
+FOR EACH ROW
+BEGIN
+    UPDATE flights
+    SET seats_available = seats_available - 1
+    WHERE flight_id = NEW.flight_id;
+END//
+
+--Update available seats after booking is cancelled
+CREATE TRIGGER update_seats_after_cancellation
+AFTER DELETE ON booking_passengers
+FOR EACH ROW
+BEGIN
+    UPDATE flights
+    SET seats_available = seats_available + 1
+    WHERE flight_id = OLD.flight_id;
+END//
+
+DELIMETER;
 
 
 
