@@ -10,6 +10,8 @@ CREATE TABLE Country (
 CREATE TABLE city (
     city_id INTEGER PRIMARY KEY,
     city_name VARCHAR(60)
+    country_id INTEGER NOT NULL,
+    FOREIGN KEY(country_id) REFERENCES Country(country_id)
 );
 
 CREATE TABLE airline (
@@ -26,8 +28,7 @@ CREATE TABLE Airport (
     city_id   INTEGER NOT NULL,
     timezone   VARCHAR(30),
     number_of_terminals   INTEGER,
-    FOREIGN KEY (country_id) REFERENCES Country(country_id),
-    FOREIGN KEY (city_id)    REFERENCES City(city_id)
+    FOREIGN KEY (city_id)    REFERENCES city(city_id)
 );
 
 CREATE TABLE gates (
@@ -53,9 +54,9 @@ CREATE TABLE routes(
 	destination_airport_id INTEGER,
 	demand ENUM ('Low', 'Medium', 'High'),
 	FOREIGN KEY (departure_airport_id) 
-		REFERENCES airport (airport_id),
+		REFERENCES Airport (airport_id),
 	FOREIGN KEY (destination_airport_id) 
-		REFERENCES airport (airport_id)
+		REFERENCES Airport (airport_id)
 		
 );
 
@@ -189,7 +190,7 @@ CREATE TABLE boardingpass(
 	FOREIGN KEY (gate_id) 
 		REFERENCES gates (gate_id),
 	FOREIGN KEY (flight_id) 
-		REFERENCES flights (flight_id),
+		REFERENCES Flights (flight_id),
 	FOREIGN KEY (airline_id) 
 		REFERENCES airline (airline_id)
 );
@@ -257,29 +258,35 @@ GROUP BY flight_id;
 
 --TRIGGERS
 
-DELIMETER //
+DELIMITER //
 
---Update available seats when a booking is made
 CREATE TRIGGER update_seats_after_booking
-AFTER INSERT ON booking_passengers
+AFTER INSERT ON Booking_Passengers
 FOR EACH ROW
 BEGIN
-    UPDATE flights
+    UPDATE Flights
     SET seats_available = seats_available - 1
-    WHERE flight_id = NEW.flight_id;
+    WHERE flight_id = (
+        SELECT flight_id
+        FROM bookings
+        WHERE booking_id = NEW.booking_id
+    );
 END//
 
---Update available seats after booking is cancelled
 CREATE TRIGGER update_seats_after_cancellation
-AFTER DELETE ON booking_passengers
+AFTER DELETE ON Booking_Passengers
 FOR EACH ROW
 BEGIN
-    UPDATE flights
+    UPDATE Flights
     SET seats_available = seats_available + 1
-    WHERE flight_id = OLD.flight_id;
+    WHERE flight_id = (
+	SELECT flight_id
+	FROM bookings
+	WHERE booking_id = OLD.booking_id
+    );
 END//
 
-DELIMETER;
+DELIMITER;
 
 
 
