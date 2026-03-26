@@ -9,7 +9,7 @@ CREATE TABLE Country (
 
 CREATE TABLE city (
     city_id INTEGER PRIMARY KEY,
-    city_name VARCHAR(60)
+    city_name VARCHAR(60),
     country_id INTEGER NOT NULL,
     FOREIGN KEY(country_id) REFERENCES Country(country_id)
 );
@@ -55,8 +55,8 @@ CREATE TABLE routes(
 	FOREIGN KEY (departure_airport_id) 
 		REFERENCES Airport (airport_id),
 	FOREIGN KEY (destination_airport_id) 
-		REFERENCES Airport (airport_id)
-    CHECK (departure_airport_id <> destination_airport_id)
+		REFERENCES Airport (airport_id),
+    CHECK (departure_airport_id <> destination_airport_id),
 	UNIQUE KEY unique_route (departure_airport_id, destination_airport_id)
 );
 
@@ -72,7 +72,7 @@ CREATE TABLE Flights (
     baggage_availability INT CHECK (baggage_availability >= 0),
     FOREIGN KEY (aircraft_id) REFERENCES Aircraft(aircraft_id),
     FOREIGN KEY (route_id) REFERENCES routes(route_id),
-    FOREIGN KEY (airline_id) REFERENCES airline(airline_id)
+    FOREIGN KEY (airline_id) REFERENCES airline(airline_id),
 
     CHECK (seats_available <= total_seats)
 );
@@ -234,7 +234,7 @@ CREATE TABLE inflight_entertainment (
     description_of_type VARCHAR(120)
 );
 -- QUERIES-- 
---Shows all flights that still have available seats
+-- Shows all flights that still have available seats --
 SELECT flight_id, route_id, date_of_departure, seats_available
 FROM Flights
 WHERE seats_available > 0;
@@ -289,6 +289,4 @@ BEGIN
 END//
 
 DELIMITER;
-
-
 
