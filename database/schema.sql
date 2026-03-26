@@ -24,7 +24,6 @@ CREATE TABLE Airport (
     airport_id   INTEGER PRIMARY KEY NOT NULL,
     airport_code   VARCHAR(10),
     airport_name   VARCHAR(60),
-    country_id   INTEGER NOT NULL,
     city_id   INTEGER NOT NULL,
     timezone   VARCHAR(30),
     number_of_terminals   INTEGER,
@@ -49,7 +48,7 @@ CREATE TABLE Aircraft (
 );
 
 CREATE TABLE routes(
-	route_id INTEGER PRIMARY KEY, 
+	route_id INTEGER PRIMARY KEY AUTO_INCREMENT, 
 	departure_airport_id INTEGER,
 	destination_airport_id INTEGER,
 	demand ENUM ('Low', 'Medium', 'High'),
@@ -57,7 +56,8 @@ CREATE TABLE routes(
 		REFERENCES Airport (airport_id),
 	FOREIGN KEY (destination_airport_id) 
 		REFERENCES Airport (airport_id)
-		
+    CHECK (departure_airport_id <> destination_airport_id)
+	UNIQUE KEY unique_route (departure_airport_id, destination_airport_id)
 );
 
 CREATE TABLE Flights (
@@ -69,8 +69,10 @@ CREATE TABLE Flights (
     total_seats INT NOT NULL CHECK (total_seats > 0),
     seats_available INT NOT NULL CHECK (seats_available >= 0),
     staff_size INT NOT NULL CHECK (staff_size >= 4),
-    baggage_capacity INT CHECK (baggage_capacity >= 0),
     baggage_availability INT CHECK (baggage_availability >= 0),
+    FOREIGN KEY (aircraft_id) REFERENCES Aircraft(aircraft_id),
+    FOREIGN KEY (route_id) REFERENCES routes(route_id),
+    FOREIGN KEY (airline_id) REFERENCES airline(airline_id)
 
     CHECK (seats_available <= total_seats)
 );
