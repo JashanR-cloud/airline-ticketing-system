@@ -233,6 +233,7 @@ CREATE TABLE inflight_entertainment (
     title_of_type VARCHAR(60) NOT NULL,
     description_of_type VARCHAR(120)
 );
+
 -- QUERIES-- 
 -- Shows all flights that still have available seats --
 SELECT flight_id, route_id, date_of_departure, seats_available
@@ -257,6 +258,7 @@ GROUP BY b.flight_id;
 SELECT flight_id, COUNT(*) AS total_bookings
 FROM Bookings
 GROUP BY flight_id;
+
 
 --TRIGGERS
 
