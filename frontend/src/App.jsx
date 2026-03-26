@@ -53,7 +53,7 @@ function App() {
     try {
       setLoadingAirports(true);
 
-      const response = await fetch("http://localhost:8000/airports");
+      const response = await fetch("https://airline-ticketing-system-gjnr.onrender.com/airports");
       const data = await response.json();
 
       if (!response.ok) {
@@ -92,7 +92,7 @@ function App() {
     setLoginMessage("");
 
     try {
-      const response = await fetch("http://localhost:8000/login", {
+      const response = await fetch("https://airline-ticketing-system-gjnr.onrender.com//login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -135,7 +135,7 @@ function App() {
     setFlightResults([]);
 
     try {
-      const response = await fetch("http://localhost:8000/search-flights", {
+      const response = await fetch("https://airline-ticketing-system-gjnr.onrender.com/search-flights", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -178,7 +178,7 @@ function App() {
     setManageResult(null);
 
     try {
-      const response = await fetch("http://localhost:8000/manage-booking", {
+      const response = await fetch("https://airline-ticketing-system-gjnr.onrender.com/manage-booking", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -214,7 +214,7 @@ function App() {
     setStatusResult(null);
 
     try {
-      const response = await fetch("http://localhost:8000/flight-status", {
+      const response = await fetch("https://airline-ticketing-system-gjnr.onrender.com/flight-status", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
