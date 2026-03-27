@@ -127,6 +127,7 @@ CREATE TABLE Employee (
 CREATE TABLE user_account (
     user_id INTEGER PRIMARY KEY AUTO_INCREMENT,
     passenger_id INTEGER UNIQUE,
+    employee_id VARCHAR(30) UNIQUE,
     email VARCHAR(120) NOT NULL UNIQUE,
     password VARCHAR(30) NOT NULL,
     card_number VARCHAR(30),
@@ -134,6 +135,7 @@ CREATE TABLE user_account (
     card_security_code VARCHAR(10),
     role ENUM('Passenger', 'Employee') NOT NULL,
     FOREIGN KEY (passenger_id) REFERENCES Passenger(passenger_id)
+    FOREIGN KEY (employee_id) REFERENCES Employee(id_number)
 );
 
 CREATE TABLE loyalty_program (
