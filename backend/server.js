@@ -8,6 +8,7 @@ const db = mysql.createConnection({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME
 });
+
 db.connect((err) => {
   if (err) { console.error("Database connection failed:", err.stack); return; }
   console.log("Connected to database.");
@@ -246,3 +247,4 @@ const server = http.createServer(async (req, res) => {
 
 const PORT = 8000;
 server.listen(PORT, () => { console.log(`Server running on port ${PORT}`); });
+
