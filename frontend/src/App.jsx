@@ -3,7 +3,7 @@ import "./App.css";
 import { CreateAccountModal, EditAccountModal } from "./components/AccountModal";
 import "./components/AccountModal.css";
 
-const API = "http://localhost:8000";
+const API = "https://airline-ticketing-system-gjnr.onrender.com/";
 
 function App() {
   const [activeTab, setActiveTab] = useState("search");
@@ -428,8 +428,5 @@ function App() {
     </div>
   );
 }
-
-export default App;
-
 
 export default App;
