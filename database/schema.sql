@@ -290,5 +290,5 @@ BEGIN
     );
 END//
 
-DELIMITER;
+DELIMITER ;
 
