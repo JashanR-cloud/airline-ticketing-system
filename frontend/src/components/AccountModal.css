@@ -1,0 +1,344 @@
+/* ── Overlay ─────────────────────────────────────────────────── */
+.acct-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 20, 0.72);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: acctFadeIn 0.2s ease;
+}
+
+@keyframes acctFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Modal box ───────────────────────────────────────────────── */
+.acct-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.3);
+  position: relative;
+  animation: acctSlideUp 0.25s ease;
+}
+
+@keyframes acctSlideUp {
+  from { transform: translateY(28px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ── Close button ────────────────────────────────────────────── */
+.acct-close {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #888;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.acct-close:hover { background: #f0f0f0; color: #222; }
+
+/* ── Header ──────────────────────────────────────────────────── */
+.acct-header {
+  background: #22252b;
+  color: #fff;
+  padding: 28px 32px 22px;
+  border-radius: 12px 12px 0 0;
+  text-align: center;
+}
+
+.acct-logo {
+  background: #cf102d;
+  display: inline-block;
+  color: #fff;
+  font-weight: 800;
+  font-size: 18px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+
+.acct-header h2 {
+  font-size: 26px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  letter-spacing: -0.5px;
+}
+
+.acct-sub {
+  font-size: 14px;
+  color: #bbb;
+  margin: 0;
+}
+
+.acct-role-tag {
+  background: #cf102d;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ── Progress dots ───────────────────────────────────────────── */
+.acct-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 0 0;
+  gap: 0;
+}
+
+.acct-prog-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #eee;
+  color: #aaa;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+
+.acct-prog-dot.active {
+  background: #cf102d;
+  color: #fff;
+}
+
+.acct-prog-line {
+  width: 80px;
+  height: 3px;
+  background: #eee;
+  margin: 0 6px;
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+
+.acct-prog-line.filled {
+  background: #cf102d;
+}
+
+/* ── Section / form body ─────────────────────────────────────── */
+.acct-section {
+  padding: 22px 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Row ─────────────────────────────────────────────────────── */
+.acct-row {
+  display: flex;
+  gap: 14px;
+}
+
+.acct-row .acct-field {
+  flex: 1;
+}
+
+/* ── Field ───────────────────────────────────────────────────── */
+.acct-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.acct-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #444;
+  letter-spacing: 0.3px;
+}
+
+.acct-req {
+  color: #cf102d;
+  margin-left: 3px;
+}
+
+/* ── Input / select ──────────────────────────────────────────── */
+.acct-input {
+  padding: 11px 14px;
+  font-size: 15px;
+  border: 1.5px solid #ddd;
+  border-radius: 7px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  background: #fafafa;
+}
+
+.acct-input:focus {
+  border-color: #cf102d;
+  box-shadow: 0 0 0 3px rgba(207,16,45,0.1);
+  background: #fff;
+}
+
+/* ── Role toggle ─────────────────────────────────────────────── */
+.acct-role-toggle {
+  display: flex;
+  gap: 0;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.acct-role-btn {
+  flex: 1;
+  padding: 11px;
+  background: #fafafa;
+  border: none;
+  font-size: 15px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #666;
+  transition: background 0.15s, color 0.15s;
+}
+
+.acct-role-btn + .acct-role-btn {
+  border-left: 1.5px solid #ddd;
+}
+
+.acct-role-active {
+  background: #22252b;
+  color: #fff;
+}
+
+/* ── Checkboxes ──────────────────────────────────────────────── */
+.acct-check-row {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.acct-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #444;
+  cursor: pointer;
+}
+
+.acct-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #cf102d;
+  cursor: pointer;
+}
+
+/* ── Divider ─────────────────────────────────────────────────── */
+.acct-divider {
+  border-top: 1.5px solid #eee;
+  padding-top: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.acct-divider em {
+  font-style: italic;
+  font-weight: 400;
+  color: #999;
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 4px;
+}
+
+/* ── Actions ─────────────────────────────────────────────────── */
+.acct-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.acct-btn-primary {
+  background: #cf102d;
+  color: #fff;
+  border: none;
+  padding: 12px 28px;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.acct-btn-primary:hover { background: #a80d24; }
+.acct-btn-primary:active { transform: scale(0.98); }
+.acct-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.acct-btn-outline {
+  background: #fff;
+  color: #444;
+  border: 1.5px solid #ddd;
+  padding: 12px 22px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.acct-btn-outline:hover { background: #f5f5f5; }
+
+/* ── Messages ────────────────────────────────────────────────── */
+.acct-error {
+  color: #cf102d;
+  background: #fff0f2;
+  border: 1px solid #f5c2ca;
+  border-radius: 7px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.acct-success {
+  color: #1a6e3c;
+  background: #edfaf3;
+  border: 1px solid #b2e6cc;
+  border-radius: 7px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 520px) {
+  .acct-row { flex-direction: column; }
+  .acct-section { padding: 18px 20px 22px; }
+  .acct-header { padding: 22px 20px 18px; }
+}
+
+/* ── Inline field hint (shown under invalid email) ───────────── */
+.acct-field-hint {
+  font-size: 12px;
+  color: #cf102d;
+  margin-top: 4px;
+}
+
+/* ── Input error state ───────────────────────────────────────── */
+.acct-input-error {
+  border-color: #cf102d !important;
+  background: #fff8f9 !important;
+}
