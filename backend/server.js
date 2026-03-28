@@ -28,6 +28,7 @@ function parseBody(req) {
         reject(e); 
       } 
     });
+    req.on("error", reject);
   });
 }
 
@@ -40,7 +41,8 @@ const server = http.createServer((req, res) => {
   if (req.method === "OPTIONS") { 
     res.writeHead(204); 
     res.end(); 
-    return; }
+    return; 
+  }
 
   // GET airports
   if (req.url === "/airports" && req.method === "GET") {
@@ -60,8 +62,13 @@ const server = http.createServer((req, res) => {
   // GET users
   if (req.url === "/users" && req.method === "GET") {
     db.query("SELECT user_id, email, role FROM user_account", (err, results) => {
-      if (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); return; }
-      res.writeHead(200); res.end(JSON.stringify(results));
+      if (err) { 
+        res.writeHead(500);
+        res.end(JSON.stringify({ error: err.message })); 
+        return; 
+      }
+      res.writeHead(200); 
+      res.end(JSON.stringify(results));
     });
     return;
   }
@@ -323,5 +330,7 @@ const server = http.createServer((req, res) => {
 });
 
 const PORT = 8000;
-server.listen(PORT, () => { console.log(`Server running on port ${PORT}`); });
+server.listen(PORT, () => { 
+  console.log(`Server running on port ${PORT}`); 
+});
 
