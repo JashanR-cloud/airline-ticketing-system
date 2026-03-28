@@ -21,7 +21,13 @@ function parseBody(req) {
   return new Promise((resolve, reject) => {
     let body = "";
     req.on("data", (chunk) => { body += chunk.toString(); });
-    req.on("end", () => { try { resolve(JSON.parse(body)); } catch (e) { reject(e); } });
+    req.on("end", () => { 
+      try { 
+        resolve(JSON.parse(body)); } 
+      catch (e) { 
+        reject(e); 
+      } 
+    });
   });
 }
 
@@ -38,9 +44,15 @@ const server = http.createServer((req, res) => {
 
   // GET airports
   if (req.url === "/airports" && req.method === "GET") {
-    db.query("SELECT airport_id, airport_name FROM Airport ORDER BY airport_name ASC", (err, results) => {
-      if (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); return; }
-      res.writeHead(200); res.end(JSON.stringify(results));
+    db.query("SELECT airport_id, airport_name FROM Airport ORDER BY airport_name ASC", 
+      (err, results) => {
+        if (err) { 
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: err.message })); 
+          return; 
+        }
+        res.writeHead(200); 
+        res.end(JSON.stringify(results));
     });
     return;
   }
@@ -56,12 +68,7 @@ const server = http.createServer((req, res) => {
 
   // POST /register
   if (req.url === "/register" && req.method === "POST") {
-    parseBody(req, (err, body) => {
-      if (err) {
-        res.writeHead(400);
-        res.end(JSON.stringify({ error: "Invalid request body."}));
-        return;
-      }
+    parseBody(req).then(body => {
 
       const { role, email, password, first_name, last_name, date_of_birth,
               phone_number, address, id_number, passport_status, visa_status,
@@ -69,15 +76,27 @@ const server = http.createServer((req, res) => {
 
       if (!role || !email || !password || !first_name || !last_name ||
           !date_of_birth || !phone_number || !address || !id_number) {
-        res.writeHead(400); res.end(JSON.stringify({ error: "All required fields must be filled in." })); return;
+        res.writeHead(400); 
+        res.end(JSON.stringify({ error: "All required fields must be filled in." })); 
+        return;
       }
       if (!["Passenger", "Employee"].includes(role)) {
-        res.writeHead(400); res.end(JSON.stringify({ error: "Role must be Passenger or Employee." })); return;
+        res.writeHead(400); 
+        res.end(JSON.stringify({ error: "Role must be Passenger or Employee." })); 
+        return;
       }
 
       db.query("SELECT user_id FROM user_account WHERE email = ?", [email], (err, rows) => {
-        if (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); return; }
-        if (rows.length > 0) { res.writeHead(409); res.end(JSON.stringify({ error: "An account with this email already exists." })); return; }
+        if (err) { 
+          res.writeHead(500); 
+          res.end(JSON.stringify({ error: err.message })); 
+          return; 
+        }
+        if (rows.length > 0) { 
+          res.writeHead(409); 
+          res.end(JSON.stringify({ error: "An account with this email already exists." })); 
+          return; 
+        }
 
         // passenger_id is AUTO_INCREMENT — omit it so MySQL assigns it automatically
         const pSql = `INSERT INTO Passenger (first_name, last_name, date_of_birth, email,
@@ -87,7 +106,8 @@ const server = http.createServer((req, res) => {
         const pVals = [first_name.trim(), last_name.trim(), date_of_birth, email.trim(),
           phone_number.trim(), address.trim(), id_number.trim(),
           passport_status ? 1 : 0, visa_status ? 1 : 0,
-          country_of_origin || null, seat_preferences || null, meal_preferences || null, special_needs || null];
+          country_of_origin || null, seat_preferences || null, meal_preferences || null, special_needs || null
+        ];
 
         db.query(pSql, pVals, (err, pResult) => {
           if (err) {
@@ -104,7 +124,9 @@ const server = http.createServer((req, res) => {
             [newPassengerId, email.trim(), password, role], (err, result) => {
               if (err) {
                 db.query("DELETE FROM Passenger WHERE passenger_id = ?", [newPassengerId]);
-                res.writeHead(500); res.end(JSON.stringify({ error: err.message })); return;
+                res.writeHead(500); 
+                res.end(JSON.stringify({ error: err.message })); 
+                return;
               }
               res.writeHead(201);
               res.end(JSON.stringify({ 
@@ -122,19 +144,15 @@ const server = http.createServer((req, res) => {
 
   // POST /login
   if (req.url === "/login" && req.method === "POST") {
-    parseBody(req, (err, body) => {
-      if(err){
-        res.writeHead(400); 
-        res.end(JSON.stringify({ error: "Invalid request body."}));
-        return;
-      }
+    parseBody(req).then(body => {
 
       const email = body.email?.trim(); 
       const password = body.password?.trim(); 
       const role = body.role?.trim();
 
       if (!email || !password || !role) { 
-        res.writeHead(400); res.end(JSON.stringify({ error: "Email, password, and role are required." })); 
+        res.writeHead(400); 
+        res.end(JSON.stringify({ error: "Email, password, and role are required." })); 
         return; 
       }
 
@@ -147,10 +165,19 @@ const server = http.createServer((req, res) => {
 
       db.query(sql, [email, password, role], (err, results) => {
         if (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); return; }
-        if (results.length === 0) { res.writeHead(401); res.end(JSON.stringify({ error: "Invalid email, password, or role." })); return; }
-        res.writeHead(200); res.end(JSON.stringify({ message: "Login successful.", user: results[0] }));
+        if (results.length === 0) { 
+          res.writeHead(401); 
+          res.end(JSON.stringify({ error: "Invalid email, password, or role." })); 
+          return; 
+        }
+        res.writeHead(200); 
+        res.end(JSON.stringify({ message: "Login successful.", user: results[0] }));
       });
-    });
+    })
+    .catch(() => {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: "Invalid request body." }));
+    })
     return;
   }
 
@@ -159,22 +186,24 @@ const server = http.createServer((req, res) => {
   if (editMatch && req.method === "PUT") {
     const userId = editMatch[1];
 
-    parseBody(req, (err,body) => {
-      if (err) { 
-        res.writeHead(400); res.end(JSON.stringify({error: "Invalid request body."}));
-        return;
-      }
+    parseBody(req).then(body => {
 
       const { first_name, last_name, date_of_birth, phone_number, address,
               id_number, passport_status, visa_status, country_of_origin,
               seat_preferences, meal_preferences, special_needs, password } = body;
 
       if (!first_name || !last_name || !date_of_birth || !phone_number || !address || !id_number) {
-        res.writeHead(400); res.end(JSON.stringify({ error: "All required fields must be filled in." })); return;
+        res.writeHead(400); 
+        res.end(JSON.stringify({ error: "All required fields must be filled in." })); 
+        return;
       }
 
       db.query("SELECT passenger_id FROM user_account WHERE user_id = ?", [userId], (err, rows) => {
-        if (err || rows.length === 0) { res.writeHead(404); res.end(JSON.stringify({ error: "User not found." })); return; }
+        if (err || rows.length === 0) { 
+          res.writeHead(404); 
+          res.end(JSON.stringify({ error: "User not found." })); 
+          return; 
+        }
         const pid = rows[0].passenger_id;
 
         const uSql = `UPDATE Passenger SET first_name=?, last_name=?, date_of_birth=?,
@@ -198,17 +227,17 @@ const server = http.createServer((req, res) => {
             }
           });
       });
-    });
+    })
+    .catch(() => {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: "Invalid request body." }));
+    })
     return;
   }
 
   // POST /search-flights
   if (req.url === "/search-flights" && req.method === "POST") {
-    parseBody(req, (err,body) => {
-      if (err) { 
-        res.writeHead(400); res.end(JSON.stringify({error: "Invalid request body."}));
-        return;
-      }
+    parseBody(req).then(body => {
 
       const dep = Number(body.departureAirportId), arr = Number(body.arrivalAirportId);
       const date = body.departureDate, pax = Number(body.passengers);
@@ -228,18 +257,17 @@ const server = http.createServer((req, res) => {
         if (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); return; }
         res.writeHead(200); res.end(JSON.stringify(results));
       });
-    });
+    })
+    .catch(() => {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: "Invalid request body." }));
+    })
     return;
   }
 
   // POST /manage-booking
   if (req.url === "/manage-booking" && req.method === "POST") {
-    parseBody (req, (err, body) => {
-      if (err) { 
-        res.writeHead(400);
-        res.end(JSON.stringify({ error: "Invalid request body."}));
-        return;
-      }
+    parseBody (req).then(body => {
 
       const bookingId = body.bookingId?.trim(), lastName = body.lastName?.trim();
       if (!bookingId || !lastName) { res.writeHead(400); res.end(JSON.stringify({ error: "Booking ID and last name are required." })); return; }
@@ -255,17 +283,17 @@ const server = http.createServer((req, res) => {
         if (results.length === 0) { res.writeHead(404); res.end(JSON.stringify({ error: "Booking not found." })); return; }
         res.writeHead(200); res.end(JSON.stringify(results[0]));
       });
-    });
+    })
+    .catch(() => {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: "Invalid request body." }));
+    })
     return;
   }
 
   // POST /flight-status
   if (req.url === "/flight-status" && req.method === "POST") {
-    parseBody(req, (err, body) => {
-      if(err) {
-        res.writeHead(400); res.end(JSON.stringify({ error: "Invalid request body"}));
-        return;
-      }
+    parseBody(req).then(body =>{
 
       const flightId = Number(body.flightId);
       if (!flightId) { res.writeHead(400); res.end(JSON.stringify({ error: "Flight ID is required." })); return; }
@@ -282,7 +310,11 @@ const server = http.createServer((req, res) => {
         if (results.length === 0) { res.writeHead(404); res.end(JSON.stringify({ error: "Flight not found." })); return; }
         res.writeHead(200); res.end(JSON.stringify(results[0]));
       });
-    });
+    })
+    .catch(() => {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: "Invalid request body." }));
+    })
     return;
   }
 
