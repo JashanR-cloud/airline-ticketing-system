@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const API = "http://localhost:8000";
+const API = "https://airline-ticketing-system-gjnr.onrender.com";
 
 // ─── Options ─────────────────────────────────────────────────────────────────
 
