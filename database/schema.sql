@@ -30,14 +30,6 @@ CREATE TABLE Airport (
     FOREIGN KEY (city_id)    REFERENCES city(city_id)
 );
 
-CREATE TABLE gates (
-    gate_id INT PRIMARY KEY,
-    airport_id INT,
-    gate_name VARCHAR(10),
-    FOREIGN KEY (airport_id)
-        REFERENCES Airport(airport_id)
-);
-
 -- Aircraft:
 CREATE TABLE Aircraft (
     aircraft_id INT PRIMARY KEY,
@@ -47,24 +39,12 @@ CREATE TABLE Aircraft (
     max_baggage_capacity INT CHECK (max_baggage_capacity >= 0)
 );
 
-CREATE TABLE routes(
-	route_id INTEGER PRIMARY KEY AUTO_INCREMENT, 
-	departure_airport_id INTEGER,
-	destination_airport_id INTEGER,
-	demand ENUM ('Low', 'Medium', 'High'),
-	FOREIGN KEY (departure_airport_id) 
-		REFERENCES Airport (airport_id),
-	FOREIGN KEY (destination_airport_id) 
-		REFERENCES Airport (airport_id),
-    CHECK (departure_airport_id <> destination_airport_id),
-	UNIQUE KEY unique_route (departure_airport_id, destination_airport_id)
-);
-
 CREATE TABLE Flights (
     flight_id INT PRIMARY KEY,
     aircraft_id INT,
-    route_id INT,
     airline_id INT,
+    destination_airport_id INT,
+    departure_airport_id INT,
     date_of_departure DATETIME NOT NULL,
     total_seats INT NOT NULL CHECK (total_seats > 0),
     seats_available INT NOT NULL CHECK (seats_available >= 0),
@@ -73,8 +53,11 @@ CREATE TABLE Flights (
     FOREIGN KEY (aircraft_id) REFERENCES Aircraft(aircraft_id),
     FOREIGN KEY (route_id) REFERENCES routes(route_id),
     FOREIGN KEY (airline_id) REFERENCES airline(airline_id),
+    FOREIGN KEY (destination_airport_id) REFERENCES Airport(airport_id),
+    FOREIGN KEY (destination_airport_id) REFERENCES Airport(airport_id)
 
-    CHECK (seats_available <= total_seats)
+    CHECK (seats_available <= total_seats),
+    CHECK (departure_airport_id <> destination_airport_id)
 );
 
 -- passenger object
@@ -181,7 +164,7 @@ CREATE TABLE Payment (
 CREATE TABLE boardingpass(
 	boarding_pass_id INTEGER PRIMARY KEY,
 	airport_id INTEGER,
-	gate_id INTEGER,
+	gate_id VARCHAR(10),
 	flight_id INTEGER,
 	airline_id INTEGER,
 	customer_support_phone VARCHAR(30),
