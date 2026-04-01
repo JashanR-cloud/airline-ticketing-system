@@ -246,22 +246,50 @@ const server = http.createServer((req, res) => {
   if (req.url === "/search-flights" && req.method === "POST") {
     parseBody(req).then(body => {
 
-      const dep = Number(body.departureAirportId), arr = Number(body.arrivalAirportId);
-      const date = body.departureDate, pax = Number(body.passengers);
-      if (!dep || !arr || !date || !pax) { res.writeHead(400); res.end(JSON.stringify({ error: "All flight search fields are required." })); return; }
-      if (dep === arr) { res.writeHead(400); res.end(JSON.stringify({ error: "Departure and arrival airports cannot be the same." })); return; }
+      const dep = Number(body.departureAirportId); 
+      const arr = Number(body.arrivalAirportId);
+      const date = body.departureDate;
+      const pax = Number(body.passengers);
 
-      const sql = `SELECT f.flight_id, f.date_of_departure, f.seats_available,
-        dep.airport_name AS departure_airport, arr.airport_name AS arrival_airport
-        FROM Flights f JOIN routes r ON f.route_id = r.route_id
-        JOIN Airport dep ON r.departure_airport_id = dep.airport_id
-        JOIN Airport arr ON r.destination_airport_id = arr.airport_id
-        WHERE r.departure_airport_id=? AND r.destination_airport_id=?
-          AND DATE(f.date_of_departure)=? AND f.seats_available>=?
+      if (!dep || !arr || !date || !pax) { 
+        res.writeHead(400); 
+        res.end(JSON.stringify({ error: "All flight search fields are required." })); 
+        return; 
+      }
+
+      if (dep === arr) { 
+        res.writeHead(400); 
+        res.end(JSON.stringify({ error: "Departure and arrival airports cannot be the same." })); 
+        return; 
+      }
+
+      const sql = `
+        SELECT 
+            f.flight_id,
+            f.date_of_departure,
+            f.seats_available,
+            f.economy_price,
+            f.business_price,
+            f.first_class_price,
+            dep.airport_name AS departure_airport,
+            arr.airport_name AS arrival_airport,
+            dep.airport_code AS departure_code,
+            arr.airport_code AS arrival_code
+        FROM Flights f
+        JOIN Airport dep ON f.departure_airport_id = dep.airport_id
+        JOIN Airport arr ON f.destination_airport_id = arr.airport_id
+        WHERE f.departure_airport_id = ?
+          AND f.destination_airport_id = ?
+          AND DATE(f.date_of_departure) = ?
+          AND f.seats_available >= ?
         ORDER BY f.date_of_departure ASC`;
 
       db.query(sql, [dep, arr, date, pax], (err, results) => {
-        if (err) { res.writeHead(500); res.end(JSON.stringify({ error: err.message })); return; }
+        if (err) { 
+          res.writeHead(500); 
+          res.end(JSON.stringify({ error: err.message })); 
+          return; 
+        }
         res.writeHead(200); res.end(JSON.stringify(results));
       });
     })

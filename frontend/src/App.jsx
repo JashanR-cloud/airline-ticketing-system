@@ -325,6 +325,11 @@ function App() {
                       <p><strong>Arrival:</strong> {flight.arrival_airport}</p>
                       <p><strong>Date:</strong> {new Date(flight.date_of_departure).toLocaleString()}</p>
                       <p><strong>Seats Available:</strong> {flight.seats_available}</p>
+
+                      <p><strong>Economy:</strong> ${Number(flight.economy_price || 0).toLocaleString()}</p>
+                      <p><strong>Business:</strong> ${Number(flight.business_price || 0).toLocaleString()}</p>
+                      <p><strong>First Class:</strong> ${Number(flight.first_class_price || 0).toLocaleString()}</p>
+                      
                       {loggedInUser && (
                         <button type="button" className="book-btn">
                           Book This Flight
