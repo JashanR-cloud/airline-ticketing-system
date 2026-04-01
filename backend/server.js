@@ -49,7 +49,7 @@ const server = http.createServer((req, res) => {
     const sql = `
       SELECT a.airport_id, a.airport_name, c.city_name, co.country_name
       FROM Airport AS a
-      JOIN city c AS c ON a.city_id = c.city_id
+      JOIN city AS c ON a.city_id = c.city_id
       JOIN Country AS co ON a.country_id = co.country_id
       ORDER BY co.country_name, c.city_name, a.airport_name`;
 
