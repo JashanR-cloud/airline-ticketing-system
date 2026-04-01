@@ -283,17 +283,33 @@ function App() {
               <div className="advanced-search">Advanced search: multi-city, promo codes, and partner airlines</div>
               <div className="form-row">
                 <div className="form-group large-group">
-                  <label>Departure Airport</label>
-                  <select name="departureAirportId" value={flightSearch.departureAirportId} onChange={handleFlightChange} required disabled={loadingAirports}>
-                    <option value="">{loadingAirports ? "Loading airports..." : "Select departure airport"}</option>
-                    {airports.map((a) => <option key={a.airport_id} value={a.airport_id}>{a.airport_name}</option>)}
+                  <label>Leaving from</label>
+                  <select 
+                    name="departureAirportId" 
+                    value={flightSearch.departureAirportId} 
+                    onChange={handleFlightChange} 
+                    required disabled={loadingAirports}
+                  >
+                    <option value="">{loadingAirports ? "Loading airports..." : "Select departure city"}</option>
+                    {airports.map((a) => 
+                      <option key={a.airport_id} value={a.airport_id}>
+                        {a.city_name}, {a.country_name} ({a.airport_name})
+                      </option>)}
                   </select>
                 </div>
                 <div className="form-group large-group">
-                  <label>Arrival Airport</label>
-                  <select name="arrivalAirportId" value={flightSearch.arrivalAirportId} onChange={handleFlightChange} required disabled={loadingAirports}>
+                  <label>Going to</label>
+                  <select 
+                    name="arrivalAirportId" 
+                    value={flightSearch.arrivalAirportId} 
+                    onChange={handleFlightChange} 
+                    required disabled={loadingAirports}
+                  >
                     <option value="">{loadingAirports ? "Loading airports..." : "Select arrival airport"}</option>
-                    {airports.map((a) => <option key={a.airport_id} value={a.airport_id}>{a.airport_name}</option>)}
+                    {airports.map((a) => 
+                      <option key={a.airport_id} value={a.airport_id}>
+                        {a.city_name}, {a.country_name} ({a.airport_name})
+                      </option>)}
                   </select>
                 </div>
               </div>
@@ -321,15 +337,17 @@ function App() {
                   {flightResults.map((flight) => (
                     <div key={flight.flight_id} className="flight-card">
                       <p><strong>Flight ID:</strong> {flight.flight_id}</p>
-                      <p><strong>Departure:</strong> {flight.departure_airport}</p>
-                      <p><strong>Arrival:</strong> {flight.arrival_airport}</p>
+                      <p><strong>To:</strong> {flight.departure_city}, {flight.departure_country}</p>
+                      <p><strong>From:</strong> {flight.arrival_city}, {flight.arrival_country}</p>
+                      <p><strong>Departure:</strong> {flight.departure_airport} ({flight.departure_airport_code})</p>
+                      <p><strong>Arrival:</strong> {flight.arrival_airport} ({flight.arrival_airport_code})</p>
                       <p><strong>Date:</strong> {new Date(flight.date_of_departure).toLocaleString()}</p>
                       <p><strong>Seats Available:</strong> {flight.seats_available}</p>
 
                       <p><strong>Economy:</strong> ${Number(flight.economy_price || 0).toLocaleString()}</p>
                       <p><strong>Business:</strong> ${Number(flight.business_price || 0).toLocaleString()}</p>
                       <p><strong>First Class:</strong> ${Number(flight.first_class_price || 0).toLocaleString()}</p>
-                      
+
                       {loggedInUser && (
                         <button type="button" className="book-btn">
                           Book This Flight

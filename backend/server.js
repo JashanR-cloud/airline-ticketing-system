@@ -46,7 +46,14 @@ const server = http.createServer((req, res) => {
 
   // GET airports
   if (req.url === "/airports" && req.method === "GET") {
-    db.query("SELECT airport_id, airport_name FROM Airport ORDER BY airport_name ASC", 
+    const sql = `
+      SELECT a.airport_id, a.airport_name, c.city_name, co.country_name
+      FROM Airport AS a
+      JOIN city c AS c ON a.city_id = c.city_id
+      JOIN Country AS co ON a.country_id = co.country_id
+      ORDER BY co.country_name, c.city_name, a.airport_name`;
+
+    db.query(sql, 
       (err, results) => {
         if (err) { 
           res.writeHead(500);
@@ -272,12 +279,22 @@ const server = http.createServer((req, res) => {
             f.business_price,
             f.first_class_price,
             dep.airport_name AS departure_airport,
+            dep.airport_code AS departure_airport_code,
+            dep_city.city_name AS departure_city,
+            dep_country.country_name AS departure_country,
             arr.airport_name AS arrival_airport,
+            arr.airport_code AS arrival_airport_code,
+            arr_city.city_name AS arrival_city,
+            arr_country.country_name AS arrival_country,
             dep.airport_code AS departure_code,
             arr.airport_code AS arrival_code
         FROM Flights f
         JOIN Airport dep ON f.departure_airport_id = dep.airport_id
+        JOIN city AS dep_city ON dep.city_id = dep_city.city_id
+        JOIN Country AS dep_country ON dep.country_id = dep_country.country_id
         JOIN Airport arr ON f.destination_airport_id = arr.airport_id
+        JOIN city AS arr_city ON arr.city_id = arr_city.city_id
+        JOIN Country AS arr_country ON arr.country_id = arr_country.country_id
         WHERE f.departure_airport_id = ?
           AND f.destination_airport_id = ?
           AND DATE(f.date_of_departure) = ?
