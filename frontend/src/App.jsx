@@ -3,7 +3,7 @@ import "./App.css";
 import { CreateAccountModal, EditAccountModal } from "./components/AccountModal";
 import "./components/AccountModal.css";
 
-const API = "http://localhost:8000";
+const API = "https://airline-ticketing-system-gjnr.onrender.com";
 
 const SEAT_OPTIONS = ["No Preference", "Window", "Aisle", "Middle"];
 const MEAL_OPTIONS = ["No Preference", "Standard", "Vegetarian", "Vegan", "Halal", "Kosher", "Gluten-Free", "No Meal"];
