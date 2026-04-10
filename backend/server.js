@@ -17,24 +17,27 @@ db.connect((err) => {
   }
   console.log("Connected to database.");
 
-  // ── Create virtual 'routes' table
-db.query(`
-  CREATE OR REPLACE VIEW routes AS
-  SELECT 
-    MIN(flight_id) AS route_id,
-    departure_airport_id,
-    destination_airport_id,
-    1 AS is_active,
-    COUNT(*) AS total_flights
-  FROM Flights
-  GROUP BY departure_airport_id, destination_airport_id;
-`, (viewErr) => {
-  if (viewErr) {
-    console.error("Could not create 'routes' view:", viewErr.message);
-  } else {
-    console.log("'routes' view created successfully (virtual table).");
-  }
-});
+  // Auto-add is_active column to routes if it doesn't exist yet
+  db.query(`
+    ALTER TABLE routes ADD COLUMN IF NOT EXISTS is_active TINYINT(1) NOT NULL DEFAULT 1
+  `, (alterErr) => {
+    if (alterErr) {
+      // MySQL < 8 doesn't support IF NOT EXISTS on ALTER — try the safe fallback
+      db.query(`
+        SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'routes' AND COLUMN_NAME = 'is_active'
+      `, (checkErr, rows) => {
+        if (!checkErr && rows[0].cnt === 0) {
+          db.query(`ALTER TABLE routes ADD COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1`, (addErr) => {
+            if (addErr) console.error("Could not add is_active column:", addErr.message);
+            else console.log("Added is_active column to routes table.");
+          });
+        }
+      });
+    } else {
+      console.log("routes.is_active column ready.");
+    }
+  });
 
   // Auto-create booking_packages table if it doesn't exist
   db.query(`
@@ -125,10 +128,11 @@ const server = http.createServer((req, res) => {
       SELECT 
         dep.airport_id AS dep_id, dep.airport_name AS departure,
         arr.airport_id AS arr_id, arr.airport_name AS arrival,
-        r.total_flights
+        r.route_id, COUNT(f.flight_id) AS total_flights
       FROM routes r
       JOIN Airport dep ON r.departure_airport_id = dep.airport_id
       JOIN Airport arr ON r.destination_airport_id = arr.airport_id
+      LEFT JOIN Flights f ON r.route_id = f.route_id
       GROUP BY r.route_id, dep.airport_id, dep.airport_name, arr.airport_id, arr.airport_name
       ORDER BY dep.airport_name, arr.airport_name
     `;
@@ -181,15 +185,12 @@ const server = http.createServer((req, res) => {
     const requester = getRequestUser(req);
     if (!isStaff(requester.role)) return deny(res);
     const sql = `
-      SELECT 
-        f.flight_id, 
-        f.date_of_departure, 
-        f.seats_available,
-        dep.airport_name AS departure_airport, 
-        arr.airport_name AS arrival_airport
+      SELECT f.flight_id, f.date_of_departure, f.seats_available,
+        dep.airport_name AS departure_airport, arr.airport_name AS arrival_airport
       FROM Flights f
-      JOIN Airport dep ON f.departure_airport_id = dep.airport_id
-      JOIN Airport arr ON f.destination_airport_id = arr.airport_id
+      JOIN routes r ON f.route_id = r.route_id
+      JOIN Airport dep ON r.departure_airport_id = dep.airport_id
+      JOIN Airport arr ON r.destination_airport_id = arr.airport_id
       ORDER BY f.date_of_departure DESC
       LIMIT 200
     `;
@@ -240,36 +241,24 @@ const server = http.createServer((req, res) => {
     const requester = getRequestUser(req);
     if (!isStaff(requester.role)) return deny(res);
     const sql = `
-      SELECT
-        r.route_id,
-        dep.airport_name AS departure,
-        arr.airport_name AS arrival,
-        COALESCE(r.is_active, 1) AS is_active,
-        COUNT(f.flight_id) AS total_flights
+      SELECT r.route_id, dep.airport_name AS departure, arr.airport_name AS arrival,
+        COALESCE(r.is_active, 1) AS is_active, COUNT(f.flight_id) AS total_flights
       FROM routes r
       JOIN Airport dep ON r.departure_airport_id = dep.airport_id
       JOIN Airport arr ON r.destination_airport_id = arr.airport_id
-      LEFT JOIN Flights f 
-        ON f.departure_airport_id = r.departure_airport_id 
-      AND f.destination_airport_id = r.destination_airport_id
+      LEFT JOIN Flights f ON r.route_id = f.route_id
       GROUP BY r.route_id, dep.airport_name, arr.airport_name, r.is_active
       ORDER BY r.route_id
     `;
     db.query(sql, (err, results) => {
       if (err) {
         const fallback = `
-          SELECT
-            r.route_id,
-            dep.airport_name AS departure,
-            arr.airport_name AS arrival,
-            1 AS is_active,
-            COUNT(f.flight_id) AS total_flights
+          SELECT r.route_id, dep.airport_name AS departure, arr.airport_name AS arrival,
+            1 AS is_active, COUNT(f.flight_id) AS total_flights
           FROM routes r
           JOIN Airport dep ON r.departure_airport_id = dep.airport_id
           JOIN Airport arr ON r.destination_airport_id = arr.airport_id
-          LEFT JOIN Flights f 
-            ON f.departure_airport_id = r.departure_airport_id 
-          AND f.destination_airport_id = r.destination_airport_id
+          LEFT JOIN Flights f ON r.route_id = f.route_id
           GROUP BY r.route_id, dep.airport_name, arr.airport_name
           ORDER BY r.route_id
         `;
@@ -287,22 +276,16 @@ const server = http.createServer((req, res) => {
   // GET /experience-ratings → public
   if (req.url === "/experience-ratings" && req.method === "GET") {
     const sql = `
-      SELECT 
-        r.route_id,
-        r.departure_airport_id AS dep_id, 
-        r.destination_airport_id AS arr_id,
-        dep.airport_name AS departure, 
-        arr.airport_name AS arrival,
+      SELECT r.route_id,
+        r.departure_airport_id AS dep_id, r.destination_airport_id AS arr_id,
+        dep.airport_name AS departure, arr.airport_name AS arrival,
         COUNT(DISTINCT f.flight_id) AS total_flights,
         COALESCE(SUM(f.seats_available), 0) AS total_seats
       FROM routes r
       JOIN Airport dep ON r.departure_airport_id = dep.airport_id
       JOIN Airport arr ON r.destination_airport_id = arr.airport_id
-      LEFT JOIN Flights f 
-        ON f.departure_airport_id = r.departure_airport_id 
-      AND f.destination_airport_id = r.destination_airport_id
-      GROUP BY r.route_id, r.departure_airport_id, r.destination_airport_id, 
-              dep.airport_name, arr.airport_name
+      LEFT JOIN Flights f ON r.route_id = f.route_id
+      GROUP BY r.route_id, r.departure_airport_id, r.destination_airport_id, dep.airport_name, arr.airport_name
       ORDER BY total_flights DESC
     `;
     db.query(sql, (err, results) => {
@@ -372,20 +355,13 @@ const server = http.createServer((req, res) => {
     const requester = getRequestUser(req);
     if (!isStaff(requester.role)) return deny(res);
     const sql = `
-      SELECT 
-        f.flight_id, 
-        f.date_of_departure, 
-        f.seats_available,
-        dep.airport_name AS departure_airport, 
-        arr.airport_name AS arrival_airport
+      SELECT f.flight_id, f.date_of_departure, f.seats_available,
+        dep.airport_name AS departure_airport, arr.airport_name AS arrival_airport
       FROM Flights f
-      JOIN routes r 
-        ON f.departure_airport_id = r.departure_airport_id 
-      AND f.destination_airport_id = r.destination_airport_id
+      JOIN routes r ON f.route_id = r.route_id
       JOIN Airport dep ON r.departure_airport_id = dep.airport_id
       JOIN Airport arr ON r.destination_airport_id = arr.airport_id
-      WHERE r.route_id = ? 
-      ORDER BY f.date_of_departure ASC
+      WHERE f.route_id = ? ORDER BY f.date_of_departure ASC
     `;
     db.query(sql, [routeId], (err, results) => {
       if (err) return sendJson(res, 500, { error: err.message });
@@ -420,17 +396,12 @@ const server = http.createServer((req, res) => {
     const requester = getRequestUser(req);
     if (!isStaff(requester.role)) return deny(res);
     const sql = `
-      SELECT 
-        r.route_id, 
-        dep.airport_name AS departure, 
-        arr.airport_name AS arrival,
+      SELECT r.route_id, dep.airport_name AS departure, arr.airport_name AS arrival,
         COUNT(f.flight_id) AS total_flights
       FROM routes r
       JOIN Airport dep ON r.departure_airport_id = dep.airport_id
       JOIN Airport arr ON r.destination_airport_id = arr.airport_id
-      LEFT JOIN Flights f 
-        ON f.departure_airport_id = r.departure_airport_id 
-      AND f.destination_airport_id = r.destination_airport_id
+      LEFT JOIN Flights f ON r.route_id = f.route_id
       GROUP BY r.route_id, dep.airport_name, arr.airport_name
       ORDER BY r.route_id
     `;
@@ -517,23 +488,14 @@ const server = http.createServer((req, res) => {
   if (req.url === "/search-flights" && req.method === "POST") {
     parseBody(req).then((body) => {
       const sql = `
-        SELECT 
-          f.flight_id,
-          r.route_id,
-          f.date_of_departure,
-          f.seats_available,
-          dep.airport_name AS departure_airport,
-          arr.airport_name AS arrival_airport
+        SELECT f.flight_id, f.route_id, f.date_of_departure, f.seats_available,
+          dep.airport_name AS departure_airport, arr.airport_name AS arrival_airport
         FROM Flights f
-        JOIN routes r 
-          ON f.departure_airport_id = r.departure_airport_id 
-        AND f.destination_airport_id = r.destination_airport_id
+        JOIN routes r ON f.route_id = r.route_id
         JOIN Airport dep ON r.departure_airport_id = dep.airport_id
         JOIN Airport arr ON r.destination_airport_id = arr.airport_id
-        WHERE (? IS NULL OR r.departure_airport_id = ?) 
-          AND (? IS NULL OR r.destination_airport_id = ?)
-        ORDER BY f.date_of_departure ASC 
-        LIMIT 10
+        WHERE (? IS NULL OR r.departure_airport_id = ?) AND (? IS NULL OR r.destination_airport_id = ?)
+        ORDER BY f.date_of_departure ASC LIMIT 10
       `;
       const depId = body.departureAirportId || null;
       const arrId = body.arrivalAirportId || null;
@@ -808,20 +770,13 @@ const server = http.createServer((req, res) => {
   if (req.url === "/flight-status" && req.method === "POST") {
     parseBody(req).then((body) => {
       const sql = `
-        SELECT 
-          f.flight_id, 
-          f.date_of_departure, 
-          f.seats_available,
-          dep.airport_name AS departure_airport, 
-          arr.airport_name AS arrival_airport
+        SELECT f.flight_id, f.date_of_departure, f.seats_available,
+          dep.airport_name AS departure_airport, arr.airport_name AS arrival_airport
         FROM Flights f
-        JOIN routes r 
-          ON f.departure_airport_id = r.departure_airport_id 
-        AND f.destination_airport_id = r.destination_airport_id
+        JOIN routes r ON f.route_id = r.route_id
         JOIN Airport dep ON r.departure_airport_id = dep.airport_id
         JOIN Airport arr ON r.destination_airport_id = arr.airport_id
-        WHERE f.flight_id = ? 
-        LIMIT 1
+        WHERE f.flight_id = ? LIMIT 1
       `;
       db.query(sql, [body.flightId], (err, results) => {
         if (err) return sendJson(res, 500, { error: err.message });
@@ -856,16 +811,10 @@ const server = http.createServer((req, res) => {
     const requester = getRequestUser(req);
     if (!isStaff(requester.role)) return deny(res);
     const sql = `
-      SELECT 
-        f.flight_id, 
-        f.date_of_departure, 
-        f.seats_available,
-        dep.airport_name AS departure_airport, 
-        arr.airport_name AS arrival_airport
+      SELECT f.flight_id, f.date_of_departure, f.seats_available,
+        dep.airport_name AS departure_airport, arr.airport_name AS arrival_airport
       FROM Flights f
-      JOIN routes r 
-        ON f.departure_airport_id = r.departure_airport_id 
-      AND f.destination_airport_id = r.destination_airport_id
+      JOIN routes r ON f.route_id = r.route_id
       JOIN Airport dep ON r.departure_airport_id = dep.airport_id
       JOIN Airport arr ON r.destination_airport_id = arr.airport_id
       ORDER BY f.date_of_departure ASC
