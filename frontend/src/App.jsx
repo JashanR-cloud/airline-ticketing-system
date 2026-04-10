@@ -3,12 +3,128 @@ import "./App.css";
 import { CreateAccountModal, EditAccountModal } from "./components/AccountModal";
 import "./components/AccountModal.css";
 
-const API = "https://airline-ticketing-system-gjnr.onrender.com";
+const API = "http://localhost:8000";
+
+const SEAT_OPTIONS = ["No Preference", "Window", "Aisle", "Middle"];
+const MEAL_OPTIONS = ["No Preference", "Standard", "Vegetarian", "Vegan", "Halal", "Kosher", "Gluten-Free", "No Meal"];
+
+// ── Airport metadata for the destination explorer ──
+const AIRPORT_META = {
+  "Adolfo Suárez Madrid-Barajas Airport":                  { city: "Madrid",        country: "Spain",       flag: "🇪🇸", region: "Europe" },
+  "Cancun International Airport":                          { city: "Cancún",        country: "Mexico",      flag: "🇲🇽", region: "Americas" },
+  "Charles de Gaulle Airport":                             { city: "Paris",         country: "France",      flag: "🇫🇷", region: "Europe" },
+  "Chhatrapati Shivaji Maharaj International Airport":     { city: "Mumbai",        country: "India",       flag: "🇮🇳", region: "Asia-Pacific" },
+  "Frankfurt Airport":                                     { city: "Frankfurt",     country: "Germany",     flag: "🇩🇪", region: "Europe" },
+  "George Bush Intercontinental Airport":                  { city: "Houston",       country: "USA",         flag: "🇺🇸", region: "Americas" },
+  "Hamad International Airport":                           { city: "Doha",          country: "Qatar",       flag: "🇶🇦", region: "Middle East" },
+  "Indira Gandhi International Airport":                   { city: "New Delhi",     country: "India",       flag: "🇮🇳", region: "Asia-Pacific" },
+  "John F. Kennedy International Airport":                 { city: "New York",      country: "USA",         flag: "🇺🇸", region: "Americas" },
+  "Josep Tarradellas Barcelona-El Prat Airport":           { city: "Barcelona",     country: "Spain",       flag: "🇪🇸", region: "Europe" },
+  "Leonardo da Vinci-Fiumicino Airport":                   { city: "Rome",          country: "Italy",       flag: "🇮🇹", region: "Europe" },
+  "London Gatwick Airport":                                { city: "London",        country: "UK",          flag: "🇬🇧", region: "Europe" },
+  "London Heathrow Airport":                               { city: "London",        country: "UK",          flag: "🇬🇧", region: "Europe" },
+  "Los Angeles International Airport":                     { city: "Los Angeles",   country: "USA",         flag: "🇺🇸", region: "Americas" },
+  "Manchester Airport":                                    { city: "Manchester",    country: "UK",          flag: "🇬🇧", region: "Europe" },
+  "Melbourne Airport":                                     { city: "Melbourne",     country: "Australia",   flag: "🇦🇺", region: "Asia-Pacific" },
+  "Mexico City International Airport":                     { city: "Mexico City",   country: "Mexico",      flag: "🇲🇽", region: "Americas" },
+  "Miami International Airport":                           { city: "Miami",         country: "USA",         flag: "🇺🇸", region: "Americas" },
+  "Narita International Airport":                          { city: "Tokyo",         country: "Japan",       flag: "🇯🇵", region: "Asia-Pacific" },
+  "Rio de Janeiro/Galeão International Airport":           { city: "Rio de Janeiro",country: "Brazil",      flag: "🇧🇷", region: "Americas" },
+  "São Paulo/Guarulhos International Airport":             { city: "São Paulo",     country: "Brazil",      flag: "🇧🇷", region: "Americas" },
+  "Singapore Changi Airport":                              { city: "Singapore",     country: "Singapore",   flag: "🇸🇬", region: "Asia-Pacific" },
+  "Sydney Kingsford Smith Airport":                        { city: "Sydney",        country: "Australia",   flag: "🇦🇺", region: "Asia-Pacific" },
+  "Dubai International Airport":                           { city: "Dubai",         country: "UAE",         flag: "🇦🇪", region: "Middle East" },
+};
+
+const REGION_COLORS = {
+  "Americas":     { bg: "#fef2f2", accent: "#cf102d", badge: "#cf102d" },
+  "Europe":       { bg: "#eff6ff", accent: "#1d4ed8", badge: "#1d4ed8" },
+  "Asia-Pacific": { bg: "#f0fdf4", accent: "#16a34a", badge: "#16a34a" },
+  "Middle East":  { bg: "#fffbeb", accent: "#d97706", badge: "#d97706" },
+  "Other":        { bg: "#f8f8f8", accent: "#555",    badge: "#555" },
+};
+
+// ── Vacation Package Catalog ──
+const VACATION_PACKAGES = [
+  // PARIS
+  { id:"pkg-paris-romantic", arrival:"Charles de Gaulle Airport", city:"Paris", flag:"🇫🇷", category:"Romantic", emoji:"💕", name:"Paris Romance Escape", duration:7, price:1299, originalPrice:1599, hotel:"Grand Hôtel Opera ★★★★★", carRental:true, carType:"Convertible", activities:["Eiffel Tower Skip-the-Line","Seine River Dinner Cruise","Versailles Day Trip","Private Champagne Tasting"], meals:"Breakfast & Dinner daily", highlights:["Couples Spa Treatment","Airport Private Transfer","Welcome Champagne & Roses"] },
+  { id:"pkg-paris-city", arrival:"Charles de Gaulle Airport", city:"Paris", flag:"🇫🇷", category:"City Break", emoji:"🏙️", name:"Paris City Explorer", duration:5, price:849, originalPrice:1050, hotel:"Hôtel du Marais ★★★★", carRental:false, carType:null, activities:["Louvre Museum Tour","Montmartre Walking Tour","Day Trip to Giverny","Local Food Market Tour"], meals:"Breakfast daily", highlights:["Metro Pass Included","City Guide App","Museum Pass"] },
+  { id:"pkg-paris-family", arrival:"Charles de Gaulle Airport", city:"Paris", flag:"🇫🇷", category:"Family", emoji:"👨‍👩‍👧‍👦", name:"Paris Family Adventure", duration:6, price:1099, originalPrice:1350, hotel:"Novotel Paris Centre ★★★★", carRental:true, carType:"Minivan", activities:["Disneyland Paris 2-Day Pass","Eiffel Tower Visit","Kids Cooking Class","Jardin d'Acclimatation"], meals:"Breakfast daily", highlights:["Kids Eat Free","Family Concierge","Baby Equipment on Request"] },
+
+  // LONDON
+  { id:"pkg-london-family", arrival:"London Heathrow Airport", city:"London", flag:"🇬🇧", category:"Family", emoji:"👨‍👩‍👧‍👦", name:"London Family Fun Pack", duration:7, price:1199, originalPrice:1499, hotel:"Holiday Inn Kensington ★★★★", carRental:true, carType:"SUV", activities:["Harry Potter Studio Tour","Tower of London","London Eye","Natural History Museum"], meals:"Breakfast daily", highlights:["Oyster Travel Cards","Kids Activity Pack","Priority Check-In"] },
+  { id:"pkg-london-romantic", arrival:"London Heathrow Airport", city:"London", flag:"🇬🇧", category:"Romantic", emoji:"💕", name:"London Romantic Getaway", duration:5, price:1099, originalPrice:1350, hotel:"The Savoy ★★★★★", carRental:false, carType:null, activities:["West End Theatre Show","Thames Dinner Cruise","Kew Gardens","Afternoon Tea at Claridge's"], meals:"Breakfast & Afternoon Tea", highlights:["Champagne on Arrival","Pillow Menu","Late Checkout"] },
+  { id:"pkg-london-city", arrival:"London Gatwick Airport", city:"London", flag:"🇬🇧", category:"City Break", emoji:"🏙️", name:"London Express Break", duration:4, price:699, originalPrice:880, hotel:"Premier Inn Southbank ★★★", carRental:false, carType:null, activities:["British Museum","Borough Market Tour","Buckingham Palace","Greenwich Observatory"], meals:"Breakfast daily", highlights:["Contactless Travel Card","City Map & Guide","24hr Concierge"] },
+
+  // NEW YORK
+  { id:"pkg-nyc-allinclusive", arrival:"John F. Kennedy International Airport", city:"New York", flag:"🇺🇸", category:"All-Inclusive", emoji:"🗽", name:"NYC All-Inclusive Experience", duration:6, price:1599, originalPrice:1999, hotel:"The Plaza Hotel ★★★★★", carRental:false, carType:null, activities:["Broadway Show Tickets","Statue of Liberty Ferry","NYC Helicopter Tour","Fine Dining x3"], meals:"All meals & beverages included", highlights:["$200 Dining Credit","Rooftop Bar Access","Private Airport Transfer","Unlimited Metro Card"] },
+  { id:"pkg-nyc-city", arrival:"John F. Kennedy International Airport", city:"New York", flag:"🇺🇸", category:"City Break", emoji:"🏙️", name:"Manhattan Explorer", duration:5, price:999, originalPrice:1250, hotel:"Hilton Midtown ★★★★", carRental:false, carType:null, activities:["Top of the Rock","Central Park Bike Tour","MoMA Museum","Brooklyn Food Tour"], meals:"Breakfast daily", highlights:["Unlimited Metro Card","NYC Pass","Photography Tour"] },
+  { id:"pkg-nyc-family", arrival:"John F. Kennedy International Airport", city:"New York", flag:"🇺🇸", category:"Family", emoji:"👨‍👩‍👧‍👦", name:"NYC Family Discovery", duration:7, price:1399, originalPrice:1750, hotel:"Marriott Times Square ★★★★", carRental:true, carType:"SUV", activities:["American Museum of Natural History","Central Park Zoo","Coney Island","LEGOLAND Discovery"], meals:"Breakfast & Dinner daily", highlights:["Kids NYC Guide","Family Concierge","Early Check-In"] },
+
+  // DUBAI
+  { id:"pkg-dubai-luxury", arrival:"Dubai International Airport", city:"Dubai", flag:"🇦🇪", category:"All-Inclusive", emoji:"✨", name:"Dubai Ultra-Luxury Retreat", duration:7, price:2499, originalPrice:3200, hotel:"Burj Al Arab Jumeirah ★★★★★+", carRental:true, carType:"Luxury Sedan", activities:["Desert Safari with BBQ","Dubai Frame","Burj Khalifa At the Top","Gold Souk Private Tour"], meals:"All meals & premium beverages", highlights:["Private Butler","Infinity Pool Access","Seaplane Transfer","Spa Credit $300"] },
+  { id:"pkg-dubai-romantic", arrival:"Dubai International Airport", city:"Dubai", flag:"🇦🇪", category:"Romantic", emoji:"💕", name:"Dubai Romance in the Desert", duration:5, price:1799, originalPrice:2200, hotel:"Atlantis The Palm ★★★★★", carRental:false, carType:null, activities:["Sunset Desert Camel Ride","Dhow Cruise Dinner","Aquaventure Waterpark","Private Beach Day"], meals:"Breakfast & Dinner", highlights:["Rose Petal Turndown","Couples Spa","Welcome Dates & Arabic Coffee"] },
+
+  // TOKYO
+  { id:"pkg-tokyo-adventure", arrival:"Narita International Airport", city:"Tokyo", flag:"🇯🇵", category:"Adventure", emoji:"⛩️", name:"Japan Adventure Quest", duration:10, price:1899, originalPrice:2400, hotel:"Shinjuku Granbell ★★★★", carRental:true, carType:"Compact (JDM)", activities:["Mt. Fuji Day Trip","Kyoto Temple Tour","Tokyo Street Food Tour","Bullet Train Pass","Go-Kart in Tokyo"], meals:"Breakfast daily", highlights:["7-Day JR Pass","Pocket WiFi","IC Card for Transit"] },
+  { id:"pkg-tokyo-family", arrival:"Narita International Airport", city:"Tokyo", flag:"🇯🇵", category:"Family", emoji:"👨‍👩‍👧‍👦", name:"Tokyo Family Magic", duration:8, price:1699, originalPrice:2100, hotel:"Keio Plaza Hotel ★★★★", carRental:false, carType:null, activities:["Tokyo Disneyland 2-Day","teamLab Digital Art","Akihabara Electronics Tour","Pokemon Center Visit","Sumo Show"], meals:"Breakfast daily", highlights:["Kids JR Pass","Activity Backpack","24hr Concierge"] },
+
+  // CANCÚN
+  { id:"pkg-cancun-allinclusive", arrival:"Cancun International Airport", city:"Cancún", flag:"🇲🇽", category:"All-Inclusive", emoji:"🏖️", name:"Cancún All-Inclusive Paradise", duration:7, price:1199, originalPrice:1599, hotel:"Grand Oasis Cancún ★★★★★", carRental:false, carType:null, activities:["Chichen Itza Tour","Cenote Swim","Cozumel Snorkeling","Tulum Ruins"], meals:"All meals, drinks & snacks unlimited", highlights:["Unlimited Premium Open Bar","Beachfront Room","Swim-Up Bar","Nightclub Access"] },
+  { id:"pkg-cancun-family", arrival:"Cancun International Airport", city:"Cancún", flag:"🇲🇽", category:"Family", emoji:"👨‍👩‍👧‍👦", name:"Cancún Family Splash", duration:7, price:999, originalPrice:1299, hotel:"Hard Rock Hotel Cancún ★★★★★", carRental:true, carType:"Minivan", activities:["Xcaret Eco-Park","Xel-Ha Water Park","Snorkeling Tour","Pirate Boat Show"], meals:"All-inclusive for family", highlights:["Kids Club","Baby Pool","Family Suite Upgrade"] },
+  { id:"pkg-cancun-romantic", arrival:"Cancun International Airport", city:"Cancún", flag:"🇲🇽", category:"Romantic", emoji:"💕", name:"Cancún Couples Retreat", duration:5, price:1099, originalPrice:1399, hotel:"Le Blanc Spa Resort ★★★★★", carRental:false, carType:null, activities:["Catamaran Sunset Cruise","Couples Massage","Private Cenote Tour","Tulum Ruins at Sunrise"], meals:"All meals & premium drinks", highlights:["Adults-Only Resort","Couples Spa Suite","Private Plunge Pool","Personalized Butler"] },
+
+  // SYDNEY
+  { id:"pkg-sydney-adventure", arrival:"Sydney Kingsford Smith Airport", city:"Sydney", flag:"🇦🇺", category:"Adventure", emoji:"🦘", name:"Sydney Adventure Down Under", duration:8, price:1599, originalPrice:2000, hotel:"Ovolo Woolloomooloo ★★★★", carRental:true, carType:"4WD", activities:["Harbour Bridge Climb","Blue Mountains Day Trip","Bondi to Coogee Coastal Walk","Great Barrier Reef Day Tour","Surf Lesson at Bondi"], meals:"Breakfast daily", highlights:["National Parks Pass","Opal Travel Card","Guided Wildlife Tour"] },
+  { id:"pkg-sydney-family", arrival:"Sydney Kingsford Smith Airport", city:"Sydney", flag:"🇦🇺", category:"Family", emoji:"👨‍👩‍👧‍👦", name:"Sydney Family Explorer", duration:7, price:1399, originalPrice:1750, hotel:"Novotel Sydney ★★★★", carRental:true, carType:"Minivan", activities:["Sydney Zoo Taronga","SEA LIFE Aquarium","Featherdale Wildlife Park","Luna Park","Royal Botanic Garden"], meals:"Breakfast daily", highlights:["Kids National Parks Pass","Sydney Pass","Family Concierge"] },
+
+  // MIAMI
+  { id:"pkg-miami-allinclusive", arrival:"Miami International Airport", city:"Miami", flag:"🇺🇸", category:"All-Inclusive", emoji:"🌴", name:"Miami All-Inclusive Beach Escape", duration:5, price:1099, originalPrice:1399, hotel:"Fontainebleau Miami Beach ★★★★★", carRental:true, carType:"Convertible", activities:["Everglades Airboat Tour","Art Basel District Walk","South Beach Nightlife Tour","Key West Day Trip"], meals:"All meals & premium cocktails", highlights:["Poolside Cabana","Spa Credit $150","VIP Beach Access"] },
+  { id:"pkg-miami-romantic", arrival:"Miami International Airport", city:"Miami", flag:"🇺🇸", category:"Romantic", emoji:"💕", name:"Miami Sunset Romance", duration:4, price:899, originalPrice:1150, hotel:"Edition Miami ★★★★★", carRental:false, carType:null, activities:["Sunset Sailboat Cruise","Little Havana Food Tour","Wynwood Street Art Tour","Private Beach Dinner"], meals:"Breakfast & Dinner", highlights:["Ocean View Suite","Couples Spa","Welcome Champagne"] },
+
+  // ROME
+  { id:"pkg-rome-city", arrival:"Leonardo da Vinci-Fiumicino Airport", city:"Rome", flag:"🇮🇹", category:"City Break", emoji:"🏛️", name:"Eternal City Roman Holiday", duration:6, price:999, originalPrice:1250, hotel:"Hotel Nazionale Roma ★★★★", carRental:false, carType:null, activities:["Colosseum Skip-the-Line","Vatican Museums Tour","Pompeii Day Trip","Pasta Making Class","Trastevere Food Tour"], meals:"Breakfast daily", highlights:["Roma Pass","Private Guide","Vespa Tour Option"] },
+  { id:"pkg-rome-romantic", arrival:"Leonardo da Vinci-Fiumicino Airport", city:"Rome", flag:"🇮🇹", category:"Romantic", emoji:"💕", name:"Roma Amore Romantico", duration:5, price:1149, originalPrice:1450, hotel:"Hotel de Russie ★★★★★", carRental:false, carType:null, activities:["Private Colosseum After-Hours","Amalfi Coast Day Trip","Wine & Cheese Evening","Trevi Fountain Private Visit"], meals:"Breakfast & Dinner", highlights:["Rooftop Aperitivo","Couples Cooking Class","Personal Photographer 1hr"] },
+
+  // BARCELONA
+  { id:"pkg-barcelona-city", arrival:"Josep Tarradellas Barcelona-El Prat Airport", city:"Barcelona", flag:"🇪🇸", category:"City Break", emoji:"🎨", name:"Barcelona Art & Culture Break", duration:5, price:849, originalPrice:1080, hotel:"Hotel Arts Barcelona ★★★★★", carRental:false, carType:null, activities:["Sagrada Familia Priority","Park Güell Tour","Flamenco Show","La Boqueria Food Tour","Picasso Museum"], meals:"Breakfast daily", highlights:["T10 Metro Card","FC Barcelona Museum Option","Sunset Rooftop Cocktails"] },
+  { id:"pkg-barcelona-romantic", arrival:"Josep Tarradellas Barcelona-El Prat Airport", city:"Barcelona", flag:"🇪🇸", category:"Romantic", emoji:"💕", name:"Barcelona Coastal Romance", duration:6, price:1099, originalPrice:1400, hotel:"W Barcelona ★★★★★", carRental:true, carType:"Convertible", activities:["Costa Brava Day Trip","Private Catamaran","Wine Tour in Penedès","Private Sagrada Familia","Sunset Tapas Tour"], meals:"Breakfast & Dinner", highlights:["Sea View Suite","Couples Spa","Cava Welcome Package"] },
+
+  // RIO DE JANEIRO
+  { id:"pkg-rio-adventure", arrival:"Rio de Janeiro/Galeão International Airport", city:"Rio de Janeiro", flag:"🇧🇷", category:"Adventure", emoji:"🌊", name:"Rio Adventure & Carnival", duration:7, price:1299, originalPrice:1650, hotel:"Windsor Atlantica ★★★★★", carRental:true, carType:"Jeep", activities:["Christ the Redeemer","Hang Gliding Over Rio","Sugarloaf Mountain","Favela Tour","Sambadrome Show"], meals:"Breakfast daily", highlights:["Carnival VIP Grandstand","Copacabana Beach Lounge","Caipirinha Welcome Kit"] },
+
+  // HOUSTON (local)
+  { id:"pkg-houston-family", arrival:"George Bush Intercontinental Airport", city:"Houston", flag:"🇺🇸", category:"Family", emoji:"🚀", name:"Houston Space City Family Pack", duration:4, price:599, originalPrice:799, hotel:"Marriott Marquis Houston ★★★★", carRental:true, carType:"SUV", activities:["NASA Space Center","Houston Zoo","Downtown Aquarium","Children's Museum","Kemah Boardwalk"], meals:"Breakfast daily", highlights:["NASA Behind-the-Scenes Pass","Metro Day Pass","Family Welcome Gift"] },
+  { id:"pkg-houston-city", arrival:"George Bush Intercontinental Airport", city:"Houston", flag:"🇺🇸", category:"City Break", emoji:"🏙️", name:"Houston City Highlights", duration:3, price:449, originalPrice:599, hotel:"Four Seasons Houston ★★★★★", carRental:true, carType:"Sedan", activities:["Museum District Pass","Buffalo Bayou Park","Minute Maid Park Tour","Tex-Mex Culinary Tour"], meals:"Breakfast daily", highlights:["Luxury Spa Access","Rooftop Pool","Concierge Service"] },
+
+  // SINGAPORE
+  { id:"pkg-singapore-allinclusive", arrival:"Singapore Changi Airport", city:"Singapore", flag:"🇸🇬", category:"All-Inclusive", emoji:"🦁", name:"Singapore Ultimate Experience", duration:6, price:1799, originalPrice:2300, hotel:"Marina Bay Sands ★★★★★", carRental:false, carType:null, activities:["Gardens by the Bay","Universal Studios Singapore","Sentosa Island Day","Singapore Night Safari","Hawker Centre Food Tour"], meals:"All meals included", highlights:["Infinity Pool on 57th Floor","Casino Access","Sands SkyPark Observation Deck","MRT Pass"] },
+
+  // MUMBAI
+  { id:"pkg-mumbai-adventure", arrival:"Chhatrapati Shivaji Maharaj International Airport", city:"Mumbai", flag:"🇮🇳", category:"Adventure", emoji:"🕌", name:"India Heritage & Adventure", duration:9, price:1299, originalPrice:1700, hotel:"Taj Mahal Palace ★★★★★", carRental:true, carType:"Private Car with Driver", activities:["Taj Mahal Sunrise Agra","Ajanta & Ellora Caves","Mumbai Street Food Walk","Elephant Island Caves","Bollywood Studio Tour"], meals:"Breakfast & Dinner", highlights:["Private Guide","Cultural Welcome Ceremony","Yoga Session Daily"] },
+];
+
+const PACKAGE_CATEGORIES = ["All", "All-Inclusive", "Family", "Romantic", "Adventure", "City Break"];
+const CATEGORY_STYLES = {
+  "All-Inclusive": { bg: "#fef3c7", color: "#d97706", icon: "✨" },
+  "Family":        { bg: "#dbeafe", color: "#1d4ed8", icon: "👨‍👩‍👧‍👦" },
+  "Romantic":      { bg: "#fce7f3", color: "#be185d", icon: "💕" },
+  "Adventure":     { bg: "#d1fae5", color: "#065f46", icon: "⛰️" },
+  "City Break":    { bg: "#e0e7ff", color: "#3730a3", icon: "🏙️" },
+};
 
 function App() {
   const [activeTab, setActiveTab] = useState("search");
   const [airports, setAirports] = useState([]);
   const [flightResults, setFlightResults] = useState([]);
+  const [userBookings, setUserBookings] = useState([]);
+
+  const [reports, setReports] = useState([]);
+  const [loadingReports, setLoadingReports] = useState(false);
+  const [isEditingPrefs, setIsEditingPrefs] = useState(false);
+  const [prefData, setPrefData] = useState({ seat_preferences: "", meal_preferences: "" });
+  const [crudAction, setCrudAction] = useState("");
+  const [crudData, setCrudData] = useState({ routeId: "", departureDate: "", seats: "", aircraftId: "", capacity: "" });
 
   const [searchMessage, setSearchMessage] = useState("");
   const [loginMessage, setLoginMessage] = useState("");
@@ -20,23 +136,172 @@ function App() {
   const [loadingLogin, setLoadingLogin] = useState(false);
   const [loadingManage, setLoadingManage] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState(false);
+  const [loadingUserBookings, setLoadingUserBookings] = useState(false);
 
   const [loggedInUser, setLoggedInUser] = useState(null);
   const [manageResult, setManageResult] = useState(null);
   const [statusResult, setStatusResult] = useState(null);
 
-  // Modal visibility
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
+  // Staff "book for passenger" modal
+  const [bookForModal, setBookForModal] = useState({ show: false, flight: null, passengerId: "", bookingMsg: "" });
+
+  // Booking confirmation modal
+  const [bookingConfirm, setBookingConfirm] = useState(null);
+
+  // Loyalty modal
+  const [loyaltyModal, setLoyaltyModal] = useState(null);
+
+  // Free flight mode
+  const [freeFlightMode, setFreeFlightMode] = useState(false);
+
+  // Vacation package mode
+  const [vacationMode, setVacationMode] = useState(false);
+  const [pkgCategory, setPkgCategory] = useState("All");
+  const [pkgSearch, setPkgSearch] = useState("");
+  const [selectedPackage, setSelectedPackage] = useState(null); // package chosen to book
+  const [savingPackage, setSavingPackage] = useState(false);
+
+  const [showDestinationsModal, setShowDestinationsModal] = useState(false);
+  const [showExperienceModal, setShowExperienceModal] = useState(false);
+  const [destinations, setDestinations] = useState([]);
+  const [experienceRatings, setExperienceRatings] = useState([]);
+  const [loadingDestinations, setLoadingDestinations] = useState(false);
+  const [loadingExperience, setLoadingExperience] = useState(false);
+  const [destSearch, setDestSearch] = useState("");
+  const [destRegion, setDestRegion] = useState("All");
+  const [expSort, setExpSort] = useState("score");   // "score" | "ontime" | "comfort" | "value"
+  const [expSearch, setExpSearch] = useState("");
+
+  const [showRouteFlightsModal, setShowRouteFlightsModal] = useState(false);
+  const [routeFlights, setRouteFlights] = useState([]);
+  const [selectedRouteLabel, setSelectedRouteLabel] = useState("");
+  const [loadingRouteFlights, setLoadingRouteFlights] = useState(false);
+
+  const [loyaltyMilestone, setLoyaltyMilestone] = useState(null);
+
+  const [allAircrafts, setAllAircrafts] = useState([]);
+  const [loadingAircrafts, setLoadingAircrafts] = useState(false);
+  const [allFlights, setAllFlights] = useState([]);
+  const [loadingAllFlights, setLoadingAllFlights] = useState(false);
+  const [routesWithStatus, setRoutesWithStatus] = useState([]);
+  const [loadingRoutesStatus, setLoadingRoutesStatus] = useState(false);
+  const [inlineAircraftEdit, setInlineAircraftEdit] = useState({ id: null, capacity: "" });
+
+  const [allPassengers, setAllPassengers] = useState([]);
+  const [loadingPassengers, setLoadingPassengers] = useState(false);
+  const [allBookingsAdmin, setAllBookingsAdmin] = useState([]);
+  const [loadingAllBookings, setLoadingAllBookings] = useState(false);
+
+  const [adminNewBooking, setAdminNewBooking] = useState({ userId: "", passengerId: "" });
+  const [adminNewBookingMsg, setAdminNewBookingMsg] = useState("");
+  const [bookingStatusUpdate, setBookingStatusUpdate] = useState({ bookingId: "", status: "Confirmed" });
+  const [bookingStatusMsg, setBookingStatusMsg] = useState("");
+
+  // Employee portal section accordion
+  const [empSection, setEmpSection] = useState("passengers");
+
   const [loginData, setLoginData] = useState({ email: "", password: "", role: "Passenger" });
-  const [flightSearch, setFlightSearch] = useState({
-    departureAirportId: "", arrivalAirportId: "", departureDate: "", returnDate: "", passengers: 1,
-  });
-  const [manageData, setManageData] = useState({ bookingId: "", lastName: "" });
+  const [flightSearch, setFlightSearch] = useState({ departureAirportId: "", arrivalAirportId: "", departureDate: "", returnDate: "", passengers: 1 });
+  const [manageData, setManageData] = useState({ bookingId: "" });
   const [statusData, setStatusData] = useState({ flightId: "" });
 
+  const getAuthHeaders = (includeJson = true) => {
+    const headers = {};
+    if (includeJson) headers["Content-Type"] = "application/json";
+    if (loggedInUser) {
+      headers["x-user-id"] = String(loggedInUser.user_id);
+      headers["x-user-role"] = loggedInUser.role;
+    }
+    return headers;
+  };
+
   useEffect(() => { fetchAirports(); }, []);
+
+  useEffect(() => {
+    if (loggedInUser && activeTab === "manage") {
+      if (loggedInUser.role === "Passenger") {
+        fetchUserBookings();
+      } else {
+        // Employee / System Admin: load all bookings for the dropdown
+        fetchAllBookingsAdmin();
+      }
+    }
+  }, [loggedInUser, activeTab]);
+
+  // Role flags — only 3 roles now
+  const isPassenger = loggedInUser?.role === "Passenger";
+  const isEmployee = loggedInUser?.role === "Employee";
+  const isSystemAdmin = loggedInUser?.role === "System Admin";
+
+  // Passengers can book; System Admin can also book on behalf of users
+  const canBook = isPassenger || isEmployee || isSystemAdmin;
+
+  // ── Fetch helpers ──
+  const handleCheckLoyalty = async (e) => {
+    if (e) e.preventDefault();
+    if (!loggedInUser) { setActiveTab("login"); return; }
+    try {
+      const response = await fetch(`${API}/loyalty-balance/${loggedInUser.user_id}`, { headers: getAuthHeaders(false) });
+      const data = await response.json();
+      if (response.ok) {
+        setLoyaltyModal({ miles: data.miles, tier: data.tier || "Silver", firstName: loggedInUser.first_name });
+      }
+    } catch { /* silent */ }
+  };
+
+  const handleStartFreeFlightMode = () => {
+    setLoyaltyModal(null);
+    setFreeFlightMode(true);
+    setActiveTab("search");
+  };
+
+  const handleRedeemFlight = async (flight) => {
+    try {
+      const response = await fetch(`${API}/redeem-flight`, {
+        method: "POST", headers: getAuthHeaders(true),
+        body: JSON.stringify({ userId: loggedInUser.user_id, passengerId: loggedInUser.passenger_id, flightId: flight.flight_id }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setFreeFlightMode(false);
+        setBookingConfirm({
+          bookingId: data.booking_id,
+          milesEarned: 0,
+          totalMiles: data.remaining_miles,
+          milesUsed: data.miles_used,
+          passengerName: loggedInUser.first_name + " " + (loggedInUser.last_name || ""),
+          departure: flight.departure_airport,
+          destination: flight.arrival_airport,
+          flightId: flight.flight_id,
+          milestone: null,
+          newTier: data.new_tier,
+          isFree: true,
+        });
+        fetchUserBookings();
+      } else {
+        alert(data.error || "Redemption failed.");
+      }
+    } catch { alert("Could not connect to server."); }
+  };
+
+  const savePackageToBooking = async (bookingId, pkg) => {
+    if (!pkg || !bookingId) return;
+    setSavingPackage(true);
+    try {
+      await fetch(`${API}/save-package-booking`, {
+        method: "POST", headers: getAuthHeaders(true),
+        body: JSON.stringify({
+          bookingId, packageId: pkg.id, packageName: pkg.name,
+          packageCategory: pkg.category, packagePrice: pkg.price,
+          destination: pkg.city, durationDays: pkg.duration,
+        }),
+      });
+    } catch { /* non-fatal, booking still succeeded */ }
+    finally { setSavingPackage(false); }
+  };
 
   const fetchAirports = async () => {
     try {
@@ -45,26 +310,220 @@ function App() {
       const data = await response.json();
       if (!response.ok) { setSearchMessage(data.error || "Could not load airports."); return; }
       setAirports(data);
-    } catch {
-      setSearchMessage("Could not connect to backend.");
-    } finally {
-      setLoadingAirports(false);
-    }
+    } catch { setSearchMessage("Could not connect to backend."); }
+    finally { setLoadingAirports(false); }
   };
 
-  const handleLoginChange  = (e) => setLoginData({ ...loginData, [e.target.name]: e.target.value });
+  const fetchUserBookings = async () => {
+    if (!loggedInUser) return;
+    setLoadingUserBookings(true); setManageMessage("");
+    try {
+      const response = await fetch(`${API}/my-bookings/${loggedInUser.user_id}`, { headers: getAuthHeaders(false) });
+      const data = await response.json();
+      if (response.ok) { setUserBookings(data); }
+      else { setUserBookings([]); setManageMessage(data.error || "Failed to load bookings."); }
+    } catch { setUserBookings([]); setManageMessage("Failed to load your bookings."); }
+    finally { setLoadingUserBookings(false); }
+  };
+
+  const fetchReports = async () => {
+    if (!loggedInUser) return;
+    setLoadingReports(true);
+    try {
+      const res = await fetch(`${API}/reports`, { headers: getAuthHeaders(false) });
+      const data = await res.json();
+      if (res.ok) setReports(data);
+      else { setReports([]); alert(data.error || "Failed to fetch reports."); }
+    } catch { alert("Failed to fetch reports."); }
+    finally { setLoadingReports(false); }
+  };
+
+  const fetchDestinations = async () => {
+    setLoadingDestinations(true);
+    try {
+      const res = await fetch(`${API}/destinations`);
+      const data = await res.json();
+      if (res.ok) setDestinations(data);
+    } catch { }
+    finally { setLoadingDestinations(false); }
+  };
+
+  const fetchExperienceRatings = async () => {
+    setLoadingExperience(true);
+    try {
+      const res = await fetch(`${API}/experience-ratings`);
+      const data = await res.json();
+      if (res.ok) setExperienceRatings(data);
+    } catch { }
+    finally { setLoadingExperience(false); }
+  };
+
+  const fetchRouteFlights = async (routeId, label) => {
+    if (!loggedInUser) return;
+    setLoadingRouteFlights(true); setSelectedRouteLabel(label); setRouteFlights([]); setShowRouteFlightsModal(true);
+    try {
+      const res = await fetch(`${API}/route-flights/${routeId}`, { headers: getAuthHeaders(false) });
+      const data = await res.json();
+      if (res.ok) setRouteFlights(data);
+    } catch { }
+    finally { setLoadingRouteFlights(false); }
+  };
+
+  const fetchAllAircrafts = async () => {
+    if (!loggedInUser) return;
+    setLoadingAircrafts(true);
+    try {
+      const res = await fetch(`${API}/aircrafts`, { headers: getAuthHeaders(false) });
+      const data = await res.json();
+      if (res.ok) setAllAircrafts(data);
+    } catch { }
+    finally { setLoadingAircrafts(false); }
+  };
+
+  const fetchRoutesWithStatus = async () => {
+    if (!loggedInUser) return;
+    setLoadingRoutesStatus(true);
+    try {
+      const res = await fetch(`${API}/routes-with-status`, { headers: getAuthHeaders(false) });
+      const data = await res.json();
+      if (res.ok) setRoutesWithStatus(data);
+    } catch { }
+    finally { setLoadingRoutesStatus(false); }
+  };
+
+  const fetchAllPassengers = async () => {
+    if (!loggedInUser) return;
+    setLoadingPassengers(true);
+    try {
+      const res = await fetch(`${API}/all-passengers`, { headers: getAuthHeaders(false) });
+      const data = await res.json();
+      if (res.ok) setAllPassengers(data);
+    } catch { }
+    finally { setLoadingPassengers(false); }
+  };
+
+  const fetchAllBookingsAdmin = async () => {
+    if (!loggedInUser) return;
+    setLoadingAllBookings(true);
+    try {
+      const res = await fetch(`${API}/all-bookings`, { headers: getAuthHeaders(false) });
+      const data = await res.json();
+      if (res.ok) setAllBookingsAdmin(data);
+    } catch { }
+    finally { setLoadingAllBookings(false); }
+  };
+
+  const loadEmployeePortal = () => {
+    fetchAllPassengers();
+    fetchAllBookingsAdmin();
+    fetchRoutesWithStatus();
+    fetchAllAircrafts();
+    fetchReports();
+    fetchAllFlights();
+  };
+
+  const fetchAllFlights = async () => {
+    if (!loggedInUser) return;
+    setLoadingAllFlights(true);
+    try {
+      const res = await fetch(`${API}/all-flights`, { headers: getAuthHeaders(false) });
+      const data = await res.json();
+      if (res.ok) setAllFlights(data);
+    } catch { }
+    finally { setLoadingAllFlights(false); }
+  };
+
+  const [routeMsg, setRouteMsg] = useState({ text: "", type: "" });
+  const [aircraftMsg, setAircraftMsg] = useState({ text: "", type: "" });
+  const [crudMsg, setCrudMsg] = useState({ text: "", type: "" });
+  const [refreshedSection, setRefreshedSection] = useState(""); // which section just refreshed
+
+  const doRefresh = async (section, fetchFn) => {
+    setRefreshedSection("");
+    await fetchFn();
+    setRefreshedSection(section);
+    setTimeout(() => setRefreshedSection(""), 2500);
+  };
+
+  // Wrapper button component for Refresh with flash feedback
+  const RefreshBtn = ({ section, fetchFn, loading }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      {refreshedSection === section && (
+        <span style={{ fontSize: "13px", color: "#1a6e3c", fontWeight: "600" }}>✅ Refreshed!</span>
+      )}
+      <button
+        className="nav-edit-btn"
+        style={{ color: "#222", borderColor: "#222" }}
+        onClick={() => doRefresh(section, fetchFn)}
+        disabled={loading}
+      >
+        {loading ? "Loading..." : "Refresh"}
+      </button>
+    </div>
+  );
+
+  const handleToggleRouteStatus = async (routeId) => {
+    setRouteMsg({ text: "", type: "" });
+    try {
+      const res = await fetch(`${API}/toggle-route-status`, { method: "POST", headers: getAuthHeaders(true), body: JSON.stringify({ routeId }) });
+      const data = await res.json();
+      if (res.ok) {
+        fetchRoutesWithStatus();
+        setRouteMsg({ text: "✅ Route status updated.", type: "success" });
+        setTimeout(() => setRouteMsg({ text: "", type: "" }), 3000);
+      } else {
+        setRouteMsg({ text: "❌ " + (data.error || "Failed to update route status."), type: "error" });
+      }
+    } catch { setRouteMsg({ text: "❌ Error connecting to server.", type: "error" }); }
+  };
+
+  const handleInlineAircraftUpdate = async (aircraftId) => {
+    setAircraftMsg({ text: "", type: "" });
+    try {
+      const res = await fetch(`${API}/update-aircraft`, { method: "PUT", headers: getAuthHeaders(true), body: JSON.stringify({ aircraftId, capacity: inlineAircraftEdit.capacity }) });
+      const data = await res.json();
+      if (res.ok) {
+        setAircraftMsg({ text: "✅ Aircraft capacity updated.", type: "success" });
+        setInlineAircraftEdit({ id: null, capacity: "" });
+        fetchAllAircrafts();
+        setTimeout(() => setAircraftMsg({ text: "", type: "" }), 3000);
+      } else {
+        setAircraftMsg({ text: "❌ " + (data.error || "Update failed."), type: "error" });
+      }
+    } catch { setAircraftMsg({ text: "❌ Error connecting to server.", type: "error" }); }
+  };
+
+  const handleAddBookingAdmin = async (e) => {
+    e.preventDefault(); setAdminNewBookingMsg("");
+    try {
+      const res = await fetch(`${API}/add-booking-admin`, { method: "POST", headers: getAuthHeaders(true), body: JSON.stringify({ userId: adminNewBooking.userId, passengerId: adminNewBooking.passengerId }) });
+      const data = await res.json();
+      if (res.ok) { setAdminNewBookingMsg(`✅ Booking #${data.booking_id} created successfully!`); setAdminNewBooking({ userId: "", passengerId: "" }); fetchAllBookingsAdmin(); }
+      else setAdminNewBookingMsg("❌ " + (data.error || "Failed to create booking."));
+    } catch { setAdminNewBookingMsg("❌ Error connecting to server."); }
+  };
+
+  const handleUpdateBookingStatus = async (e) => {
+    e.preventDefault(); setBookingStatusMsg("");
+    try {
+      const res = await fetch(`${API}/update-booking-status`, { method: "PUT", headers: getAuthHeaders(true), body: JSON.stringify({ bookingId: bookingStatusUpdate.bookingId, status: bookingStatusUpdate.status }) });
+      const data = await res.json();
+      if (res.ok) { setBookingStatusMsg("✅ " + data.message); setBookingStatusUpdate({ bookingId: "", status: "Confirmed" }); fetchAllBookingsAdmin(); }
+      else setBookingStatusMsg("❌ " + (data.error || "Failed."));
+    } catch { setBookingStatusMsg("❌ Error connecting to server."); }
+  };
+
+  // ── Event handlers ──
+  const handleLoginChange = (e) => setLoginData({ ...loginData, [e.target.name]: e.target.value });
   const handleFlightChange = (e) => setFlightSearch({ ...flightSearch, [e.target.name]: e.target.value });
   const handleManageChange = (e) => setManageData({ ...manageData, [e.target.name]: e.target.value });
   const handleStatusChange = (e) => setStatusData({ ...statusData, [e.target.name]: e.target.value });
 
   const handleLoginSubmit = async (e) => {
-    e.preventDefault();
-    setLoadingLogin(true);
-    setLoginMessage("");
+    e.preventDefault(); setLoadingLogin(true); setLoginMessage("");
     try {
       const response = await fetch(`${API}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: loginData.email, password: loginData.password, role: loginData.role }),
       });
       const data = await response.json();
@@ -72,135 +531,1033 @@ function App() {
       setLoggedInUser(data.user);
       setLoginMessage(`Login successful. Logged in as ${data.user.role}.`);
       setActiveTab("search");
-    } catch {
-      setLoginMessage("Could not connect to backend.");
-    } finally {
-      setLoadingLogin(false);
-    }
+    } catch { setLoginMessage("Could not connect to backend."); }
+    finally { setLoadingLogin(false); }
   };
 
   const handleLogout = () => {
     setLoggedInUser(null);
     setLoginData({ email: "", password: "", role: "Passenger" });
-    setLoginMessage("");
+    setLoginMessage(""); setManageMessage(""); setStatusMessage("");
+    setManageResult(null); setStatusResult(null);
+    setUserBookings([]); setReports([]); setAllAircrafts([]);
+    setRoutesWithStatus([]); setAllPassengers([]); setAllBookingsAdmin([]);
     setActiveTab("login");
   };
 
   const handleFlightSubmit = async (e) => {
-    e.preventDefault();
-    setLoadingFlights(true);
-    setSearchMessage("");
-    setFlightResults([]);
+    e.preventDefault(); setLoadingFlights(true); setSearchMessage(""); setFlightResults([]);
     try {
       const response = await fetch(`${API}/search-flights`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          departureAirportId: Number(flightSearch.departureAirportId),
-          arrivalAirportId: Number(flightSearch.arrivalAirportId),
-          departureDate: flightSearch.departureDate,
-          passengers: Number(flightSearch.passengers),
-        }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ departureAirportId: Number(flightSearch.departureAirportId), arrivalAirportId: Number(flightSearch.arrivalAirportId), departureDate: flightSearch.departureDate, passengers: Number(flightSearch.passengers) }),
       });
       const data = await response.json();
       if (!response.ok) { setSearchMessage(data.error || "Something went wrong."); return; }
       if (data.length === 0) setSearchMessage("No flights found.");
       else setSearchMessage(`Found ${data.length} flight(s).`);
       setFlightResults(data);
-    } catch {
-      setSearchMessage("Could not connect to backend.");
-    } finally {
-      setLoadingFlights(false);
-    }
+    } catch { setSearchMessage("Could not connect to backend."); }
+    finally { setLoadingFlights(false); }
   };
 
   const handleManageSubmit = async (e) => {
-    e.preventDefault();
-    setLoadingManage(true);
-    setManageMessage("");
-    setManageResult(null);
+    e.preventDefault(); setLoadingManage(true); setManageMessage(""); setManageResult(null); setIsEditingPrefs(false);
     try {
-      const response = await fetch(`${API}/manage-booking`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: manageData.bookingId, lastName: manageData.lastName }),
-      });
+      const response = await fetch(`${API}/manage-booking`, { method: "POST", headers: getAuthHeaders(true), body: JSON.stringify({ bookingId: manageData.bookingId }) });
       const data = await response.json();
       if (!response.ok) { setManageMessage(data.error || "Booking not found."); return; }
-      setManageResult(data);
-      setManageMessage("Booking found.");
-    } catch {
-      setManageMessage("Could not connect to backend.");
-    } finally {
-      setLoadingManage(false);
-    }
+      setManageResult(data); setManageMessage("Booking found.");
+    } catch { setManageMessage("Could not connect to backend."); }
+    finally { setLoadingManage(false); }
   };
 
   const handleStatusSubmit = async (e) => {
-    e.preventDefault();
-    setLoadingStatus(true);
-    setStatusMessage("");
-    setStatusResult(null);
+    e.preventDefault(); setLoadingStatus(true); setStatusMessage(""); setStatusResult(null);
     try {
-      const response = await fetch(`${API}/flight-status`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ flightId: statusData.flightId }),
-      });
+      const response = await fetch(`${API}/flight-status`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ flightId: statusData.flightId }) });
       const data = await response.json();
       if (!response.ok) { setStatusMessage(data.error || "Flight not found."); return; }
-      setStatusResult(data);
-      setStatusMessage("Flight found.");
-    } catch {
-      setStatusMessage("Could not connect to backend.");
-    } finally {
-      setLoadingStatus(false);
+      setStatusResult(data); setStatusMessage("Flight found.");
+    } catch { setStatusMessage("Could not connect to backend."); }
+    finally { setLoadingStatus(false); }
+  };
+
+  const handleBookFlight = (flight) => {
+    if (!loggedInUser) { setActiveTab("login"); return; }
+    if (!canBook) { alert("Only Passenger, Employee, or System Admin accounts can book flights."); return; }
+
+    if (isPassenger) {
+      executeBooking(flight, loggedInUser.user_id, loggedInUser.passenger_id);
+    } else {
+      // Staff: always re-fetch passenger list so dropdown is ready, then open modal
+      fetchAllPassengers();
+      setBookForModal({ show: true, flight, passengerId: "", bookingMsg: "" });
     }
   };
 
-  // After successful registration, auto-login by calling the login endpoint
+  const executeBooking = async (flight, userId, passengerId) => {
+    try {
+      const response = await fetch(`${API}/book-flight`, {
+        method: "POST", headers: getAuthHeaders(true),
+        body: JSON.stringify({ userId, passengerId, flightId: flight.flight_id, passengers: Number(flightSearch.passengers) }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setBookForModal({ show: false, flight: null, passengerId: "", bookingMsg: "" });
+
+        // Find passenger name for the confirmation screen
+        const passenger = allPassengers.find((p) => String(p.passenger_id) === String(passengerId));
+        const passengerName = passenger
+          ? `${passenger.first_name} ${passenger.last_name}`
+          : loggedInUser.first_name || "Passenger";
+
+        // Always show the styled booking confirmation — milestone info included if applicable
+        // Also save the selected package if one was chosen
+        const pkgToSave = bookForModal.selectedPackage || selectedPackage;
+        if (pkgToSave && data.booking_id) {
+          savePackageToBooking(data.booking_id, pkgToSave);
+        }
+
+        setBookingConfirm({
+          bookingId: data.booking_id,
+          milesEarned: data.miles_earned || 0,
+          totalMiles: data.new_miles || 0,
+          passengerName,
+          flightId: flight.flight_id,
+          departure: flight.departure_airport,
+          destination: flight.arrival_airport,
+          milestone: data.milestone || null,
+          newTier: data.new_tier || null,
+          packageAdded: pkgToSave || null,
+        });
+
+        // Clear package selection after booking
+        setSelectedPackage(null);
+        setVacationMode(false);
+        setManageData({ bookingId: "" }); setManageResult(null);
+        if (isPassenger) fetchUserBookings();
+        else fetchAllBookingsAdmin();
+      } else {
+        setBookForModal((prev) => ({ ...prev, bookingMsg: "❌ Booking failed: " + data.error }));
+      }
+    } catch {
+      setBookForModal((prev) => ({ ...prev, bookingMsg: "❌ Could not connect to the server." }));
+    }
+  };
+
+  const handleStaffBookSubmit = () => {
+    const pid = Number(bookForModal.passengerId);
+    if (!pid) { setBookForModal((prev) => ({ ...prev, bookingMsg: "❌ Please select a person." })); return; }
+    const person = allPassengers.find((p) => p.passenger_id === pid);
+    const targetUserId = person?.user_id || loggedInUser.user_id;
+    executeBooking(bookForModal.flight, targetUserId, pid);
+  };
+
+  const [actionMsg, setActionMsg] = useState({ text: "", type: "" }); // type: "success" | "error"
+
+  const handleCancelBooking = async (bookingId) => {
+    setActionMsg({ text: "", type: "" });
+    try {
+      const response = await fetch(`${API}/cancel-booking`, { method: "POST", headers: getAuthHeaders(true), body: JSON.stringify({ bookingId }) });
+      const data = await response.json();
+      if (response.ok) {
+        setActionMsg({ text: "✅ Booking cancelled successfully.", type: "success" });
+        setManageResult(null);
+        if (isPassenger) fetchUserBookings();
+        if (isEmployee || isSystemAdmin) fetchAllBookingsAdmin();
+      } else {
+        setActionMsg({ text: "❌ " + (data.error || "Failed to cancel booking."), type: "error" });
+      }
+    } catch { setActionMsg({ text: "❌ Error connecting to server.", type: "error" }); }
+  };
+
+  const handleUpdatePreferences = async () => {
+    try {
+      const response = await fetch(`${API}/update-preferences`, {
+        method: "PUT", headers: getAuthHeaders(true),
+        body: JSON.stringify({ passengerId: manageResult.passenger_id, seatPreferences: prefData.seat_preferences, mealPreferences: prefData.meal_preferences }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setActionMsg({ text: "✅ Preferences updated successfully!", type: "success" });
+        setIsEditingPrefs(false);
+        setManageResult({ ...manageResult, seat_preferences: prefData.seat_preferences, meal_preferences: prefData.meal_preferences });
+      } else {
+        setActionMsg({ text: "❌ " + (data.error || "Failed to update preferences."), type: "error" });
+      }
+    } catch { setActionMsg({ text: "❌ Error connecting to server.", type: "error" }); }
+  };
+
+  const handleCrudSubmit = async (e) => {
+    e.preventDefault();
+    let endpoint = "", method = "", bodyData = {};
+    if (crudAction === "addFlight") { endpoint = "/add-flight"; method = "POST"; bodyData = { routeId: crudData.routeId, departureDate: crudData.departureDate, seats: crudData.seats }; }
+    else if (crudAction === "updateAircraft") { endpoint = "/update-aircraft"; method = "PUT"; bodyData = { aircraftId: crudData.aircraftId, capacity: crudData.capacity }; }
+    else if (crudAction === "deleteRoute") { endpoint = "/delete-route"; method = "DELETE"; bodyData = { routeId: crudData.routeId }; }
+    try {
+      const response = await fetch(`${API}${endpoint}`, { method, headers: getAuthHeaders(true), body: JSON.stringify(bodyData) });
+      const data = await response.json();
+      if (response.ok) {
+        const action = crudAction;
+        setCrudMsg({ text: "✅ " + data.message, type: "success" });
+        setCrudAction(""); setCrudData({ routeId: "", departureDate: "", seats: "", aircraftId: "", capacity: "" });
+        fetchReports(); fetchRoutesWithStatus();
+        if (action === "updateAircraft") fetchAllAircrafts();
+        setTimeout(() => setCrudMsg({ text: "", type: "" }), 4000);
+      } else {
+        setCrudMsg({ text: "❌ " + (data.error || "Action failed."), type: "error" });
+      }
+    } catch { setCrudMsg({ text: "❌ Failed to connect to the server.", type: "error" }); }
+  };
+
   const handleRegisterSuccess = async (regData) => {
     setShowCreateModal(false);
     try {
-      const res = await fetch(`${API}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: regData.email, password: regData.password, role: regData.role }),
-      });
+      const res = await fetch(`${API}/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: regData.email, password: regData.password, role: regData.role }) });
       const data = await res.json();
-      if (res.ok) {
-        setLoggedInUser(data.user);
-        setActiveTab("search");
-        return;
-      }
-    } catch {}
-    // Fallback: send to login tab with a message
+      if (res.ok) { setLoggedInUser(data.user); setActiveTab("search"); return; }
+    } catch { }
     setLoginMessage("Account created! Please log in.");
     setLoginData((prev) => ({ ...prev, role: regData.role }));
     setActiveTab("login");
   };
 
-  // After editing account
-  const handleEditSaved = (updatedUser) => {
-    setLoggedInUser((prev) => ({ ...prev, ...updatedUser }));
-  };
+  const handleEditSaved = (updatedUser) => { setLoggedInUser((prev) => ({ ...prev, ...updatedUser })); };
+
+  const groupedDestinations = destinations.reduce((acc, d) => {
+    if (!acc[d.departure]) acc[d.departure] = [];
+    acc[d.departure].push(d);
+    return acc;
+  }, {});
+
+  // ── Section button helper ──
+  const SectionBtn = ({ id, label }) => (
+    <button
+      type="button"
+      onClick={() => setEmpSection(id)}
+      style={{
+        padding: "8px 18px", borderRadius: "20px", border: "none", cursor: "pointer",
+        fontWeight: "600", fontSize: "13px",
+        background: empSection === id ? "#cf102d" : "#f0f0f0",
+        color: empSection === id ? "#fff" : "#333",
+        transition: "all 0.2s"
+      }}
+    >
+      {label}
+    </button>
+  );
+
+  // ── Shared booking result card (used by Passenger manage & Employee find booking) ──
+  const BookingResultCard = ({ result, onCancel, showPrefs = true }) => (
+    <div className="result-card">
+      <p><strong>Booking ID:</strong> {result.booking_id}</p>
+      <p><strong>Status:</strong> {result.booking_status}</p>
+      <p><strong>Passenger:</strong> {result.first_name} {result.last_name}</p>
+      <p><strong>Email:</strong> {result.email || "N/A"}</p>
+      <p><strong>Phone:</strong> {result.phone_number || "N/A"}</p>
+      {showPrefs && (
+        <>
+          <hr style={{ margin: "15px 0", border: 0, borderTop: "1px solid #eee" }} />
+          {isEditingPrefs ? (
+            <div style={{ background: "#f9f9f9", padding: "15px", borderRadius: "6px", marginBottom: "15px" }}>
+              <h4 style={{ marginBottom: "10px" }}>Edit Preferences</h4>
+              <div className="form-group" style={{ marginBottom: "10px" }}>
+                <label>Seat Preference</label>
+                <select value={prefData.seat_preferences} onChange={(e) => setPrefData({ ...prefData, seat_preferences: e.target.value })}>
+                  {SEAT_OPTIONS.map((o) => <option key={o} value={o === "No Preference" ? "" : o}>{o}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: "15px" }}>
+                <label>Meal Preference</label>
+                <select value={prefData.meal_preferences} onChange={(e) => setPrefData({ ...prefData, meal_preferences: e.target.value })}>
+                  {MEAL_OPTIONS.map((o) => <option key={o} value={o === "No Preference" ? "" : o}>{o}</option>)}
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button type="button" className="primary-btn" style={{ padding: "10px 20px", fontSize: "14px", backgroundColor: "#1a6e3c" }} onClick={handleUpdatePreferences}>Save Changes</button>
+                <button type="button" className="nav-edit-btn" style={{ padding: "10px 20px", fontSize: "14px" }} onClick={() => setIsEditingPrefs(false)}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p><strong>Seat Preference:</strong> {result.seat_preferences || "None selected"}</p>
+              <p><strong>Meal Preference:</strong> {result.meal_preferences || "None selected"}</p>
+            </>
+          )}
+        </>
+      )}
+      <div style={{ display: "flex", gap: "15px", marginTop: "20px", flexWrap: "wrap" }}>
+        {result.booking_status !== "Cancelled" ? (
+          <>
+            {showPrefs && !isEditingPrefs && (
+              <button type="button" className="primary-btn" style={{ backgroundColor: "#22252b", padding: "12px 20px", fontSize: "15px" }}
+                onClick={() => { setIsEditingPrefs(true); setPrefData({ seat_preferences: result.seat_preferences || "", meal_preferences: result.meal_preferences || "" }); }}>
+                Modify Preferences
+              </button>
+            )}
+            <button type="button" className="primary-btn" style={{ backgroundColor: "#b00020", padding: "12px 20px", fontSize: "15px" }} onClick={() => onCancel(result.booking_id)}>
+              Cancel Booking
+            </button>
+          </>
+        ) : (
+          <p style={{ color: "#b00020", fontWeight: "bold", width: "100%" }}>This booking is cancelled.</p>
+        )}
+      </div>
+      {actionMsg.text && (
+        <p style={{ marginTop: "14px", fontWeight: "600", fontSize: "15px", color: actionMsg.type === "success" ? "#1a6e3c" : "#b00020" }}>
+          {actionMsg.text}
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <div className="app">
-      {/* ── Modals ── */}
-      {showCreateModal && (
-        <CreateAccountModal
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={handleRegisterSuccess}
-        />
+
+
+      {/* ── Booking Confirmation Screen ── */}
+      {bookingConfirm && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(10,10,20,0.75)",
+          zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "20px", backdropFilter: "blur(4px)"
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: "20px", maxWidth: "500px", width: "100%",
+            boxShadow: "0 24px 80px rgba(0,0,0,0.4)", overflow: "hidden"
+          }}>
+            {/* Header band */}
+            <div style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #cf102d 100%)", padding: "32px 36px 28px", textAlign: "center" }}>
+              <div style={{ fontSize: "52px", marginBottom: "8px" }}>✈️</div>
+              <h2 style={{ margin: 0, color: "#fff", fontSize: "22px", fontWeight: "800", letterSpacing: "0.5px" }}>
+                Booking Confirmed!
+              </h2>
+              <p style={{ margin: "6px 0 0", color: "rgba(255,255,255,0.8)", fontSize: "14px" }}>
+                {bookingConfirm.departure} → {bookingConfirm.destination}
+              </p>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: "28px 36px" }}>
+              {/* Booking details row */}
+              <div style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
+                <div style={{ flex: 1, background: "#f8f8f8", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
+                  <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#999", textTransform: "uppercase", letterSpacing: "1px" }}>Booking ID</p>
+                  <p style={{ margin: 0, fontSize: "22px", fontWeight: "800", color: "#1a1a2e" }}>#{bookingConfirm.bookingId}</p>
+                </div>
+                <div style={{ flex: 1, background: "#f8f8f8", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
+                  <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#999", textTransform: "uppercase", letterSpacing: "1px" }}>Passenger</p>
+                  <p style={{ margin: 0, fontSize: "15px", fontWeight: "700", color: "#1a1a2e" }}>{bookingConfirm.passengerName}</p>
+                </div>
+              </div>
+
+              {/* Miles earned / used banner */}
+              <div style={{
+                background: bookingConfirm.isFree ? "linear-gradient(135deg, #e8f5e9, #f1fff5)" : "linear-gradient(135deg, #fff8e1, #fff3cd)",
+                border: `2px solid ${bookingConfirm.isFree ? "#1a6e3c" : "#ffcc00"}`, borderRadius: "12px",
+                padding: "18px 20px", marginBottom: "16px", textAlign: "center"
+              }}>
+                <p style={{ margin: "0 0 6px", fontSize: "13px", color: bookingConfirm.isFree ? "#1a4d2e" : "#8a6d00", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.8px" }}>
+                  {bookingConfirm.isFree ? "🎟️ Free Flight Redeemed" : "🏆 Royal Horizon Loyalty Points"}
+                </p>
+                <div style={{ display: "flex", justifyContent: "center", gap: "32px", marginTop: "8px" }}>
+                  {bookingConfirm.isFree ? (
+                    <>
+                      <div>
+                        <p style={{ margin: "0 0 2px", fontSize: "26px", fontWeight: "800", color: "#b00020" }}>-{bookingConfirm.milesUsed}</p>
+                        <p style={{ margin: 0, fontSize: "12px", color: "#888" }}>Miles Used</p>
+                      </div>
+                      <div style={{ width: "1px", background: "#1a6e3c", opacity: 0.3 }} />
+                      <div>
+                        <p style={{ margin: "0 0 2px", fontSize: "26px", fontWeight: "800", color: "#1a6e3c" }}>{bookingConfirm.totalMiles.toLocaleString()}</p>
+                        <p style={{ margin: 0, fontSize: "12px", color: "#888" }}>Miles Remaining</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <p style={{ margin: "0 0 2px", fontSize: "26px", fontWeight: "800", color: "#cf102d" }}>+{bookingConfirm.milesEarned}</p>
+                        <p style={{ margin: 0, fontSize: "12px", color: "#888" }}>Miles Earned</p>
+                      </div>
+                      <div style={{ width: "1px", background: "#e0c800", opacity: 0.5 }} />
+                      <div>
+                        <p style={{ margin: "0 0 2px", fontSize: "26px", fontWeight: "800", color: "#1a6e3c" }}>{bookingConfirm.totalMiles.toLocaleString()}</p>
+                        <p style={{ margin: 0, fontSize: "12px", color: "#888" }}>Total Miles</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Milestone badge if tier crossed */}
+              {bookingConfirm.milestone && (
+                <div style={{ background: "#fce4ec", border: "1px solid #f48fb1", borderRadius: "10px", padding: "12px 16px", marginBottom: "16px", textAlign: "center" }}>
+                  <p style={{ margin: 0, fontSize: "14px", fontWeight: "700", color: "#b00020" }}>
+                    🎉 You've reached <strong>{bookingConfirm.milestone.tier} Tier</strong>! Welcome to exclusive benefits.
+                  </p>
+                </div>
+              )}
+
+              {/* Package added summary */}
+              {bookingConfirm.packageAdded && (
+                <div style={{ background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)", border: "1.5px solid #7dd3fc", borderRadius: "12px", padding: "14px 16px", marginBottom: "16px" }}>
+                  <p style={{ margin: "0 0 8px", fontSize: "12px", fontWeight: "700", color: "#0369a1", textTransform: "uppercase", letterSpacing: "0.5px" }}>📦 Vacation Package Included</p>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                    <div>
+                      <p style={{ margin: "0 0 2px", fontWeight: "800", fontSize: "14px", color: "#1a1a2e" }}>{bookingConfirm.packageAdded.emoji} {bookingConfirm.packageAdded.name}</p>
+                      <p style={{ margin: 0, fontSize: "12px", color: "#555" }}>{bookingConfirm.packageAdded.city} · {bookingConfirm.packageAdded.duration} nights · {bookingConfirm.packageAdded.meals}</p>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <p style={{ margin: 0, fontSize: "18px", fontWeight: "800", color: "#0369a1" }}>${bookingConfirm.packageAdded.price}<span style={{ fontSize: "11px", color: "#888", fontWeight: "400" }}>/person</span></p>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "8px" }}>
+                    {bookingConfirm.packageAdded.activities?.slice(0,3).map((a) => (
+                      <span key={a} style={{ background: "rgba(3,105,161,0.08)", color: "#0369a1", fontSize: "10px", fontWeight: "600", padding: "2px 8px", borderRadius: "999px" }}>✓ {a}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Congratulations message */}
+              <div style={{ background: "#f0faf4", border: "1px solid #a8d5b5", borderRadius: "10px", padding: "14px 16px", marginBottom: "24px" }}>
+                {bookingConfirm.isFree ? (
+                  <p style={{ margin: 0, fontSize: "14px", color: "#1a4d2e", lineHeight: "1.6" }}>
+                    🎟️ <strong>Enjoy your free flight, {bookingConfirm.passengerName.split(" ")[0]}!</strong> You redeemed <strong>1,000 miles</strong> for this booking. You have <strong>{bookingConfirm.totalMiles.toLocaleString()} miles</strong> remaining — keep flying to earn more rewards!
+                  </p>
+                ) : (
+                  <p style={{ margin: 0, fontSize: "14px", color: "#1a4d2e", lineHeight: "1.6" }}>
+                    🎊 <strong>Congratulations, {bookingConfirm.passengerName.split(" ")[0]}!</strong> With <strong>{bookingConfirm.totalMiles.toLocaleString()} miles</strong> in your account, you're on your way to free flights, seat upgrades, and exclusive Royal Horizon rewards. {bookingConfirm.totalMiles >= 1000 ? "You already have enough miles to redeem a free flight!" : `Earn ${(1000 - bookingConfirm.totalMiles).toLocaleString()} more miles to unlock a free flight!`}
+                  </p>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: "flex", gap: "12px" }}>
+                <button
+                  onClick={() => {
+                    setBookingConfirm(null);
+                    if (isPassenger) { fetchUserBookings(); }
+                    else { fetchAllBookingsAdmin(); }
+                    setActiveTab("manage");
+                  }}
+                  style={{ flex: 1, background: "#cf102d", color: "#fff", border: "none", borderRadius: "10px", padding: "14px", fontSize: "15px", fontWeight: "700", cursor: "pointer" }}
+                >
+                  View My Bookings
+                </button>
+                <button
+                  onClick={() => { setBookingConfirm(null); setActiveTab("search"); }}
+                  style={{ flex: 1, background: "#f0f0f0", color: "#333", border: "none", borderRadius: "10px", padding: "14px", fontSize: "15px", fontWeight: "600", cursor: "pointer" }}
+                >
+                  Book Another
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
-      {showEditModal && loggedInUser && (
-        <EditAccountModal
-          user={loggedInUser}
-          onClose={() => setShowEditModal(false)}
-          onSaved={handleEditSaved}
-        />
+
+      {/* ── Loyalty Modal ── */}
+      {loyaltyModal && (() => {
+        const { miles, tier, firstName } = loyaltyModal;
+        const TIERS = [
+          { name: "Silver", threshold: 0,     color: "#94a3b8", next: 1000  },
+          { name: "Gold",   threshold: 1000,  color: "#f59e0b", next: 5000  },
+          { name: "Platinum", threshold: 5000, color: "#8b5cf6", next: 10000 },
+          { name: "Diamond", threshold: 10000, color: "#06b6d4", next: null  },
+        ];
+        const currentTier = TIERS.find((t) => t.name === tier) || TIERS[0];
+        const nextTier = currentTier.next ? TIERS.find((t) => t.threshold === currentTier.next) : null;
+        const progress = nextTier ? Math.min(100, ((miles - currentTier.threshold) / (currentTier.next - currentTier.threshold)) * 100) : 100;
+        const canRedeem = miles >= 1000 && isPassenger;
+
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(10,10,20,0.75)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", backdropFilter: "blur(4px)" }}>
+            <div style={{ background: "#fff", borderRadius: "20px", maxWidth: "460px", width: "100%", boxShadow: "0 24px 80px rgba(0,0,0,0.4)", overflow: "hidden" }}>
+
+              {/* Header */}
+              <div style={{ background: `linear-gradient(135deg, #1a1a2e 0%, ${currentTier.color} 100%)`, padding: "28px 32px", textAlign: "center" }}>
+                <div style={{ fontSize: "44px", marginBottom: "6px" }}>🏆</div>
+                <h2 style={{ margin: "0 0 4px", color: "#fff", fontSize: "20px", fontWeight: "800" }}>Royal Horizon Loyalty</h2>
+                <p style={{ margin: 0, color: "rgba(255,255,255,0.8)", fontSize: "14px" }}>Welcome back, {firstName}!</p>
+              </div>
+
+              <div style={{ padding: "24px 32px" }}>
+                {/* Tier badge + miles */}
+                <div style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
+                  <div style={{ flex: 1, background: "#f8f8f8", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
+                    <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#999", textTransform: "uppercase", letterSpacing: "1px" }}>Current Tier</p>
+                    <p style={{ margin: 0, fontSize: "20px", fontWeight: "800", color: currentTier.color }}>{tier}</p>
+                  </div>
+                  <div style={{ flex: 1, background: "#f8f8f8", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
+                    <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#999", textTransform: "uppercase", letterSpacing: "1px" }}>Miles Balance</p>
+                    <p style={{ margin: 0, fontSize: "20px", fontWeight: "800", color: "#1a1a2e" }}>{miles.toLocaleString()}</p>
+                  </div>
+                </div>
+
+                {/* Progress to next tier */}
+                {nextTier ? (
+                  <div style={{ marginBottom: "20px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                      <span style={{ fontSize: "12px", color: "#666", fontWeight: "600" }}>{tier}</span>
+                      <span style={{ fontSize: "12px", color: "#666", fontWeight: "600" }}>{nextTier.name} at {nextTier.threshold.toLocaleString()} miles</span>
+                    </div>
+                    <div style={{ background: "#f0f0f0", borderRadius: "999px", height: "10px", overflow: "hidden" }}>
+                      <div style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${currentTier.color}, ${nextTier.color})`, height: "100%", borderRadius: "999px", transition: "width 0.4s" }} />
+                    </div>
+                    <p style={{ margin: "6px 0 0", fontSize: "12px", color: "#888", textAlign: "center" }}>
+                      {(currentTier.next - miles).toLocaleString()} miles to {nextTier.name}
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ background: "#e8f5e9", borderRadius: "10px", padding: "10px 14px", marginBottom: "20px", textAlign: "center" }}>
+                    <p style={{ margin: 0, fontSize: "13px", color: "#1a6e3c", fontWeight: "700" }}>💎 You've reached Diamond — the highest tier!</p>
+                  </div>
+                )}
+
+                {/* Tiers reference */}
+                <div style={{ display: "flex", gap: "6px", marginBottom: "20px" }}>
+                  {TIERS.map((t) => (
+                    <div key={t.name} style={{ flex: 1, textAlign: "center", padding: "6px 4px", borderRadius: "8px", background: t.name === tier ? t.color + "22" : "#f8f8f8", border: `1px solid ${t.name === tier ? t.color : "#eee"}` }}>
+                      <p style={{ margin: "0 0 2px", fontSize: "10px", fontWeight: "800", color: t.color }}>{t.name.toUpperCase()}</p>
+                      <p style={{ margin: 0, fontSize: "9px", color: "#999" }}>{t.threshold.toLocaleString()}+</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Free flight redemption */}
+                {canRedeem ? (
+                  <div style={{ background: "linear-gradient(135deg, #e8f5e9, #f1fff5)", border: "2px solid #1a6e3c", borderRadius: "12px", padding: "16px 18px", marginBottom: "16px" }}>
+                    <p style={{ margin: "0 0 4px", fontWeight: "800", color: "#1a4d2e", fontSize: "15px" }}>🎟️ You qualify for a free flight!</p>
+                    <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#555" }}>Redeem <strong>1,000 miles</strong> to book any flight for free. You have <strong>{miles.toLocaleString()} miles</strong>.</p>
+                    <button
+                      onClick={handleStartFreeFlightMode}
+                      style={{ width: "100%", background: "#1a6e3c", color: "#fff", border: "none", borderRadius: "10px", padding: "13px", fontSize: "15px", fontWeight: "800", cursor: "pointer", letterSpacing: "0.3px" }}
+                    >
+                      ✈️ Book a Free Flight
+                    </button>
+                  </div>
+                ) : isPassenger ? (
+                  <div style={{ background: "#f8f8f8", borderRadius: "10px", padding: "12px 14px", marginBottom: "16px", textAlign: "center" }}>
+                    <p style={{ margin: 0, fontSize: "13px", color: "#888" }}>Earn <strong>{(1000 - miles).toLocaleString()} more miles</strong> to unlock your first free flight!</p>
+                  </div>
+                ) : null}
+
+                <button onClick={() => setLoyaltyModal(null)} style={{ width: "100%", background: "#f0f0f0", color: "#333", border: "none", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: "600", cursor: "pointer" }}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Where We Fly — Destination Explorer ── */}
+      {showDestinationsModal && (() => {
+        // Build unique destination list with metadata + price estimate
+        const allDests = [];
+        const seen = new Set();
+        destinations.forEach((d) => {
+          const key = d.arr_id;
+          if (!seen.has(key)) {
+            seen.add(key);
+            const meta = AIRPORT_META[d.arrival] || { city: d.arrival, country: "", flag: "🌍", region: "Other" };
+            const minPrice = Math.floor(((d.route_id || 1) * 53 + d.arr_id * 17) % 400) + 149;
+            allDests.push({ ...d, ...meta, minPrice });
+          }
+        });
+
+        const regions = ["All", ...Array.from(new Set(allDests.map((d) => d.region))).sort()];
+
+        const filtered = allDests.filter((d) => {
+          const matchRegion = destRegion === "All" || d.region === destRegion;
+          const q = destSearch.toLowerCase();
+          const matchSearch = !q || d.city.toLowerCase().includes(q) || d.country.toLowerCase().includes(q) || d.arrival.toLowerCase().includes(q);
+          return matchRegion && matchSearch;
+        }).sort((a, b) => b.total_flights - a.total_flights);
+
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(10,10,20,0.78)", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "32px 16px", backdropFilter: "blur(4px)" }}>
+            <div style={{ background: "#fff", borderRadius: "20px", maxWidth: "960px", width: "100%", boxShadow: "0 28px 80px rgba(0,0,0,0.45)", overflow: "hidden" }}>
+
+              {/* Header */}
+              <div style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)", padding: "32px 36px 28px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <h2 style={{ margin: "0 0 6px", color: "#fff", fontSize: "26px", fontWeight: "800", letterSpacing: "0.3px" }}>✈️ Where We Fly</h2>
+                    <p style={{ margin: 0, color: "rgba(255,255,255,0.65)", fontSize: "14px" }}>
+                      {allDests.length} destinations across {regions.length - 1} regions
+                    </p>
+                  </div>
+                  <button onClick={() => { setShowDestinationsModal(false); setDestSearch(""); setDestRegion("All"); }}
+                    style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontSize: "14px", fontWeight: "600" }}>
+                    ✕ Close
+                  </button>
+                </div>
+
+                {/* Search bar */}
+                <div style={{ position: "relative", marginTop: "20px" }}>
+                  <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "16px", pointerEvents: "none" }}>🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Search city, country, or airport..."
+                    value={destSearch}
+                    onChange={(e) => setDestSearch(e.target.value)}
+                    style={{ width: "100%", padding: "12px 16px 12px 42px", borderRadius: "10px", border: "none", fontSize: "15px", outline: "none", boxSizing: "border-box", background: "rgba(255,255,255,0.12)", color: "#fff", backdropFilter: "blur(6px)" }}
+                  />
+                </div>
+
+                {/* Region filter tabs */}
+                <div style={{ display: "flex", gap: "8px", marginTop: "16px", flexWrap: "wrap" }}>
+                  {regions.map((r) => {
+                    const col = REGION_COLORS[r] || REGION_COLORS["Other"];
+                    const active = destRegion === r;
+                    return (
+                      <button key={r} onClick={() => setDestRegion(r)}
+                        style={{ padding: "6px 16px", borderRadius: "999px", border: "none", cursor: "pointer", fontWeight: "700", fontSize: "13px", transition: "all 0.15s",
+                          background: active ? "#fff" : "rgba(255,255,255,0.12)",
+                          color: active ? (col.accent || "#1a1a2e") : "rgba(255,255,255,0.85)" }}>
+                        {r}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Destination grid */}
+              <div style={{ padding: "28px 32px" }}>
+                {loadingDestinations ? (
+                  <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
+                    <p style={{ fontSize: "32px", margin: "0 0 10px" }}>🌍</p>
+                    <p>Loading destinations...</p>
+                  </div>
+                ) : filtered.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
+                    <p style={{ fontSize: "32px", margin: "0 0 10px" }}>🔍</p>
+                    <p>No destinations found for "{destSearch}"</p>
+                    <button onClick={() => { setDestSearch(""); setDestRegion("All"); }} style={{ marginTop: "10px", background: "#f0f0f0", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontSize: "13px" }}>Clear filters</button>
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "16px" }}>
+                    {filtered.map((d) => {
+                      const col = REGION_COLORS[d.region] || REGION_COLORS["Other"];
+                      const isPopular = d.total_flights > 5;
+                      return (
+                        <div key={d.route_id} style={{ background: "#fff", border: "1px solid #eee", borderRadius: "14px", overflow: "hidden", cursor: "pointer", transition: "all 0.2s", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+                          onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)"; e.currentTarget.style.borderColor = col.accent; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.06)"; e.currentTarget.style.borderColor = "#eee"; }}>
+
+                          {/* Color top band */}
+                          <div style={{ background: col.bg, padding: "18px 16px 14px", textAlign: "center", position: "relative" }}>
+                            {isPopular && (
+                              <span style={{ position: "absolute", top: "8px", right: "8px", background: col.badge, color: "#fff", fontSize: "9px", fontWeight: "800", padding: "2px 7px", borderRadius: "999px", letterSpacing: "0.5px", textTransform: "uppercase" }}>Popular</span>
+                            )}
+                            <span style={{ fontSize: "38px", display: "block", marginBottom: "4px" }}>{d.flag}</span>
+                            <p style={{ margin: "0 0 2px", fontSize: "16px", fontWeight: "800", color: "#1a1a2e" }}>{d.city}</p>
+                            <p style={{ margin: 0, fontSize: "12px", color: "#666", fontWeight: "500" }}>{d.country}</p>
+                          </div>
+
+                          {/* Details */}
+                          <div style={{ padding: "12px 14px" }}>
+                            <p style={{ margin: "0 0 8px", fontSize: "10px", color: "#aaa", lineHeight: "1.4" }}>{d.arrival}</p>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <div>
+                                <span style={{ background: col.bg, color: col.accent, fontSize: "11px", fontWeight: "700", padding: "2px 8px", borderRadius: "999px" }}>
+                                  {d.region}
+                                </span>
+                              </div>
+                              <div style={{ textAlign: "right" }}>
+                                <p style={{ margin: "0 0 1px", fontSize: "10px", color: "#aaa" }}>From</p>
+                                <p style={{ margin: 0, fontSize: "15px", fontWeight: "800", color: col.accent }}>${d.minPrice}</p>
+                              </div>
+                            </div>
+                            <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "4px" }}>
+                              <span style={{ fontSize: "11px" }}>✈️</span>
+                              <span style={{ fontSize: "11px", color: "#888" }}>{d.total_flights} flight{d.total_flights !== 1 ? "s" : ""} available</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Footer stats */}
+                {filtered.length > 0 && (
+                  <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid #eee", display: "flex", gap: "24px", flexWrap: "wrap" }}>
+                    {Object.entries(
+                      filtered.reduce((acc, d) => { acc[d.region] = (acc[d.region] || 0) + 1; return acc; }, {})
+                    ).map(([region, count]) => {
+                      const col = REGION_COLORS[region] || REGION_COLORS["Other"];
+                      return (
+                        <div key={region} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: col.accent, display: "inline-block" }} />
+                          <span style={{ fontSize: "13px", color: "#666" }}><strong>{count}</strong> in {region}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Experience Ratings — Route Review Explorer ── */}
+      {showExperienceModal && (() => {
+        const getMeta = (airportName) => AIRPORT_META[airportName] || { city: airportName.split(" ")[0], country: "", flag: "🌍", region: "Other" };
+
+        const SORT_OPTIONS = [
+          { key: "score",   label: "⭐ Overall" },
+          { key: "ontime",  label: "🕐 On-Time" },
+          { key: "comfort", label: "💺 Comfort" },
+          { key: "value",   label: "💰 Value" },
+        ];
+
+        const sorted = [...experienceRatings]
+          .filter((r) => {
+            if (!expSearch) return true;
+            const q = expSearch.toLowerCase();
+            const depMeta = getMeta(r.departure);
+            const arrMeta = getMeta(r.arrival);
+            return depMeta.city.toLowerCase().includes(q) || arrMeta.city.toLowerCase().includes(q) ||
+              depMeta.country.toLowerCase().includes(q) || arrMeta.country.toLowerCase().includes(q);
+          })
+          .sort((a, b) => {
+            if (expSort === "ontime") return b.on_time_num - a.on_time_num;
+            if (expSort === "comfort") return parseFloat(b.comfort_score) - parseFloat(a.comfort_score);
+            if (expSort === "value") return parseFloat(b.value_score) - parseFloat(a.value_score);
+            return parseFloat(b.experience_score) - parseFloat(a.experience_score);
+          });
+
+        const ScoreBar = ({ value, max = 5, color }) => {
+          const pct = (parseFloat(value) / max) * 100;
+          return (
+            <div style={{ flex: 1, background: "#f0f0f0", borderRadius: "999px", height: "6px", overflow: "hidden" }}>
+              <div style={{ width: `${pct}%`, background: color, height: "100%", borderRadius: "999px" }} />
+            </div>
+          );
+        };
+
+        const rankIcon = (i) => i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : null;
+
+        const onTimeBg = (n) => n >= 90 ? "#e8f5e9" : n >= 80 ? "#fff8e1" : "#fce4ec";
+        const onTimeColor = (n) => n >= 90 ? "#1a6e3c" : n >= 80 ? "#d97706" : "#b00020";
+
+        const scoreColor = (s) => {
+          const v = parseFloat(s);
+          if (v >= 4.5) return "#16a34a";
+          if (v >= 4.0) return "#1d4ed8";
+          if (v >= 3.5) return "#d97706";
+          return "#b00020";
+        };
+
+        const popStyle = (p) => ({
+          bg: p === "High" ? "#e8f5e9" : p === "Medium" ? "#fff8e1" : "#fce4ec",
+          col: p === "High" ? "#1a6e3c" : p === "Medium" ? "#d97706" : "#b00020",
+        });
+
+        return (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(10,10,20,0.78)", zIndex: 9999, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "32px 16px", backdropFilter: "blur(4px)" }}>
+            <div style={{ background: "#fff", borderRadius: "20px", maxWidth: "900px", width: "100%", boxShadow: "0 28px 80px rgba(0,0,0,0.45)", overflow: "hidden" }}>
+
+              {/* Header */}
+              <div style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #1e3a5f 60%, #0f3460 100%)", padding: "32px 36px 28px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <h2 style={{ margin: "0 0 6px", color: "#fff", fontSize: "26px", fontWeight: "800" }}>⭐ Route Experience Ratings</h2>
+                    <p style={{ margin: 0, color: "rgba(255,255,255,0.65)", fontSize: "14px" }}>
+                      Passenger ratings across {experienceRatings.length} routes — scored on comfort, service, value & punctuality
+                    </p>
+                  </div>
+                  <button onClick={() => { setShowExperienceModal(false); setExpSearch(""); setExpSort("score"); }}
+                    style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", color: "#fff", borderRadius: "8px", padding: "8px 16px", cursor: "pointer", fontSize: "14px", fontWeight: "600" }}>
+                    ✕ Close
+                  </button>
+                </div>
+
+                {/* Search */}
+                <div style={{ position: "relative", marginTop: "20px" }}>
+                  <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", fontSize: "16px" }}>🔍</span>
+                  <input type="text" placeholder="Search city or country..." value={expSearch} onChange={(e) => setExpSearch(e.target.value)}
+                    style={{ width: "100%", padding: "11px 16px 11px 42px", borderRadius: "10px", border: "none", fontSize: "14px", outline: "none", boxSizing: "border-box", background: "rgba(255,255,255,0.12)", color: "#fff", backdropFilter: "blur(6px)" }} />
+                </div>
+
+                {/* Sort tabs */}
+                <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>
+                  {SORT_OPTIONS.map(({ key, label }) => (
+                    <button key={key} onClick={() => setExpSort(key)}
+                      style={{ padding: "6px 16px", borderRadius: "999px", border: "none", cursor: "pointer", fontWeight: "700", fontSize: "13px",
+                        background: expSort === key ? "#fff" : "rgba(255,255,255,0.12)",
+                        color: expSort === key ? "#1a1a2e" : "rgba(255,255,255,0.85)" }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cards */}
+              <div style={{ padding: "24px 32px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                {loadingExperience ? (
+                  <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
+                    <p style={{ fontSize: "32px", margin: "0 0 8px" }}>⭐</p><p>Loading ratings...</p>
+                  </div>
+                ) : sorted.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
+                    <p>No routes match your search.</p>
+                    <button onClick={() => setExpSearch("")} style={{ marginTop: "8px", background: "#f0f0f0", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer" }}>Clear</button>
+                  </div>
+                ) : sorted.map((r, i) => {
+                  const dep = getMeta(r.departure);
+                  const arr = getMeta(r.arrival);
+                  const pop = popStyle(r.popularity);
+                  const medal = rankIcon(i);
+                  const sc = parseFloat(r.experience_score);
+                  const stars = Math.round(sc);
+
+                  return (
+                    <div key={r.route_id} style={{ border: "1px solid #eee", borderRadius: "14px", overflow: "hidden", boxShadow: i < 3 ? "0 2px 12px rgba(0,0,0,0.08)" : "none", borderLeft: i < 3 ? `4px solid ${["#f59e0b","#94a3b8","#cd7f32"][i]}` : "1px solid #eee" }}>
+                      <div style={{ padding: "18px 20px", display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-start" }}>
+
+                        {/* Rank */}
+                        <div style={{ minWidth: "36px", textAlign: "center", paddingTop: "2px" }}>
+                          {medal ? <span style={{ fontSize: "26px" }}>{medal}</span> : <span style={{ fontSize: "15px", fontWeight: "800", color: "#aaa" }}>#{i + 1}</span>}
+                        </div>
+
+                        {/* Route */}
+                        <div style={{ flex: "1 1 240px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "6px" }}>
+                            <span style={{ fontSize: "22px" }}>{dep.flag}</span>
+                            <div>
+                              <p style={{ margin: 0, fontWeight: "800", fontSize: "15px", color: "#1a1a2e" }}>{dep.city}</p>
+                              <p style={{ margin: 0, fontSize: "11px", color: "#888" }}>{dep.country}</p>
+                            </div>
+                            <span style={{ color: "#aaa", fontSize: "18px", fontWeight: "300" }}>→</span>
+                            <span style={{ fontSize: "22px" }}>{arr.flag}</span>
+                            <div>
+                              <p style={{ margin: 0, fontWeight: "800", fontSize: "15px", color: "#1a1a2e" }}>{arr.city}</p>
+                              <p style={{ margin: 0, fontSize: "11px", color: "#888" }}>{arr.country}</p>
+                            </div>
+                          </div>
+                          <p style={{ margin: 0, fontSize: "11px", color: "#bbb" }}>{r.departure} → {r.arrival}</p>
+
+                          {/* Sub-score bars */}
+                          <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "5px" }}>
+                            {[
+                              { label: "Comfort",  val: r.comfort_score,  color: "#8b5cf6" },
+                              { label: "Service",  val: r.service_score,  color: "#0ea5e9" },
+                              { label: "Value",    val: r.value_score,    color: "#16a34a" },
+                            ].map(({ label, val, color }) => (
+                              <div key={label} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                <span style={{ width: "52px", fontSize: "11px", color: "#888", flexShrink: 0 }}>{label}</span>
+                                <ScoreBar value={val} color={color} />
+                                <span style={{ width: "28px", fontSize: "11px", fontWeight: "700", color }}>{val}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Right panel */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "flex-end", minWidth: "130px" }}>
+                          {/* Overall score */}
+                          <div style={{ textAlign: "center", background: "#f8f8f8", borderRadius: "12px", padding: "10px 16px" }}>
+                            <p style={{ margin: "0 0 2px", fontSize: "28px", fontWeight: "900", color: scoreColor(r.experience_score) }}>{r.experience_score}</p>
+                            <div style={{ display: "flex", gap: "1px", justifyContent: "center", marginBottom: "2px" }}>
+                              {Array.from({ length: 5 }).map((_, si) => (
+                                <span key={si} style={{ fontSize: "12px", color: si < stars ? "#f59e0b" : "#ddd" }}>★</span>
+                              ))}
+                            </div>
+                            <p style={{ margin: 0, fontSize: "10px", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.5px" }}>Overall</p>
+                          </div>
+
+                          {/* On-time */}
+                          <div style={{ background: onTimeBg(r.on_time_num), borderRadius: "10px", padding: "6px 12px", textAlign: "center" }}>
+                            <p style={{ margin: "0 0 1px", fontSize: "16px", fontWeight: "800", color: onTimeColor(r.on_time_num) }}>{r.on_time_rate}</p>
+                            <p style={{ margin: 0, fontSize: "10px", color: onTimeColor(r.on_time_num), fontWeight: "600" }}>On-Time · {r.on_time_label}</p>
+                          </div>
+
+                          {/* Tags */}
+                          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                            <span style={{ background: pop.bg, color: pop.col, fontSize: "10px", fontWeight: "800", padding: "3px 9px", borderRadius: "999px" }}>{r.popularity}</span>
+                            <span style={{ background: "#f0f0f0", color: "#666", fontSize: "10px", fontWeight: "600", padding: "3px 9px", borderRadius: "999px" }}>✈️ {r.total_flights} flights</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Legend footer */}
+              <div style={{ padding: "16px 32px 24px", display: "flex", gap: "20px", flexWrap: "wrap", borderTop: "1px solid #eee" }}>
+                {[["#8b5cf6","Comfort"],["#0ea5e9","Service"],["#16a34a","Value"],["#f59e0b","Top ranked"]].map(([color, label]) => (
+                  <div key={label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: color, display: "inline-block" }} />
+                    <span style={{ fontSize: "12px", color: "#888" }}>{label}</span>
+                  </div>
+                ))}
+                <span style={{ fontSize: "12px", color: "#aaa", marginLeft: "auto" }}>Rated by verified Royal Horizon passengers</span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Route Flights Modal ── */}
+      {showRouteFlightsModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div style={{ background: "#fff", borderRadius: "14px", padding: "32px", maxWidth: "700px", width: "100%", maxHeight: "80vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <h3 style={{ margin: 0, color: "#1a1a2e" }}>✈️ Flights: {selectedRouteLabel}</h3>
+              <button onClick={() => setShowRouteFlightsModal(false)} style={{ background: "none", border: "1px solid #ddd", borderRadius: "6px", padding: "6px 14px", cursor: "pointer" }}>✕ Close</button>
+            </div>
+            {loadingRouteFlights ? <p style={{ textAlign: "center", color: "#666" }}>Loading flights...</p> : routeFlights.length === 0 ? <p style={{ textAlign: "center", color: "#666" }}>No flights found for this route.</p> : (
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+                <thead>
+                  <tr style={{ background: "#f5f5f5" }}>
+                    {["Flight ID", "Departure", "Arrival", "Date", "Seats"].map((h) => (
+                      <th key={h} style={{ padding: "10px", textAlign: "left", borderBottom: "2px solid #ddd" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {routeFlights.map((f) => (
+                    <tr key={f.flight_id} style={{ borderBottom: "1px solid #eee" }}>
+                      <td style={{ padding: "10px" }}>#{f.flight_id}</td>
+                      <td style={{ padding: "10px" }}>{f.departure_airport}</td>
+                      <td style={{ padding: "10px" }}>{f.arrival_airport}</td>
+                      <td style={{ padding: "10px" }}>{new Date(f.date_of_departure).toLocaleString()}</td>
+                      <td style={{ padding: "10px" }}>{f.seats_available}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
       )}
+
+      {/* ── Book For Passenger Modal (Employee / System Admin) ── */}
+      {bookForModal.show && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div style={{ background: "#fff", borderRadius: "16px", padding: "36px", maxWidth: "480px", width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+            <h3 style={{ margin: "0 0 6px", color: "#1a1a2e" }}>📋 Book Flight for Passenger</h3>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", flexWrap: "wrap", gap: "10px" }}>
+              <p style={{ margin: 0, color: "#666", fontSize: "14px" }}>
+                Flight <strong>#{bookForModal.flight?.flight_id}</strong> → <strong>{bookForModal.flight?.arrival_airport}</strong>
+              </p>
+              {bookForModal.flight?.price && (
+                <div style={{ background: "#fff8f8", border: "2px solid #cf102d", borderRadius: "10px", padding: "8px 16px", textAlign: "center" }}>
+                  <p style={{ margin: "0 0 1px", fontSize: "10px", color: "#888", textTransform: "uppercase", letterSpacing: "0.5px" }}>Price</p>
+                  <p style={{ margin: 0, fontSize: "20px", fontWeight: "800", color: "#cf102d" }}>${bookForModal.flight.price}</p>
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginBottom: "18px" }}>
+              <label style={{ display: "block", fontWeight: "600", marginBottom: "6px", fontSize: "14px" }}>
+                Select Person to Book For
+              </label>
+              {allPassengers.length > 0 ? (
+                <select
+                  value={bookForModal.passengerId}
+                  onChange={(e) => setBookForModal((prev) => ({ ...prev, passengerId: e.target.value, bookingMsg: "" }))}
+                  style={{ width: "100%", padding: "10px 12px", border: "1px solid #ccc", borderRadius: "8px", fontSize: "14px" }}
+                >
+                  <option value="">-- Select a person --</option>
+                  {allPassengers.map((p) => (
+                    <option key={p.passenger_id} value={p.passenger_id}>
+                      {p.first_name} {p.last_name} ({p.user_role}) — {p.email}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <select disabled style={{ width: "100%", padding: "10px 12px", border: "1px solid #ccc", borderRadius: "8px", fontSize: "14px", color: "#999" }}>
+                  <option>{loadingPassengers ? "Loading..." : "No passengers found"}</option>
+                </select>
+              )}
+            </div>
+
+            {bookForModal.passengerId && allPassengers.length > 0 && (() => {
+              const p = allPassengers.find((x) => String(x.passenger_id) === String(bookForModal.passengerId));
+              return p ? (
+                <div style={{ background: "#f0f7ff", border: "1px solid #b3d4ff", borderRadius: "8px", padding: "12px 16px", marginBottom: "18px", fontSize: "14px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                    <p style={{ margin: 0, fontWeight: "700" }}>{p.first_name} {p.last_name}</p>
+                    <span style={{ background: p.user_role === "Passenger" ? "#e3f2fd" : "#e8f5e9", color: p.user_role === "Passenger" ? "#1565c0" : "#1a6e3c", fontSize: "11px", fontWeight: "700", padding: "2px 10px", borderRadius: "999px" }}>{p.user_role}</span>
+                  </div>
+                  <p style={{ margin: "0 0 2px" }}><strong>Email:</strong> {p.email}</p>
+                  <p style={{ margin: 0 }}><strong>Seat Pref:</strong> {p.seat_preferences || "None"} · <strong>Meal Pref:</strong> {p.meal_preferences || "None"}</p>
+                </div>
+              ) : null;
+            })()}
+
+            {bookForModal.bookingMsg && (
+              <p style={{ color: "#b00020", fontWeight: "600", marginBottom: "14px", fontSize: "14px" }}>{bookForModal.bookingMsg}</p>
+            )}
+
+            {/* Optional vacation package picker */}
+            {bookForModal.flight && (() => {
+              const arrivalName = bookForModal.flight.arrival_airport || "";
+              const matchingPkgs = VACATION_PACKAGES.filter((p) => p.arrival === arrivalName);
+              if (matchingPkgs.length === 0) return null;
+              const currentPkg = bookForModal.selectedPackage;
+              return (
+                <div style={{ marginBottom: "18px" }}>
+                  <label style={{ display: "block", fontWeight: "600", marginBottom: "6px", fontSize: "14px" }}>
+                    🏖️ Add Vacation Package <span style={{ fontWeight: "400", color: "#888", fontSize: "12px" }}>(optional)</span>
+                  </label>
+                  <select
+                    value={currentPkg?.id || ""}
+                    onChange={(e) => {
+                      const pkg = matchingPkgs.find((p) => p.id === e.target.value) || null;
+                      setBookForModal((prev) => ({ ...prev, selectedPackage: pkg }));
+                    }}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid #ccc", borderRadius: "8px", fontSize: "14px" }}
+                  >
+                    <option value="">-- No package (flight only) --</option>
+                    {matchingPkgs.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.emoji} {p.name} · {p.duration}nts · ${p.price}/person
+                      </option>
+                    ))}
+                  </select>
+                  {currentPkg && (
+                    <div style={{ marginTop: "8px", background: "#f0f9ff", border: "1px solid #7dd3fc", borderRadius: "8px", padding: "10px 14px", fontSize: "13px" }}>
+                      <p style={{ margin: "0 0 4px", fontWeight: "700", color: "#0369a1" }}>{currentPkg.emoji} {currentPkg.name}</p>
+                      <p style={{ margin: "0 0 2px", color: "#555" }}>🏨 {currentPkg.hotel} · {currentPkg.carRental ? `🚗 ${currentPkg.carType} ·` : ""} 🍽️ {currentPkg.meals}</p>
+                      <p style={{ margin: 0, color: "#888", fontSize: "12px" }}>{currentPkg.activities.slice(0,2).join(" · ")}{currentPkg.activities.length > 2 ? ` +${currentPkg.activities.length - 2} more` : ""}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                type="button"
+                onClick={handleStaffBookSubmit}
+                style={{ flex: 1, background: "#cf102d", color: "#fff", border: "none", borderRadius: "8px", padding: "12px", fontSize: "15px", cursor: "pointer", fontWeight: "700" }}
+              >
+                Confirm Booking
+              </button>
+              <button
+                type="button"
+                onClick={() => setBookForModal({ show: false, flight: null, passengerId: "", bookingMsg: "" })}
+                style={{ flex: 1, background: "#f0f0f0", color: "#333", border: "none", borderRadius: "8px", padding: "12px", fontSize: "15px", cursor: "pointer", fontWeight: "600" }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {showCreateModal && <CreateAccountModal onClose={() => setShowCreateModal(false)} onSuccess={handleRegisterSuccess} />}
+      {showEditModal && loggedInUser && <EditAccountModal user={loggedInUser} onClose={() => setShowEditModal(false)} onSaved={handleEditSaved} />}
 
       <div className="top-alert">
         <span className="important">Important:</span> Welcome to Royal Horizon Airways — Travel Beyond the Horizon
@@ -211,16 +1568,13 @@ function App() {
           <div className="logo">RHA</div>
           <div className="brand-text">Royal Horizon Airways</div>
         </div>
-
         <ul className="nav-links">
-          <li>BOOK</li>
-          <li>MANAGE</li>
-          <li>EXPERIENCE</li>
-          <li>WHERE WE FLY</li>
-          <li>LOYALTY</li>
-          <li>HELP</li>
+          <li onClick={() => setActiveTab("search")} style={{ cursor: "pointer" }}>BOOK</li>
+          <li onClick={() => setActiveTab("manage")} style={{ cursor: "pointer" }}>MANAGE</li>
+          <li onClick={async () => { setShowExperienceModal(true); await fetchExperienceRatings(); }} style={{ cursor: "pointer" }}>EXPERIENCE</li>
+          <li onClick={async () => { setShowDestinationsModal(true); await fetchDestinations(); }} style={{ cursor: "pointer" }}>WHERE WE FLY</li>
+          <li onClick={handleCheckLoyalty} style={{ cursor: "pointer", color: "#ffcc00", fontWeight: "bold" }}>LOYALTY</li>
         </ul>
-
         <div className="nav-right-group">
           {loggedInUser ? (
             <>
@@ -251,15 +1605,37 @@ function App() {
       <section className="booking-panel">
         <div className="tabs">
           <button className={activeTab === "search" ? "tab active" : "tab"} onClick={() => setActiveTab("search")}>Search Flights</button>
-          <button className={activeTab === "manage" ? "tab active" : "tab"} onClick={() => setActiveTab("manage")}>Manage Booking</button>
+
+          <button className={activeTab === "manage" ? "tab active" : "tab"} onClick={() => setActiveTab("manage")}>
+            {isPassenger ? "My Bookings" : "Manage Booking"}
+          </button>
+
           <button className={activeTab === "status" ? "tab active" : "tab"} onClick={() => setActiveTab("status")}>Flight Status</button>
+
           {!loggedInUser && (
             <button className={activeTab === "login" ? "tab active" : "tab"} onClick={() => setActiveTab("login")}>Login</button>
+          )}
+
+          {(isEmployee || isSystemAdmin) && (
+            <button
+              className={activeTab === "employee" ? "tab active" : "tab"}
+              onClick={() => { setActiveTab("employee"); loadEmployeePortal(); }}
+            >
+              Employee Portal
+            </button>
+          )}
+
+          {isSystemAdmin && (
+            <button
+              className={activeTab === "systemAdmin" ? "tab active" : "tab"}
+              onClick={() => { setActiveTab("systemAdmin"); fetchReports(); }}
+            >
+              System Admin
+            </button>
           )}
         </div>
 
         <div className="panel-content">
-          {/* ── Logged-in welcome banner ── */}
           {loggedInUser && (
             <div className="logged-in-banner">
               <div>
@@ -273,43 +1649,189 @@ function App() {
             </div>
           )}
 
-          {/* ── Search tab ── */}
+          {/* ── Search Flights ── */}
           {activeTab === "search" && (
-            <form className="search-form" onSubmit={handleFlightSubmit}>
-              <div className="trip-toggle">
-                <button type="button" className="toggle-btn active-toggle">Flight</button>
-                <button type="button" className="toggle-btn">Vacation Package</button>
+            <>
+            {/* ── MODE TOGGLE ── */}
+            <div className="trip-toggle" style={{ marginBottom: "0" }}>
+              <button type="button"
+                className={!vacationMode ? "toggle-btn active-toggle" : "toggle-btn"}
+                onClick={() => { setVacationMode(false); setSelectedPackage(null); }}>
+                ✈️ Flight
+              </button>
+              <button type="button"
+                className={vacationMode ? "toggle-btn active-toggle" : "toggle-btn"}
+                onClick={() => setVacationMode(true)}>
+                🏖️ Vacation Package
+              </button>
+            </div>
+
+            {/* ── VACATION PACKAGE BROWSER ── */}
+            {vacationMode ? (
+              <div style={{ marginTop: "0" }}>
+                {/* Package browser header */}
+                <div style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)", borderRadius: "12px", padding: "24px 28px", marginBottom: "20px" }}>
+                  <h3 style={{ margin: "0 0 6px", color: "#fff", fontSize: "20px", fontWeight: "800" }}>🏖️ Vacation Packages</h3>
+                  <p style={{ margin: "0 0 16px", color: "rgba(255,255,255,0.7)", fontSize: "13px" }}>All-inclusive bundles with flights, hotel, car rental & activities</p>
+                  {/* Search */}
+                  <div style={{ position: "relative", marginBottom: "14px" }}>
+                    <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }}>🔍</span>
+                    <input type="text" placeholder="Search destination or package name..."
+                      value={pkgSearch} onChange={(e) => setPkgSearch(e.target.value)}
+                      style={{ width: "100%", padding: "10px 14px 10px 36px", borderRadius: "8px", border: "none", fontSize: "14px", boxSizing: "border-box", background: "rgba(255,255,255,0.12)", color: "#fff" }} />
+                  </div>
+                  {/* Category filters */}
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    {PACKAGE_CATEGORIES.map((cat) => {
+                      const style = cat !== "All" ? CATEGORY_STYLES[cat] : null;
+                      return (
+                        <button key={cat} type="button" onClick={() => setPkgCategory(cat)}
+                          style={{ padding: "6px 14px", borderRadius: "999px", border: "none", cursor: "pointer", fontWeight: "700", fontSize: "13px",
+                            background: pkgCategory === cat ? "#fff" : "rgba(255,255,255,0.15)",
+                            color: pkgCategory === cat ? (style?.color || "#1a1a2e") : "rgba(255,255,255,0.85)" }}>
+                          {cat !== "All" && CATEGORY_STYLES[cat]?.icon + " "}{cat}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Selected package bar */}
+                {selectedPackage && (
+                  <div style={{ background: "linear-gradient(135deg, #1a6e3c, #22a85a)", borderRadius: "10px", padding: "12px 18px", marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+                    <div>
+                      <p style={{ margin: 0, color: "#fff", fontWeight: "800", fontSize: "15px" }}>✅ Package Selected: {selectedPackage.name}</p>
+                      <p style={{ margin: "2px 0 0", color: "rgba(255,255,255,0.85)", fontSize: "13px" }}>{selectedPackage.city} · {selectedPackage.duration} nights · ${selectedPackage.price}/person</p>
+                    </div>
+                    <div style={{ display: "flex", gap: "10px" }}>
+                      <button type="button" onClick={() => { setVacationMode(false); }}
+                        style={{ background: "#fff", color: "#1a6e3c", border: "none", borderRadius: "8px", padding: "8px 16px", fontWeight: "800", cursor: "pointer", fontSize: "13px" }}>
+                        ✈️ Now Pick a Flight
+                      </button>
+                      <button type="button" onClick={() => setSelectedPackage(null)}
+                        style={{ background: "rgba(255,255,255,0.2)", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 12px", cursor: "pointer", fontSize: "13px" }}>
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Package grid */}
+                {(() => {
+                  const filtered = VACATION_PACKAGES.filter((pkg) => {
+                    const matchCat = pkgCategory === "All" || pkg.category === pkgCategory;
+                    const q = pkgSearch.toLowerCase();
+                    const matchSearch = !q || pkg.city.toLowerCase().includes(q) || pkg.name.toLowerCase().includes(q) || pkg.category.toLowerCase().includes(q);
+                    return matchCat && matchSearch;
+                  });
+                  if (filtered.length === 0) return (
+                    <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
+                      <p style={{ fontSize: "32px" }}>🔍</p>
+                      <p>No packages match your search.</p>
+                      <button type="button" onClick={() => { setPkgSearch(""); setPkgCategory("All"); }} style={{ marginTop: "8px", background: "#f0f0f0", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer" }}>Clear filters</button>
+                    </div>
+                  );
+                  return (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px" }}>
+                      {filtered.map((pkg) => {
+                        const catStyle = CATEGORY_STYLES[pkg.category] || {};
+                        const savings = pkg.originalPrice - pkg.price;
+                        const isSelected = selectedPackage?.id === pkg.id;
+                        return (
+                          <div key={pkg.id} style={{ border: `2px solid ${isSelected ? "#1a6e3c" : "#eee"}`, borderRadius: "16px", overflow: "hidden", background: "#fff", boxShadow: isSelected ? "0 0 0 3px rgba(26,110,60,0.15)" : "0 2px 8px rgba(0,0,0,0.06)", transition: "all 0.2s" }}>
+                            {/* Card header */}
+                            <div style={{ background: catStyle.bg || "#f8f8f8", padding: "18px 18px 14px", position: "relative" }}>
+                              <div style={{ position: "absolute", top: "10px", right: "10px", display: "flex", gap: "6px", flexDirection: "column", alignItems: "flex-end" }}>
+                                <span style={{ background: catStyle.color, color: "#fff", fontSize: "10px", fontWeight: "800", padding: "3px 10px", borderRadius: "999px", textTransform: "uppercase", letterSpacing: "0.5px" }}>{catStyle.icon} {pkg.category}</span>
+                                {savings > 0 && <span style={{ background: "#cf102d", color: "#fff", fontSize: "10px", fontWeight: "800", padding: "3px 10px", borderRadius: "999px" }}>Save ${savings}</span>}
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <span style={{ fontSize: "36px" }}>{pkg.flag}</span>
+                                <div>
+                                  <p style={{ margin: "0 0 2px", fontWeight: "800", fontSize: "17px", color: "#1a1a2e" }}>{pkg.name}</p>
+                                  <p style={{ margin: 0, fontSize: "13px", color: "#666" }}>{pkg.city} · {pkg.duration} nights</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Inclusions */}
+                            <div style={{ padding: "14px 18px" }}>
+                              <p style={{ margin: "0 0 8px", fontSize: "12px", color: "#888", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>Includes</p>
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "10px" }}>
+                                <span style={{ background: "#eff6ff", color: "#1d4ed8", fontSize: "11px", fontWeight: "600", padding: "3px 10px", borderRadius: "999px" }}>🏨 {pkg.hotel.split(" ").slice(-1)[0]}</span>
+                                {pkg.carRental && <span style={{ background: "#f0fdf4", color: "#16a34a", fontSize: "11px", fontWeight: "600", padding: "3px 10px", borderRadius: "999px" }}>🚗 {pkg.carType}</span>}
+                                <span style={{ background: "#fef9c3", color: "#854d0e", fontSize: "11px", fontWeight: "600", padding: "3px 10px", borderRadius: "999px" }}>🍽️ {pkg.meals.split(" ").slice(0,2).join(" ")}</span>
+                              </div>
+                              <p style={{ margin: "0 0 4px", fontSize: "12px", color: "#555", fontWeight: "600" }}>Activities:</p>
+                              <ul style={{ margin: "0 0 12px", paddingLeft: "16px", fontSize: "12px", color: "#666" }}>
+                                {pkg.activities.slice(0, 3).map((a) => <li key={a} style={{ marginBottom: "2px" }}>{a}</li>)}
+                                {pkg.activities.length > 3 && <li style={{ color: "#aaa" }}>+{pkg.activities.length - 3} more</li>}
+                              </ul>
+                              {pkg.highlights?.length > 0 && (
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "12px" }}>
+                                  {pkg.highlights.slice(0,2).map((h) => <span key={h} style={{ background: "#f9f9f9", border: "1px solid #eee", fontSize: "11px", color: "#555", padding: "2px 8px", borderRadius: "6px" }}>✓ {h}</span>)}
+                                </div>
+                              )}
+
+                              {/* Price + button */}
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "10px", borderTop: "1px solid #f0f0f0" }}>
+                                <div>
+                                  {pkg.originalPrice > pkg.price && <p style={{ margin: "0 0 2px", fontSize: "12px", color: "#aaa", textDecoration: "line-through" }}>${pkg.originalPrice}</p>}
+                                  <p style={{ margin: 0, fontSize: "22px", fontWeight: "900", color: catStyle.color || "#1a1a2e" }}>${pkg.price}<span style={{ fontSize: "12px", fontWeight: "400", color: "#888" }}>/person</span></p>
+                                </div>
+                                {loggedInUser ? (
+                                  isSelected ? (
+                                    <button type="button" onClick={() => setSelectedPackage(null)}
+                                      style={{ background: "#1a6e3c", color: "#fff", border: "none", borderRadius: "10px", padding: "10px 16px", fontWeight: "700", cursor: "pointer", fontSize: "13px" }}>
+                                      ✅ Selected
+                                    </button>
+                                  ) : (
+                                    <button type="button" onClick={() => setSelectedPackage(pkg)}
+                                      style={{ background: catStyle.color || "#cf102d", color: "#fff", border: "none", borderRadius: "10px", padding: "10px 16px", fontWeight: "700", cursor: "pointer", fontSize: "13px" }}>
+                                      Select Package
+                                    </button>
+                                  )
+                                ) : (
+                                  <button type="button" onClick={() => setActiveTab("login")}
+                                    style={{ background: "#f0f0f0", color: "#333", border: "none", borderRadius: "10px", padding: "10px 16px", fontWeight: "600", cursor: "pointer", fontSize: "13px" }}>
+                                    Log in to Book
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
+            ) : (
+            /* ── REGULAR FLIGHT SEARCH ── */
+            <form className="search-form" onSubmit={handleFlightSubmit}>
+              {selectedPackage && (
+                <div style={{ background: "linear-gradient(135deg, #e8f5e9, #f1fff5)", border: "2px solid #1a6e3c", borderRadius: "10px", padding: "12px 16px", marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: "800", color: "#1a4d2e", fontSize: "14px" }}>📦 Package: {selectedPackage.name}</p>
+                    <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#555" }}>Search flights to <strong>{selectedPackage.city}</strong> to complete your bundle</p>
+                  </div>
+                  <button type="button" onClick={() => setSelectedPackage(null)} style={{ background: "none", border: "1px solid #1a6e3c", color: "#1a6e3c", borderRadius: "6px", padding: "4px 10px", cursor: "pointer", fontSize: "12px" }}>Remove</button>
+                </div>
+              )}
               <div className="advanced-search">Advanced search: multi-city, promo codes, and partner airlines</div>
               <div className="form-row">
                 <div className="form-group large-group">
-                  <label>Leaving from</label>
-                  <select 
-                    name="departureAirportId" 
-                    value={flightSearch.departureAirportId} 
-                    onChange={handleFlightChange} 
-                    required disabled={loadingAirports}
-                  >
-                    <option value="">{loadingAirports ? "Loading airports..." : "Select departure city"}</option>
-                    {airports.map((a) => 
-                      <option key={a.airport_id} value={a.airport_id}>
-                        {a.city_name}, {a.country_name} ({a.airport_name})
-                      </option>)}
+                  <label>Departure Airport</label>
+                  <select name="departureAirportId" value={flightSearch.departureAirportId} onChange={handleFlightChange} required disabled={loadingAirports}>
+                    <option value="">{loadingAirports ? "Loading airports..." : "Select departure airport"}</option>
+                    {airports.map((a) => <option key={a.airport_id} value={a.airport_id}>{a.airport_name}</option>)}
                   </select>
                 </div>
                 <div className="form-group large-group">
-                  <label>Going to</label>
-                  <select 
-                    name="arrivalAirportId" 
-                    value={flightSearch.arrivalAirportId} 
-                    onChange={handleFlightChange} 
-                    required disabled={loadingAirports}
-                  >
+                  <label>Arrival Airport</label>
+                  <select name="arrivalAirportId" value={flightSearch.arrivalAirportId} onChange={handleFlightChange} required disabled={loadingAirports}>
                     <option value="">{loadingAirports ? "Loading airports..." : "Select arrival airport"}</option>
-                    {airports.map((a) => 
-                      <option key={a.airport_id} value={a.airport_id}>
-                        {a.city_name}, {a.country_name} ({a.airport_name})
-                      </option>)}
+                    {airports.map((a) => <option key={a.airport_id} value={a.airport_id}>{a.airport_name}</option>)}
                   </select>
                 </div>
               </div>
@@ -331,31 +1853,98 @@ function App() {
               </div>
               <button type="submit" className="primary-btn">{loadingFlights ? "Searching..." : "Continue"}</button>
               {searchMessage && <p style={{ marginTop: "14px", fontSize: "18px" }}>{searchMessage}</p>}
+
+              {/* Free flight mode banner */}
+              {freeFlightMode && (
+                <div style={{ marginTop: "16px", background: "linear-gradient(135deg, #1a6e3c, #22a85a)", borderRadius: "12px", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+                  <div>
+                    <p style={{ margin: 0, color: "#fff", fontWeight: "800", fontSize: "16px" }}>🎟️ Free Flight Redemption Mode</p>
+                    <p style={{ margin: "3px 0 0", color: "rgba(255,255,255,0.85)", fontSize: "13px" }}>Select any flight below to book it for free (1,000 miles)</p>
+                  </div>
+                  <button type="button" onClick={() => setFreeFlightMode(false)} style={{ background: "rgba(255,255,255,0.2)", color: "#fff", border: "1px solid rgba(255,255,255,0.4)", borderRadius: "8px", padding: "6px 14px", cursor: "pointer", fontSize: "13px", fontWeight: "600" }}>Cancel</button>
+                </div>
+              )}
+
               {flightResults.length > 0 && (
                 <div style={{ marginTop: "20px" }}>
                   <h2>Available Flights</h2>
                   {flightResults.map((flight) => (
-                    <div key={flight.flight_id} className="flight-card">
-                      <p><strong>Flight ID:</strong> {flight.flight_id}</p>
-                      <p><strong>To:</strong> {flight.departure_city}, {flight.departure_country}</p>
-                      <p><strong>From:</strong> {flight.arrival_city}, {flight.arrival_country}</p>
-                      <p><strong>Departure:</strong> {flight.departure_airport} ({flight.departure_airport_code})</p>
-                      <p><strong>Arrival:</strong> {flight.arrival_airport} ({flight.arrival_airport_code})</p>
-                      <p><strong>Date:</strong> {new Date(flight.date_of_departure).toLocaleString()}</p>
-                      <p><strong>Seats Available:</strong> {flight.seats_available}</p>
-
-                      <p><strong>Economy:</strong> ${Number(flight.economy_price || 0).toLocaleString()}</p>
-                      <p><strong>Business:</strong> ${Number(flight.business_price || 0).toLocaleString()}</p>
-                      <p><strong>First Class:</strong> ${Number(flight.first_class_price || 0).toLocaleString()}</p>
-
-                      {loggedInUser && (
-                        <button type="button" className="book-btn">
-                          Book This Flight
-                        </button>
+                    <div key={flight.flight_id} className="flight-card" style={{ position: "relative", overflow: "hidden" }}>
+                      {/* Free flight badge */}
+                      {freeFlightMode && (
+                        <div style={{ position: "absolute", top: 0, right: 0, background: "#1a6e3c", color: "#fff", fontSize: "11px", fontWeight: "800", padding: "4px 12px", borderBottomLeftRadius: "8px", letterSpacing: "0.5px" }}>
+                          FREE REDEMPTION
+                        </div>
                       )}
-                      {!loggedInUser && (
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: "8px" }}>
+                        <div>
+                          <p style={{ margin: "0 0 4px" }}><strong>Flight ID:</strong> {flight.flight_id}</p>
+                          <p style={{ margin: "0 0 4px" }}><strong>Departure:</strong> {flight.departure_airport}</p>
+                          <p style={{ margin: "0 0 4px" }}><strong>Arrival:</strong> {flight.arrival_airport}</p>
+                          <p style={{ margin: "0 0 4px" }}><strong>Date:</strong> {new Date(flight.date_of_departure).toLocaleString()}</p>
+                          <p style={{ margin: 0 }}><strong>Seats Available:</strong> {flight.seats_available}</p>
+                        </div>
+                        {/* Price badge */}
+                        <div style={{ textAlign: "center", background: freeFlightMode ? "#e8f5e9" : "#fff8f8", border: `2px solid ${freeFlightMode ? "#1a6e3c" : "#cf102d"}`, borderRadius: "12px", padding: "12px 20px", minWidth: "110px" }}>
+                          {freeFlightMode ? (
+                            <>
+                              <p style={{ margin: "0 0 2px", fontSize: "11px", color: "#1a6e3c", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.5px" }}>Redemption</p>
+                              <p style={{ margin: "0 0 2px", fontSize: "20px", fontWeight: "800", color: "#1a6e3c" }}>FREE</p>
+                              <p style={{ margin: 0, fontSize: "11px", color: "#555" }}>1,000 miles</p>
+                            </>
+                          ) : (
+                            <>
+                              <p style={{ margin: "0 0 2px", fontSize: "11px", color: "#888", textTransform: "uppercase", letterSpacing: "0.5px" }}>From</p>
+                              <p style={{ margin: "0 0 2px", fontSize: "24px", fontWeight: "800", color: "#cf102d" }}>${flight.price}</p>
+                              <p style={{ margin: 0, fontSize: "11px", color: "#888" }}>per person</p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {loggedInUser ? (
+                        canBook ? (
+                          freeFlightMode && isPassenger ? (
+                            <button type="button" className="book-btn" style={{ background: "#1a6e3c", marginTop: "10px" }} onClick={() => handleRedeemFlight(flight)}>
+                              🎟️ Redeem Free Flight
+                            </button>
+                          ) : !freeFlightMode ? (
+                            <>
+                              {/* Show matching packages for this destination */}
+                              {(() => {
+                                const pkgsForDest = VACATION_PACKAGES.filter((p) => p.arrival === flight.arrival_airport);
+                                if (pkgsForDest.length === 0) return null;
+                                const alreadyPkg = selectedPackage && pkgsForDest.some((p) => p.id === selectedPackage.id);
+                                return (
+                                  <div style={{ marginTop: "10px", background: "#f0f9ff", border: "1px solid #7dd3fc", borderRadius: "8px", padding: "10px 14px" }}>
+                                    <p style={{ margin: "0 0 6px", fontSize: "12px", fontWeight: "700", color: "#0369a1" }}>🏖️ {pkgsForDest.length} vacation package{pkgsForDest.length > 1 ? "s" : ""} available for {flight.arrival_airport.split(" ")[0]}</p>
+                                    {alreadyPkg ? (
+                                      <p style={{ margin: 0, fontSize: "12px", color: "#1a6e3c", fontWeight: "600" }}>✅ {selectedPackage.name} will be added to this booking</p>
+                                    ) : (
+                                      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                                        {pkgsForDest.slice(0, 3).map((p) => (
+                                          <button key={p.id} type="button" onClick={() => setSelectedPackage(p)}
+                                            style={{ background: "#fff", border: "1px solid #7dd3fc", color: "#0369a1", borderRadius: "6px", padding: "4px 10px", fontSize: "11px", fontWeight: "600", cursor: "pointer" }}>
+                                            {p.emoji} {p.category} · ${p.price}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                              <button type="button" className="book-btn" style={{ marginTop: "10px" }} onClick={() => handleBookFlight(flight)}>
+                                Book This Flight — ${flight.price}{selectedPackage && VACATION_PACKAGES.some((p) => p.id === selectedPackage.id && p.arrival === flight.arrival_airport) ? ` + ${selectedPackage.name}` : ""}
+                              </button>
+                            </>
+                          ) : null
+                        ) : (
+                          <p className="book-hint">Your current role cannot book flights from this screen.</p>
+                        )
+                      ) : (
                         <p className="book-hint">
-                          <span onClick={() => setActiveTab("login")} className="book-hint-link">Log in</span> or{" "}
+                          <span onClick={() => setActiveTab("login")} className="book-hint-link">Log in</span>{" "}or{" "}
                           <span onClick={() => setShowCreateModal(true)} className="book-hint-link">create an account</span> to book.
                         </p>
                       )}
@@ -364,37 +1953,58 @@ function App() {
                 </div>
               )}
             </form>
+            )}
+            </>
           )}
 
-          {/* ── Manage tab ── */}
+          {/* ── Manage Booking ── */}
           {activeTab === "manage" && (
-            <form className="login-form" onSubmit={handleManageSubmit}>
-              <h2>Manage Booking</h2>
-              <p>Enter your booking ID and last name to find your booking.</p>
-              <div className="form-group">
-                <label>Booking ID</label>
-                <input type="text" name="bookingId" value={manageData.bookingId} onChange={handleManageChange} placeholder="Enter booking ID" required />
-              </div>
-              <div className="form-group">
-                <label>Last Name</label>
-                <input type="text" name="lastName" value={manageData.lastName} onChange={handleManageChange} placeholder="Enter last name" required />
-              </div>
-              <button type="submit" className="primary-btn">{loadingManage ? "Searching..." : "Find Booking"}</button>
-              {manageMessage && <p style={{ marginTop: "14px", fontSize: "18px" }}>{manageMessage}</p>}
-              {manageResult && (
-                <div className="result-card">
-                  <p><strong>Booking ID:</strong> {manageResult.booking_id}</p>
-                  <p><strong>Passenger:</strong> {manageResult.first_name} {manageResult.last_name}</p>
-                  <p><strong>Email:</strong> {manageResult.email || "N/A"}</p>
-                  <p><strong>Phone:</strong> {manageResult.phone_number || "N/A"}</p>
-                  <p><strong>Seat Preference:</strong> {manageResult.seat_preferences || "N/A"}</p>
-                  <p><strong>Meal Preference:</strong> {manageResult.meal_preferences || "N/A"}</p>
+            <div className="login-form">
+              <h2>{isPassenger ? "My Bookings" : "Manage Booking"}</h2>
+              {!loggedInUser ? (
+                <div style={{ textAlign: "center", marginTop: "20px" }}>
+                  <p>You must be logged in to view and manage bookings.</p>
+                  <button className="primary-btn" onClick={() => setActiveTab("login")} style={{ marginTop: "15px" }}>Log In Now</button>
                 </div>
+              ) : isPassenger ? (
+                /* PASSENGER: select from their own bookings */
+                <form onSubmit={handleManageSubmit}>
+                  <div className="form-group">
+                    <label>Select Booking</label>
+                    <select name="bookingId" value={manageData.bookingId} onChange={handleManageChange} required disabled={loadingUserBookings}>
+                      <option value="">{loadingUserBookings ? "Loading bookings..." : "-- Select a Booking --"}</option>
+                      {userBookings.map((b) => (
+                        <option key={b.booking_id} value={b.booking_id}>Booking #{b.booking_id} ({b.booking_status})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button type="submit" className="primary-btn" disabled={!manageData.bookingId}>{loadingManage ? "Searching..." : "View Details"}</button>
+                  {manageMessage && <p style={{ marginTop: "14px", fontSize: "18px" }}>{manageMessage}</p>}
+                  {manageResult && <BookingResultCard result={manageResult} onCancel={handleCancelBooking} showPrefs={true} />}
+                </form>
+              ) : (
+                /* EMPLOYEE / SYSTEM ADMIN: dropdown of all bookings */
+                <form onSubmit={handleManageSubmit}>
+                  <div className="form-group">
+                    <label>Select Booking</label>
+                    <select name="bookingId" value={manageData.bookingId} onChange={handleManageChange} required disabled={loadingAllBookings}>
+                      <option value="">{loadingAllBookings ? "Loading bookings..." : "-- Select a Booking --"}</option>
+                      {allBookingsAdmin.map((b) => (
+                        <option key={b.booking_id} value={b.booking_id}>
+                          #{b.booking_id} — {b.first_name} {b.last_name} ({b.booking_status})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button type="submit" className="primary-btn" disabled={!manageData.bookingId}>{loadingManage ? "Searching..." : "View Details"}</button>
+                  {manageMessage && <p style={{ marginTop: "14px", fontSize: "18px" }}>{manageMessage}</p>}
+                  {manageResult && <BookingResultCard result={manageResult} onCancel={handleCancelBooking} showPrefs={true} />}
+                </form>
               )}
-            </form>
+            </div>
           )}
 
-          {/* ── Status tab ── */}
+          {/* ── Flight Status ── */}
           {activeTab === "status" && (
             <form className="login-form" onSubmit={handleStatusSubmit}>
               <h2>Flight Status</h2>
@@ -417,7 +2027,471 @@ function App() {
             </form>
           )}
 
-          {/* ── Login tab ── */}
+          {/* ── Employee Portal ── */}
+          {activeTab === "employee" && (isEmployee || isSystemAdmin) && (
+            <div>
+              <h2>Employee Portal</h2>
+              <p style={{ color: "#666", marginBottom: "18px" }}>Full access: passenger management, bookings, flight operations, and administrative actions.</p>
+
+              {/* Section navigation */}
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "24px" }}>
+                <SectionBtn id="passengers" label="👤 Passengers" />
+                <SectionBtn id="bookings" label="📋 Bookings" />
+                <SectionBtn id="flightStatus" label="🛫 Flight Status" />
+                <SectionBtn id="routes" label="🗺️ Routes" />
+                <SectionBtn id="aircraft" label="✈️ Aircraft" />
+                <SectionBtn id="actions" label="⚙️ Admin Actions" />
+              </div>
+
+              {/* ── SECTION: Passengers ── */}
+              {empSection === "passengers" && (
+                <div className="result-card">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                    <h3 style={{ margin: 0 }}>Passenger Directory</h3>
+                    <RefreshBtn section="passengers" fetchFn={fetchAllPassengers} loading={loadingPassengers} />
+                  </div>
+                  {allPassengers.length === 0 ? (
+                    <p style={{ color: "#888" }}>No passenger data. Click Refresh to load.</p>
+                  ) : (
+                    <div style={{ overflowX: "auto" }}>
+                      <p style={{ margin: "0 0 10px", fontSize: "13px", color: "#888" }}>
+                        Showing <strong>{allPassengers.length}</strong> registered passenger{allPassengers.length !== 1 ? "s" : ""}
+                      </p>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                        <thead>
+                          <tr style={{ background: "#1a1a2e", color: "#fff" }}>
+                            {["ID", "Name", "Role", "Email", "Phone", "Seat Pref", "Meal Pref", "Country", "Passport", "Visa"].map((h) => (
+                              <th key={h} style={{ padding: "10px", textAlign: "left" }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {allPassengers.map((p) => (
+                            <tr key={p.passenger_id} style={{ borderBottom: "1px solid #eee" }}>
+                              <td style={{ padding: "10px" }}>{p.passenger_id}</td>
+                              <td style={{ padding: "10px", fontWeight: "600" }}>{p.first_name} {p.last_name}</td>
+                              <td style={{ padding: "10px" }}>
+                                <span style={{ background: p.user_role === "Passenger" ? "#e3f2fd" : "#e8f5e9", color: p.user_role === "Passenger" ? "#1565c0" : "#1a6e3c", fontSize: "11px", fontWeight: "700", padding: "2px 10px", borderRadius: "999px" }}>
+                                  {p.user_role}
+                                </span>
+                              </td>
+                              <td style={{ padding: "10px" }}>{p.email}</td>
+                              <td style={{ padding: "10px" }}>{p.phone_number || "—"}</td>
+                              <td style={{ padding: "10px" }}>{p.seat_preferences || "—"}</td>
+                              <td style={{ padding: "10px" }}>{p.meal_preferences || "—"}</td>
+                              <td style={{ padding: "10px" }}>{p.country_of_origin || "—"}</td>
+                              <td style={{ padding: "10px" }}>
+                                <span style={{ color: Number(p.passport_status) === 1 ? "#1a6e3c" : "#b00020", fontWeight: "600" }}>
+                                  {Number(p.passport_status) === 1 ? "✓ Valid" : "✗ Invalid"}
+                                </span>
+                              </td>
+                              <td style={{ padding: "10px" }}>
+                                <span style={{ color: Number(p.visa_status) === 1 ? "#1a6e3c" : "#b00020", fontWeight: "600" }}>
+                                  {Number(p.visa_status) === 1 ? "✓ Valid" : "✗ Invalid"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── SECTION: Bookings ── */}
+              {empSection === "bookings" && (
+                <div>
+                  {/* Find & Modify Booking */}
+                  <div className="result-card" style={{ marginBottom: "20px" }}>
+                    <h3>Find Booking</h3>
+                    <form onSubmit={handleManageSubmit}>
+                      <div className="form-group">
+                        <label>Select Booking</label>
+                        <select name="bookingId" value={manageData.bookingId} onChange={handleManageChange} required disabled={loadingAllBookings}>
+                          <option value="">{loadingAllBookings ? "Loading bookings..." : "-- Select a booking --"}</option>
+                          {allBookingsAdmin.map((b) => (
+                            <option key={b.booking_id} value={b.booking_id}>
+                              #{b.booking_id} — {b.first_name} {b.last_name} ({b.booking_status}) · {new Date(b.booking_date).toLocaleDateString()}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <button type="submit" className="primary-btn" disabled={!manageData.bookingId}>{loadingManage ? "Searching..." : "View Details"}</button>
+                      {manageMessage && <p style={{ marginTop: "14px", fontSize: "18px" }}>{manageMessage}</p>}
+                      {manageResult && <BookingResultCard result={manageResult} onCancel={handleCancelBooking} showPrefs={true} />}
+                    </form>
+                  </div>
+
+                  {/* Modify Booking Status */}
+                  <div className="result-card" style={{ marginBottom: "20px" }}>
+                    <h3>Modify Booking Status</h3>
+                    <form onSubmit={handleUpdateBookingStatus}>
+                      <div className="form-row" style={{ alignItems: "flex-end" }}>
+                        <div className="form-group">
+                          <label>Select Booking</label>
+                          <select value={bookingStatusUpdate.bookingId} onChange={(e) => setBookingStatusUpdate({ ...bookingStatusUpdate, bookingId: e.target.value })} required disabled={loadingAllBookings}>
+                            <option value="">{loadingAllBookings ? "Loading..." : "-- Select a booking --"}</option>
+                            {allBookingsAdmin.map((b) => (
+                              <option key={b.booking_id} value={b.booking_id}>
+                                #{b.booking_id} — {b.first_name} {b.last_name} ({b.booking_status})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label>New Status</label>
+                          <select value={bookingStatusUpdate.status} onChange={(e) => setBookingStatusUpdate({ ...bookingStatusUpdate, status: e.target.value })}>
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                          </select>
+                        </div>
+                        <button type="submit" className="primary-btn" style={{ padding: "16px 20px", backgroundColor: "#333" }}>Update Status</button>
+                      </div>
+                      {bookingStatusMsg && <p style={{ marginTop: "12px", fontWeight: "600", color: bookingStatusMsg.startsWith("✅") ? "#1a6e3c" : "#b00020" }}>{bookingStatusMsg}</p>}
+                    </form>
+                  </div>
+
+                  {/* Add New Booking */}
+                  <div className="result-card" style={{ marginBottom: "20px" }}>
+                    <h3>Add New Booking</h3>
+                    <p style={{ color: "#666", fontSize: "14px", marginBottom: "12px" }}>Create a confirmed booking for any user by entering their User ID and Passenger ID.</p>
+                    <form onSubmit={handleAddBookingAdmin}>
+                      <div className="form-row" style={{ alignItems: "flex-end" }}>
+                        <div className="form-group">
+                          <label>User ID</label>
+                          <input type="number" value={adminNewBooking.userId} onChange={(e) => setAdminNewBooking({ ...adminNewBooking, userId: e.target.value })} placeholder="e.g. 5" required />
+                        </div>
+                        <div className="form-group">
+                          <label>Passenger ID</label>
+                          <input type="number" value={adminNewBooking.passengerId} onChange={(e) => setAdminNewBooking({ ...adminNewBooking, passengerId: e.target.value })} placeholder="e.g. 5" required />
+                        </div>
+                        <button type="submit" className="primary-btn" style={{ padding: "16px 20px", backgroundColor: "#1a6e3c" }}>Create Booking</button>
+                      </div>
+                      {adminNewBookingMsg && <p style={{ marginTop: "12px", fontWeight: "600", color: adminNewBookingMsg.startsWith("✅") ? "#1a6e3c" : "#b00020" }}>{adminNewBookingMsg}</p>}
+                    </form>
+                  </div>
+
+                  {/* All Bookings Table */}
+                  <div className="result-card">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                      <h3 style={{ margin: 0 }}>All Bookings</h3>
+                      <RefreshBtn section="allBookings" fetchFn={fetchAllBookingsAdmin} loading={loadingAllBookings} />
+                    </div>
+                    {allBookingsAdmin.length === 0 ? <p style={{ color: "#888" }}>No bookings loaded. Click Refresh.</p> : (
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                          <thead>
+                            <tr style={{ background: "#1a1a2e", color: "#fff" }}>
+                              {["Booking ID", "Passenger", "Email", "Phone", "Seat Pref", "Meal Pref", "Status", "Date"].map((h) => (
+                                <th key={h} style={{ padding: "10px", textAlign: "left" }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {allBookingsAdmin.map((b) => (
+                              <tr key={b.booking_id} style={{ borderBottom: "1px solid #eee" }}>
+                                <td style={{ padding: "10px" }}>#{b.booking_id}</td>
+                                <td style={{ padding: "10px", fontWeight: "600" }}>{b.first_name} {b.last_name}</td>
+                                <td style={{ padding: "10px" }}>{b.email}</td>
+                                <td style={{ padding: "10px" }}>{b.phone_number || "—"}</td>
+                                <td style={{ padding: "10px" }}>{b.seat_preferences || "—"}</td>
+                                <td style={{ padding: "10px" }}>{b.meal_preferences || "—"}</td>
+                                <td style={{ padding: "10px" }}>
+                                  <span style={{ background: b.booking_status === "Confirmed" ? "#e8f5e9" : b.booking_status === "Cancelled" ? "#fce4ec" : "#fff8e1", color: b.booking_status === "Confirmed" ? "#1a6e3c" : b.booking_status === "Cancelled" ? "#b00020" : "#f57c00", padding: "3px 8px", borderRadius: "10px", fontSize: "12px", fontWeight: "600" }}>{b.booking_status}</span>
+                                </td>
+                                <td style={{ padding: "10px" }}>{new Date(b.booking_date).toLocaleDateString()}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── SECTION: Flight Status ── */}
+              {empSection === "flightStatus" && (
+                <div className="result-card">
+                  <h3>Check Flight Status</h3>
+                  <form onSubmit={handleStatusSubmit}>
+                    <div className="form-group">
+                      <label>Select Flight</label>
+                      <select
+                        name="flightId"
+                        value={statusData.flightId}
+                        onChange={handleStatusChange}
+                        required
+                        disabled={loadingAllFlights}
+                      >
+                        <option value="">
+                          {loadingAllFlights ? "Loading flights..." : "-- Select a Flight --"}
+                        </option>
+                        {allFlights.map((f) => (
+                          <option key={f.flight_id} value={f.flight_id}>
+                            #{f.flight_id} — {f.departure_airport} → {f.arrival_airport} ({new Date(f.date_of_departure).toLocaleDateString()}, {f.seats_available} seats)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button type="submit" className="primary-btn" disabled={!statusData.flightId}>{loadingStatus ? "Searching..." : "Check Status"}</button>
+                    {statusMessage && <p style={{ marginTop: "14px", fontSize: "18px" }}>{statusMessage}</p>}
+                    {statusResult && (
+                      <div className="result-card" style={{ marginTop: "14px" }}>
+                        <p><strong>Flight ID:</strong> {statusResult.flight_id}</p>
+                        <p><strong>Departure Airport:</strong> {statusResult.departure_airport}</p>
+                        <p><strong>Arrival Airport:</strong> {statusResult.arrival_airport}</p>
+                        <p><strong>Departure Time:</strong> {new Date(statusResult.date_of_departure).toLocaleString()}</p>
+                        <p><strong>Seats Available:</strong> {statusResult.seats_available}</p>
+                      </div>
+                    )}
+                  </form>
+                </div>
+              )}
+
+              {/* ── SECTION: Routes ── */}
+              {empSection === "routes" && (
+                <div>
+                  {/* Route Status Table */}
+                  <div className="result-card" style={{ marginBottom: "20px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                      <h3 style={{ margin: 0 }}>Route Active / Inactive Status</h3>
+                      <RefreshBtn section="routes" fetchFn={fetchRoutesWithStatus} loading={loadingRoutesStatus} />
+                    </div>
+                    <p style={{ color: "#888", fontSize: "13px", marginBottom: "10px" }}>Click Activate or Deactivate to change a route's status. Click any row to see its scheduled flights.</p>
+                    {routeMsg.text && (
+                      <div style={{ marginBottom: "12px", padding: "10px 14px", borderRadius: "8px", fontWeight: "600", fontSize: "14px", background: routeMsg.type === "success" ? "#e8f5e9" : "#fce4ec", color: routeMsg.type === "success" ? "#1a6e3c" : "#b00020" }}>
+                        {routeMsg.text}
+                      </div>
+                    )}
+                    {routesWithStatus.length === 0 ? <p style={{ color: "#888" }}>No route data. Click Refresh.</p> : (
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+                        <thead>
+                          <tr style={{ background: "#1a1a2e", color: "#fff" }}>
+                            {["Route ID", "Departure", "Arrival", "Flights", "Status", "Action"].map((h) => (
+                              <th key={h} style={{ padding: "10px", textAlign: h === "Flights" || h === "Status" || h === "Action" ? "center" : "left" }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {routesWithStatus.map((r) => (
+                            <tr key={r.route_id} style={{ borderBottom: "1px solid #ddd", cursor: "pointer", height: "44px" }} onClick={() => fetchRouteFlights(r.route_id, `${r.departure} → ${r.arrival}`)}>
+                              <td style={{ padding: "10px" }}>{r.route_id}</td>
+                              <td style={{ padding: "10px" }}>{r.departure}</td>
+                              <td style={{ padding: "10px" }}>{r.arrival}</td>
+                              <td style={{ padding: "10px", textAlign: "center" }}>{r.total_flights}</td>
+                              <td style={{ padding: "10px", textAlign: "center" }}>
+                                <span style={{ background: r.is_active ? "#e8f5e9" : "#fce4ec", color: r.is_active ? "#1a6e3c" : "#b00020", padding: "3px 10px", borderRadius: "10px", fontSize: "12px", fontWeight: "700" }}>{r.is_active ? "Active" : "Inactive"}</span>
+                              </td>
+                              <td style={{ padding: "10px", textAlign: "center" }}>
+                                <button type="button" onClick={(e) => { e.stopPropagation(); handleToggleRouteStatus(r.route_id); }}
+                                  style={{ background: r.is_active ? "#b00020" : "#1a6e3c", color: "#fff", border: "none", borderRadius: "6px", padding: "5px 12px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}>
+                                  {r.is_active ? "Deactivate" : "Activate"}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                    <p style={{ fontSize: "12px", color: "#aaa", marginTop: "8px" }}>💡 Click any row to see its flights</p>
+                  </div>
+
+                  {/* Route Report */}
+                  <div className="result-card">
+                    <h3>Flight Route Data Report</h3>
+                    <button className="nav-edit-btn" style={{ color: "#222", borderColor: "#222", margin: "10px 0" }} onClick={fetchReports}>{loadingReports ? "Generating..." : "Generate Report"}</button>
+                    {reports.length > 0 && (
+                      <table style={{ width: "100%", textAlign: "left", marginTop: "10px", borderCollapse: "collapse" }}>
+                        <thead>
+                          <tr style={{ borderBottom: "2px solid #ddd" }}>
+                            {["Route ID", "Departure", "Arrival", "Total Flights"].map((h) => <th key={h} style={{ padding: "10px" }}>{h}</th>)}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reports.map((r) => (
+                            <tr key={r.route_id} style={{ borderBottom: "1px solid #ddd", height: "40px", cursor: "pointer" }}
+                              onClick={() => fetchRouteFlights(r.route_id, `${r.departure} → ${r.arrival}`)}
+                              onMouseEnter={(e) => e.currentTarget.style.background = "#f5f5f5"}
+                              onMouseLeave={(e) => e.currentTarget.style.background = ""}>
+                              <td style={{ padding: "10px" }}>{r.route_id}</td>
+                              <td style={{ padding: "10px" }}>{r.departure}</td>
+                              <td style={{ padding: "10px" }}>{r.arrival}</td>
+                              <td style={{ padding: "10px" }}>
+                                <span style={{ background: "#e3f2fd", color: "#1565c0", padding: "3px 10px", borderRadius: "10px", fontWeight: "700", fontSize: "13px" }}>{r.total_flights}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                    <p style={{ fontSize: "12px", color: "#aaa", marginTop: "8px" }}>💡 Click any row to view its flights</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ── SECTION: Aircraft ── */}
+              {empSection === "aircraft" && (
+                <div className="result-card">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                    <h3 style={{ margin: 0 }}>All Aircraft</h3>
+                    <RefreshBtn section="aircraft" fetchFn={fetchAllAircrafts} loading={loadingAircrafts} />
+                  </div>
+                  {allAircrafts.length === 0 ? <p style={{ color: "#888" }}>No aircraft data. Click Refresh.</p> : (
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+                      <thead>
+                        <tr style={{ background: "#1a1a2e", color: "#fff" }}>
+                          {["ID", "Model", "Manufacturer", "Seating Capacity", "Baggage Capacity", "Edit"].map((h) => (
+                            <th key={h} style={{ padding: "10px", textAlign: h === "Seating Capacity" || h === "Baggage Capacity" || h === "Edit" ? "center" : "left" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allAircrafts.map((a) => (
+                          <tr key={a.aircraft_id} style={{ borderBottom: "1px solid #ddd", height: "44px" }}>
+                            <td style={{ padding: "10px" }}>{a.aircraft_id}</td>
+                            <td style={{ padding: "10px", fontWeight: "600" }}>{a.model}</td>
+                            <td style={{ padding: "10px" }}>{a.manufacturer}</td>
+                            <td style={{ padding: "10px", textAlign: "center" }}>
+                              {inlineAircraftEdit.id === a.aircraft_id ? (
+                                <input type="number" value={inlineAircraftEdit.capacity} onChange={(e) => setInlineAircraftEdit({ ...inlineAircraftEdit, capacity: e.target.value })}
+                                  style={{ width: "80px", padding: "4px 8px", border: "1px solid #ccc", borderRadius: "4px", textAlign: "center" }} />
+                              ) : a.seating_capacity}
+                            </td>
+                            <td style={{ padding: "10px", textAlign: "center" }}>{a.max_baggage_capacity}</td>
+                            <td style={{ padding: "10px", textAlign: "center" }}>
+                              {inlineAircraftEdit.id === a.aircraft_id ? (
+                                <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
+                                  <button type="button" onClick={() => handleInlineAircraftUpdate(a.aircraft_id)} style={{ background: "#1a6e3c", color: "#fff", border: "none", borderRadius: "5px", padding: "5px 10px", cursor: "pointer", fontSize: "12px" }}>Save</button>
+                                  <button type="button" onClick={() => setInlineAircraftEdit({ id: null, capacity: "" })} style={{ background: "#666", color: "#fff", border: "none", borderRadius: "5px", padding: "5px 10px", cursor: "pointer", fontSize: "12px" }}>Cancel</button>
+                                </div>
+                              ) : (
+                                <button type="button" onClick={() => setInlineAircraftEdit({ id: a.aircraft_id, capacity: a.seating_capacity })} style={{ background: "#333", color: "#fff", border: "none", borderRadius: "5px", padding: "5px 12px", cursor: "pointer", fontSize: "12px" }}>✏️ Edit</button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                  {aircraftMsg.text && (
+                    <div style={{ marginTop: "12px", padding: "10px 14px", borderRadius: "8px", fontWeight: "600", fontSize: "14px", background: aircraftMsg.type === "success" ? "#e8f5e9" : "#fce4ec", color: aircraftMsg.type === "success" ? "#1a6e3c" : "#b00020" }}>
+                      {aircraftMsg.text}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── SECTION: Admin Actions ── */}
+              {empSection === "actions" && (
+                <div className="result-card">
+                  <h3>Flight Admin Actions</h3>
+                  <p style={{ color: "#666", marginBottom: "15px" }}>Add flights, update aircraft capacity, and delete routes.</p>
+                  <div style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
+                    <button type="button" className="primary-btn" style={{ fontSize: "14px", padding: "10px", backgroundColor: crudAction === "addFlight" ? "#a80d24" : "#cf102d" }} onClick={() => { setCrudAction("addFlight"); setCrudMsg({ text: "", type: "" }); }}>+ Add New Flight</button>
+                    <button type="button" className="primary-btn" style={{ fontSize: "14px", padding: "10px", backgroundColor: crudAction === "updateAircraft" ? "#111" : "#333" }} onClick={() => { setCrudAction("updateAircraft"); setCrudMsg({ text: "", type: "" }); }}>Update Aircraft</button>
+                    <button type="button" className="primary-btn" style={{ fontSize: "14px", padding: "10px", backgroundColor: crudAction === "deleteRoute" ? "#8a0018" : "#b00020" }} onClick={() => { setCrudAction("deleteRoute"); setCrudMsg({ text: "", type: "" }); }}>Delete Route</button>
+                  </div>
+                  {crudMsg.text && (
+                    <div style={{ marginBottom: "16px", padding: "10px 14px", borderRadius: "8px", fontWeight: "600", fontSize: "14px", background: crudMsg.type === "success" ? "#e8f5e9" : "#fce4ec", color: crudMsg.type === "success" ? "#1a6e3c" : "#b00020" }}>
+                      {crudMsg.text}
+                    </div>
+                  )}
+
+                  {crudAction === "addFlight" && (
+                    <form onSubmit={handleCrudSubmit} style={{ background: "#f5f5f5", padding: "15px", borderRadius: "6px" }}>
+                      <h4 style={{ marginBottom: "15px" }}>Create a New Flight</h4>
+                      <div className="form-row" style={{ alignItems: "flex-end" }}>
+                        <div className="form-group"><label>Route ID</label><input type="number" required value={crudData.routeId} onChange={(e) => setCrudData({ ...crudData, routeId: e.target.value })} placeholder="e.g. 1" /></div>
+                        <div className="form-group"><label>Departure Date</label><input type="datetime-local" required value={crudData.departureDate} onChange={(e) => setCrudData({ ...crudData, departureDate: e.target.value })} /></div>
+                        <div className="form-group"><label>Seats Available</label><input type="number" required value={crudData.seats} onChange={(e) => setCrudData({ ...crudData, seats: e.target.value })} placeholder="e.g. 150" /></div>
+                        <button type="submit" className="primary-btn" style={{ padding: "16px 20px" }}>Submit</button>
+                      </div>
+                    </form>
+                  )}
+
+                  {crudAction === "updateAircraft" && (
+                    <form onSubmit={handleCrudSubmit} style={{ background: "#f5f5f5", padding: "15px", borderRadius: "6px" }}>
+                      <h4 style={{ marginBottom: "15px" }}>Update Aircraft Capacity</h4>
+                      <div className="form-row" style={{ alignItems: "flex-end" }}>
+                        <div className="form-group"><label>Aircraft ID</label><input type="number" required value={crudData.aircraftId} onChange={(e) => setCrudData({ ...crudData, aircraftId: e.target.value })} placeholder="e.g. 1" /></div>
+                        <div className="form-group"><label>New Capacity</label><input type="number" required value={crudData.capacity} onChange={(e) => setCrudData({ ...crudData, capacity: e.target.value })} placeholder="e.g. 200" /></div>
+                        <button type="submit" className="primary-btn" style={{ padding: "16px 20px", backgroundColor: "#333" }}>Submit</button>
+                      </div>
+                    </form>
+                  )}
+
+                  {crudAction === "deleteRoute" && (
+                    <form onSubmit={handleCrudSubmit} style={{ background: "#ffebee", padding: "15px", borderRadius: "6px", border: "1px solid #ffcdd2" }}>
+                      <h4 style={{ marginBottom: "15px", color: "#b00020" }}>Delete an Existing Route</h4>
+                      <p style={{ fontSize: "14px", color: "#666", marginBottom: "15px" }}>⚠️ Warning: This permanently removes the route from the database.</p>
+                      <div className="form-row" style={{ alignItems: "flex-end" }}>
+                        <div className="form-group"><label>Route ID to Delete</label><input type="number" required value={crudData.routeId} onChange={(e) => setCrudData({ ...crudData, routeId: e.target.value })} placeholder="e.g. 5" /></div>
+                        <button type="submit" className="primary-btn" style={{ padding: "16px 20px", backgroundColor: "#b00020" }}>Confirm Delete</button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── System Admin Dashboard ── */}
+          {activeTab === "systemAdmin" && isSystemAdmin && (
+            <div>
+              <h2>System Admin Dashboard</h2>
+              <p style={{ color: "#666", marginBottom: "20px" }}>Full system access — passenger, booking, flight operations, and platform oversight.</p>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px", marginBottom: "24px" }}>
+                {[
+                  { icon: "👤", label: "Employee Portal", desc: "All staff features: passengers, bookings, routes, aircraft, flight ops", tab: "employee" },
+                  { icon: "🔍", label: "Manage Any Booking", desc: "Look up and modify any booking by ID", tab: "manage" },
+                  { icon: "🛫", label: "Flight Status", desc: "Check live flight status by flight ID", tab: "status" },
+                  { icon: "✈️", label: "Search & Book Flights", desc: "Search flights and book on behalf of any user", tab: "search" },
+                ].map(({ icon, label, desc, tab }) => (
+                  <div key={tab} onClick={() => { setActiveTab(tab); if (tab === "employee") loadEmployeePortal(); }} style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: "12px", padding: "20px", cursor: "pointer", transition: "box-shadow 0.2s" }}
+                    onMouseEnter={(e) => e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.12)"}
+                    onMouseLeave={(e) => e.currentTarget.style.boxShadow = "none"}>
+                    <div style={{ fontSize: "28px", marginBottom: "8px" }}>{icon}</div>
+                    <h4 style={{ margin: "0 0 6px", color: "#1a1a2e" }}>{label}</h4>
+                    <p style={{ margin: 0, fontSize: "13px", color: "#888" }}>{desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="result-card">
+                <h3>Route Summary Report</h3>
+                <button className="nav-edit-btn" style={{ color: "#222", borderColor: "#222", margin: "10px 0" }} onClick={fetchReports}>{loadingReports ? "Generating..." : "Generate Report"}</button>
+                {reports.length > 0 && (
+                  <table style={{ width: "100%", textAlign: "left", marginTop: "10px", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "2px solid #ddd" }}>
+                        {["Route ID", "Departure", "Arrival", "Total Flights"].map((h) => <th key={h} style={{ padding: "10px" }}>{h}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reports.map((r) => (
+                        <tr key={r.route_id} style={{ borderBottom: "1px solid #ddd", height: "40px", cursor: "pointer" }}
+                          onClick={() => fetchRouteFlights(r.route_id, `${r.departure} → ${r.arrival}`)}
+                          onMouseEnter={(e) => e.currentTarget.style.background = "#f5f5f5"}
+                          onMouseLeave={(e) => e.currentTarget.style.background = ""}>
+                          <td style={{ padding: "10px" }}>{r.route_id}</td>
+                          <td style={{ padding: "10px" }}>{r.departure}</td>
+                          <td style={{ padding: "10px" }}>{r.arrival}</td>
+                          <td style={{ padding: "10px" }}>{r.total_flights}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Login ── */}
           {activeTab === "login" && !loggedInUser && (
             <form className="login-form" onSubmit={handleLoginSubmit}>
               <h2>Royal Horizon Airways Login</h2>
@@ -434,15 +2508,16 @@ function App() {
                 <select name="role" value={loginData.role} onChange={handleLoginChange}>
                   <option value="Passenger">Passenger</option>
                   <option value="Employee">Employee</option>
+                  <option value="System Admin">System Admin</option>
                 </select>
               </div>
               <button type="submit" className="primary-btn">{loadingLogin ? "Logging in..." : "Log In"}</button>
-              {loginMessage && <p style={{ marginTop: "14px", fontSize: "18px", color: loginMessage.includes("successful") || loginMessage.includes("created") ? "#1a6e3c" : "#cf102d" }}>{loginMessage}</p>}
+              {loginMessage && (
+                <p style={{ marginTop: "14px", fontSize: "18px", color: loginMessage.includes("successful") || loginMessage.includes("created") ? "#1a6e3c" : "#cf102d" }}>{loginMessage}</p>
+              )}
               <p style={{ marginTop: "16px", fontSize: "15px", color: "#666" }}>
                 Don't have an account?{" "}
-                <span style={{ color: "#cf102d", cursor: "pointer", fontWeight: "700", textDecoration: "underline" }} onClick={() => setShowCreateModal(true)}>
-                  Create one here
-                </span>
+                <span style={{ color: "#cf102d", cursor: "pointer", fontWeight: "700", textDecoration: "underline" }} onClick={() => setShowCreateModal(true)}>Create one here</span>
               </p>
             </form>
           )}
