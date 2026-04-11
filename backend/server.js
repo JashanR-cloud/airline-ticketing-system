@@ -522,178 +522,54 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // POST /book-flight → Passenger, Employee, System Admin
+// POST /book-flight → Passenger, Employee, System Admin
   if (req.url === "/book-flight" && req.method === "POST") {
-  console.log("\n=== BOOK-FLIGHT HIT ===");
-
-  parseBody(req)
-    .then((body) => {
-      console.log("[1] Body received:", body);
-
-      let requester;
-      try {
-        requester = getRequestUser(req);
-        console.log("[2] Requester:", requester);
-      } catch (authErr) {
-        console.error("[AUTH PARSE ERROR]", authErr);
-        return sendJson(res, 500, { error: "Auth parsing failed" });
-      }
-
-      if (!requester) {
-        console.log("[AUTH FAIL] No requester found");
-        return deny(res);
-      }
-
-      if (
-        !hasRole(requester.role, ["Passenger", "Employee", "System Admin"])
-      ) {
-        console.log("[AUTH FAIL] Role not allowed:", requester.role);
-        return deny(res);
-      }
-
-      const { userId, passengerId, flightId } = body;
-
-      console.log("[3] Extracted fields:", {
-        userId,
-        passengerId,
-        flightId,
-      });
-
-      if (!flightId || !passengerId) {
-        console.log("[VALIDATION FAIL] Missing flightId or passengerId");
-        return sendJson(res, 400, {
-          error: "flightId and passengerId are required",
-        });
-      }
-
-      if (
-        requester.role === "Passenger" &&
-        requester.userId !== Number(userId)
-      ) {
-        console.log("[AUTH FAIL] Passenger mismatch");
-        return deny(res);
-      }
-
-      console.log("[4] Inserting booking...");
-
-      const insertBookingSQL = `
-        INSERT INTO Bookings 
-        (flight_id, issue_date, baggage, payment_id, ticket_status)
-        VALUES (?, CURDATE(), 0, NULL, 'Reserved')
-      `;
-
-      db.query(insertBookingSQL, [flightId], (err, result) => {
-        if (err) {
-          console.error("=== BOOKING INSERT FAILED ===");
-          console.error("Code:", err.code);
-          console.error("Message:", err.message);
-          console.error("SQL:", err.sql);
-
-          return sendJson(res, 500, {
-            error: err.message,
-            code: err.code,
-          });
-        }
-
-        const bookingId = result.insertId;
-        console.log("[5] Booking created:", bookingId);
-
-        console.log("[6] Linking passenger...");
-
-        db.query(
-          "INSERT INTO Booking_Passengers (booking_id, passenger_id) VALUES (?, ?)",
-          [bookingId, passengerId],
-          (err2) => {
-            if (err2) {
-              console.error("=== BOOKING_PASSENGERS FAILED ===");
-              console.error("Code:", err2.code);
-              console.error("Message:", err2.message);
-
-              return sendJson(res, 500, {
-                error: err2.message,
-                code: err2.code,
-              });
+    parseBody(req).then((body) => {
+      const requester = getRequestUser(req);
+      if (!hasRole(requester.role, ["Passenger", "Employee", "System Admin"])) return deny(res);
+      const { userId, passengerId } = body;
+      if (requester.role === "Passenger" && requester.userId !== Number(userId)) return deny(res);
+      db.query(
+        "INSERT INTO Bookings (user_id, booking_date, booking_status) VALUES (?, NOW(), 'Confirmed')",
+        [userId], (err, result) => {
+          if (err) return sendJson(res, 500, { error: err.message });
+          const bookingId = result.insertId;
+          db.query(
+            "INSERT INTO Booking_Passengers (booking_id, passenger_id) VALUES (?, ?)",
+            [bookingId, passengerId], (err2) => {
+              if (err2) return sendJson(res, 500, { error: err2.message });
+              db.query(
+                "SELECT miles_balance, tier FROM loyalty_program WHERE passenger_id = ?",
+                [passengerId], (loyErr, loyRows) => {
+                  if (!loyErr && loyRows.length > 0) {
+                    const oldMiles = loyRows[0].miles_balance;
+                    const newMiles = oldMiles + 500;
+                    let newTier = loyRows[0].tier;
+                    if (newMiles >= 10000) newTier = "Diamond";
+                    else if (newMiles >= 5000) newTier = "Platinum";
+                    else if (newMiles >= 1000) newTier = "Gold";
+                    db.query(
+                      "UPDATE loyalty_program SET miles_balance = ?, tier = ? WHERE passenger_id = ?",
+                      [newMiles, newTier, passengerId], () => {}
+                    );
+                    let milestone = null;
+                    if (oldMiles < 1000 && newMiles >= 1000) milestone = { tier: "Gold", miles: newMiles, threshold: 1000 };
+                    else if (oldMiles < 5000 && newMiles >= 5000) milestone = { tier: "Platinum", miles: newMiles, threshold: 5000 };
+                    else if (oldMiles < 10000 && newMiles >= 10000) milestone = { tier: "Diamond", miles: newMiles, threshold: 10000 };
+                    sendJson(res, 201, { message: "Booked!", booking_id: bookingId, miles_earned: 500, new_miles: newMiles, new_tier: newTier, milestone });
+                  } else {
+                    sendJson(res, 201, { message: "Booked!", booking_id: bookingId, miles_earned: 0, new_miles: 0, milestone: null });
+                  }
+                }
+              );
             }
+          );
+        }
+      );
+    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
+    return;
+  }
 
-            console.log("[7] Passenger linked");
-
-            console.log("[8] Fetching loyalty info...");
-
-            db.query(
-              "SELECT miles_balance, tier FROM loyalty_program WHERE passenger_id = ?",
-              [passengerId],
-              (loyErr, loyRows) => {
-                if (loyErr) {
-                  console.error("=== LOYALTY SELECT FAILED ===");
-                  console.error(loyErr);
-
-                  return sendJson(res, 500, {
-                    error: loyErr.message,
-                  });
-                }
-
-                let newMiles = 0;
-                let newTier = "Silver";
-                let milestone = null;
-
-                if (loyRows.length > 0) {
-                  const oldMiles = loyRows[0].miles_balance || 0;
-                  newMiles = oldMiles + 500;
-
-                  if (newMiles >= 10000) newTier = "Diamond";
-                  else if (newMiles >= 5000) newTier = "Platinum";
-                  else if (newMiles >= 1000) newTier = "Gold";
-                  else newTier = loyRows[0].tier;
-
-                  db.query(
-                    "UPDATE loyalty_program SET miles_balance = ?, tier = ? WHERE passenger_id = ?",
-                    [newMiles, newTier, passengerId],
-                    (updErr) => {
-                      if (updErr) {
-                        console.error("=== LOYALTY UPDATE FAILED ===");
-                        console.error(updErr);
-                      }
-                    }
-                  );
-
-                  if (oldMiles < 1000 && newMiles >= 1000)
-                    milestone = { tier: "Gold", miles: newMiles };
-
-                  if (oldMiles < 5000 && newMiles >= 5000)
-                    milestone = { tier: "Platinum", miles: newMiles };
-
-                  if (oldMiles < 10000 && newMiles >= 10000)
-                    milestone = { tier: "Diamond", miles: newMiles };
-                }
-
-                console.log("[9] SUCCESS RESPONSE SENT");
-
-                return sendJson(res, 201, {
-                  message: "Booked!",
-                  booking_id: bookingId,
-                  miles_earned: 500,
-                  new_miles: newMiles,
-                  new_tier: newTier,
-                  milestone,
-                });
-              }
-            );
-          }
-        );
-      });
-    })
-    .catch((err) => {
-      console.error("=== PARSE BODY FAILED ===");
-      console.error(err);
-
-      return sendJson(res, 400, {
-        error: "Invalid JSON body",
-        details: err.message,
-      });
-    });
-
-  return;
-}
 
   // POST /manage-booking
   if (req.url === "/manage-booking" && req.method === "POST") {
