@@ -525,28 +525,60 @@ const server = http.createServer((req, res) => {
   // POST /book-flight → Passenger, Employee, System Admin
   if (req.url === "/book-flight" && req.method === "POST") {
     parseBody(req).then((body) => {
+      console.log("=== BOOKING REQUEST RECEIVED ===");
+      console.log("Body:", body);
 
       const requester = getRequestUser(req);
+      console.log("Requester role/userId:", requester?.role, requester?.userId);
 
-      if (!hasRole(requester.role, ["Passenger", "Employee", "System Admin"])) return deny(res);
+      if (!hasRole(requester.role, ["Passenger", "Employee", "System Admin"])){
+        console.log("Permission denied");
+         return deny(res);
+      }
 
       const { userId, passengerId, flightId } = body;
 
-      if (requester.role === "Passenger" && requester.userId !== Number(userId)) return deny(res);
+      if (!flightId || !passengerId) {
+        console.log("Missing required fields");
+        return sendJson(res, 400, { error: "flightId and passengerId are required" });
+      }
+
+      if (requester.role === "Passenger" && requester.userId !== Number(userId)) {
+        console.log("Passenger ID mismatch");
+        return deny(res);
+      }
+
+      console.log(`Attempting to insert booking for flightId=${flightId}`);
 
       db.query(
-        `INSERT INTO Bookings 
-          (flight_id, issue_date, baggage, payment_id, ticket_status) 
-        VALUES (?, CURDATE(), 0, NULL, 'Reserved')`,
-        [flightId], (err, result) => {
-          if (err) return sendJson(res, 500, { error: err.message });
+        `INSERT INTO Bookings (flight_id, issue_date, baggage, payment_id, ticket_status) 
+         VALUES (?, CURDATE(), 0, NULL, 'Reserved')`,
+        [flightId],
+        (err, result) => {
+          if (err) {
+            console.error("=== BOOKINGS INSERT FAILED ===");
+            console.error("Code:", err.code);
+            console.error("Message:", err.message);
+            console.error("SQL:", err.sql);
+            return sendJson(res, 500, { error: err.message, code: err.code });
+          }
 
           const bookingId = result.insertId;
+          console.log(`Booking created successfully! bookingId = ${bookingId}`);
 
           db.query(
             "INSERT INTO Booking_Passengers (booking_id, passenger_id) VALUES (?, ?)",
-            [bookingId, passengerId], (err2) => {
-              if (err2) return sendJson(res, 500, { error: err2.message });
+            [bookingId, passengerId],
+            (err2) => {
+              if (err2) {
+                console.error("=== BOOKING_PASSENGERS INSERT FAILED ===");
+                console.error("Code:", err2.code);
+                console.error("Message:", err2.message);
+                return sendJson(res, 500, { error: err2.message, code: err2.code });
+              }
+
+              console.log("Booking_Passengers link created");
+
               db.query(
                 "SELECT miles_balance, tier FROM loyalty_program WHERE passenger_id = ?",
                 [passengerId], (loyErr, loyRows) => {
@@ -575,7 +607,10 @@ const server = http.createServer((req, res) => {
           );
         }
       );
-    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
+    }).catch((err) => {
+      console.error("=== PARSE BODY OR EARLY ERROR ===", err);
+      sendJson(res, 400, { error: "Invalid JSON body", details: err.message });
+    });
     return;
   }
 
