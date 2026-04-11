@@ -125,6 +125,17 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+    // GET /cities → public (for city-based flight search)
+  if (req.url === "/cities" && req.method === "GET") {
+    const sql = `SELECT c.city_id, c.city_name, co.country_name FROM city c JOIN Country co ON c.country_id = co.country_id ORDER BY c.city_name ASC`;
+    db.query(sql, (err, results) => {
+      if (err) return sendJson(res, 500, { error: err.message });
+      sendJson(res, 200, results);
+    });
+    return;
+  }
+
+
   // GET /destinations → public
   if (req.url === "/destinations" && req.method === "GET") {
     const sql = `
@@ -497,12 +508,12 @@ const server = http.createServer((req, res) => {
         JOIN routes r ON f.route_id = r.route_id
         JOIN airport dep ON r.departure_airport_id = dep.airport_id
         JOIN airport arr ON r.destination_airport_id = arr.airport_id
-        WHERE (? IS NULL OR r.departure_airport_id = ?) AND (? IS NULL OR r.destination_airport_id = ?)
+        WHERE (? IS NULL OR dep.city_id = ?) AND (? IS NULL OR arr.city_id = ?)
         ORDER BY f.date_of_departure ASC LIMIT 10
       `;
-      const depId = body.departureAirportId || null;
-      const arrId = body.arrivalAirportId || null;
-      db.query(sql, [depId, depId, arrId, arrId], (err, results) => {
+      const depCityId = body.departureCityId || null;
+      const arrCityId = body.arrivalCityId || null;
+      db.query(sql, [depCityId, depCityId, arrCityId, arrCityId], (err, results) => {
         if (err) return sendJson(res, 500, { error: err.message });
         // Assign consistent price per flight based on route + flight id
         const priced = results.map((f) => ({
