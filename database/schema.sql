@@ -116,7 +116,7 @@ CREATE TABLE user_account (
     card_number VARCHAR(30),
     card_expiration_date DATE,
     card_security_code VARCHAR(10),
-    role ENUM('Passenger', 'Employee') NOT NULL,
+    role ENUM('Passenger', 'Employee', 'System Admin') NOT NULL,
     FOREIGN KEY (passenger_id) REFERENCES Passenger(passenger_id)
     FOREIGN KEY (employee_id) REFERENCES Employee(id_number)
 );
