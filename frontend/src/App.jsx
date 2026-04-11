@@ -116,6 +116,7 @@ const CATEGORY_STYLES = {
 function App() {
   const [activeTab, setActiveTab] = useState("search");
   const [airports, setAirports] = useState([]);
+  const [cities, setCities] = useState([]);
   const [flightResults, setFlightResults] = useState([]);
   const [userBookings, setUserBookings] = useState([]);
 
@@ -204,7 +205,7 @@ function App() {
   const [empSection, setEmpSection] = useState("passengers");
 
   const [loginData, setLoginData] = useState({ email: "", password: "", role: "Passenger" });
-  const [flightSearch, setFlightSearch] = useState({ departureAirportId: "", arrivalAirportId: "", departureDate: "", returnDate: "", passengers: 1 });
+  const [flightSearch, setFlightSearch] = useState({ departureCityId: "", arrivalCityId: "", departureDate: "", returnDate: "", passengers: 1 });
   const [manageData, setManageData] = useState({ bookingId: "" });
   const [statusData, setStatusData] = useState({ flightId: "" });
 
@@ -218,7 +219,7 @@ function App() {
     return headers;
   };
 
-  useEffect(() => { fetchAirports(); }, []);
+  useEffect(() => { fetchAirports(); fetchCities(); }, []);
 
   useEffect(() => {
     if (loggedInUser && activeTab === "manage") {
@@ -310,6 +311,17 @@ function App() {
       const data = await response.json();
       if (!response.ok) { setSearchMessage(data.error || "Could not load airports."); return; }
       setAirports(data);
+    } catch { setSearchMessage("Could not connect to backend."); }
+    finally { setLoadingAirports(false); }
+  };
+
+  const fetchCities = async () => {
+    try {
+      setLoadingAirports(true);
+      const response = await fetch(`${API}/cities`);
+      const data = await response.json();
+      if (!response.ok) { setSearchMessage(data.error || "Could not load cities."); return; }
+      setCities(data);
     } catch { setSearchMessage("Could not connect to backend."); }
     finally { setLoadingAirports(false); }
   };
@@ -550,7 +562,7 @@ function App() {
     try {
       const response = await fetch(`${API}/search-flights`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ departureAirportId: Number(flightSearch.departureAirportId), arrivalAirportId: Number(flightSearch.arrivalAirportId), departureDate: flightSearch.departureDate, passengers: Number(flightSearch.passengers) }),
+        body: JSON.stringify({ departureCityId: Number(flightSearch.departureCityId), arrivalCityId: Number(flightSearch.arrivalCityId), departureDate: flightSearch.departureDate, passengers: Number(flightSearch.passengers) }),
       });
       const data = await response.json();
       if (!response.ok) { setSearchMessage(data.error || "Something went wrong."); return; }
@@ -1821,17 +1833,17 @@ function App() {
               <div className="advanced-search">Advanced search: multi-city, promo codes, and partner airlines</div>
               <div className="form-row">
                 <div className="form-group large-group">
-                  <label>Departure Airport</label>
-                  <select name="departureAirportId" value={flightSearch.departureAirportId} onChange={handleFlightChange} required disabled={loadingAirports}>
-                    <option value="">{loadingAirports ? "Loading airports..." : "Select departure airport"}</option>
-                    {airports.map((a) => <option key={a.airport_id} value={a.airport_id}>{a.airport_name}</option>)}
+                  <label>Leaving from?</label>
+                  <select name="departureCityId" value={flightSearch.departureCityId} onChange={handleFlightChange} required disabled={loadingAirports}>
+                    <option value="">{loadingAirports ? "Loading cities..." : "Select departure city"}</option>
+                    {cities.map((c) => <option key={c.city_id} value={c.city_id}>{c.city_name}, {c.country_name}</option>)}
                   </select>
                 </div>
                 <div className="form-group large-group">
-                  <label>Arrival Airport</label>
-                  <select name="arrivalAirportId" value={flightSearch.arrivalAirportId} onChange={handleFlightChange} required disabled={loadingAirports}>
-                    <option value="">{loadingAirports ? "Loading airports..." : "Select arrival airport"}</option>
-                    {airports.map((a) => <option key={a.airport_id} value={a.airport_id}>{a.airport_name}</option>)}
+                  <label>Going to?</label>
+                  <select name="arrivalCityId" value={flightSearch.arrivalCityId} onChange={handleFlightChange} required disabled={loadingAirports}>
+                    <option value="">{loadingAirports ? "Loading cities..." : "Select destination city"}</option>
+                    {cities.map((c) => <option key={c.city_id} value={c.city_id}>{c.city_name}, {c.country_name}</option>)}
                   </select>
                 </div>
               </div>
