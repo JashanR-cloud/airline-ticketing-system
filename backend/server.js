@@ -127,7 +127,7 @@ const server = http.createServer((req, res) => {
 
     // GET /cities → public (for city-based flight search)
   if (req.url === "/cities" && req.method === "GET") {
-    const sql = `SELECT c.city_id, c.city_name, co.country_name FROM city c JOIN Country co ON c.country_id = co.country_id ORDER BY c.city_name ASC`;
+    const sql = `SELECT c.city_id, c.city_name, co.country_name FROM city c JOIN country co ON c.country_id = co.country_id ORDER BY c.city_name ASC`;
     db.query(sql, (err, results) => {
       if (err) return sendJson(res, 500, { error: err.message });
       sendJson(res, 200, results);
