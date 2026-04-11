@@ -525,15 +525,24 @@ const server = http.createServer((req, res) => {
   // POST /book-flight → Passenger, Employee, System Admin
   if (req.url === "/book-flight" && req.method === "POST") {
     parseBody(req).then((body) => {
+      
       const requester = getRequestUser(req);
+
       if (!hasRole(requester.role, ["Passenger", "Employee", "System Admin"])) return deny(res);
-      const { userId, passengerId } = body;
+
+      const { userId, passengerId, flightId } = body;
+
       if (requester.role === "Passenger" && requester.userId !== Number(userId)) return deny(res);
+
       db.query(
-        "INSERT INTO Bookings (user_id, booking_date, booking_status) VALUES (?, NOW(), 'Confirmed')",
-        [userId], (err, result) => {
+        `INSERT INTO Bookings 
+          (flight_id, issue_date, baggage, payment_id, ticket_status) 
+        VALUES (?, CURDATE(), 0, NULL 'Confirmed')`,
+        [flightId], (err, result) => {
           if (err) return sendJson(res, 500, { error: err.message });
+
           const bookingId = result.insertId;
+
           db.query(
             "INSERT INTO Booking_Passengers (booking_id, passenger_id) VALUES (?, ?)",
             [bookingId, passengerId], (err2) => {
