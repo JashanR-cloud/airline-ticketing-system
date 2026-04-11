@@ -1,13 +1,14 @@
+
 const http = require("http");
 const mysql = require("mysql2");
 
 // ── Database Connection ──
 const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  host: "crossover.proxy.rlwy.net",
+  port: 19137,
+  user: "root",
+  password: "EFCyKqqRtiXPvYWdtGylKpyExyKggmFa",
+  database: "airline",
 });
 
 db.connect((err) => {
@@ -112,19 +113,11 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  
+
   // GET /airports → public
   if (req.url === "/airports" && req.method === "GET") {
-    const sql = `SELECT airport_id, airport_name FROM Airport ORDER BY airport_name ASC`;
-    db.query(sql, (err, results) => {
-      if (err) return sendJson(res, 500, { error: err.message });
-      sendJson(res, 200, results);
-    });
-    return;
-  }
-
-  // GET /cities → public (for city-based flight search)
-  if (req.url === "/cities" && req.method === "GET") {
-    const sql = `SELECT c.city_id, c.city_name, co.country_name FROM city c JOIN Country co ON c.country_id = co.country_id ORDER BY c.city_name ASC`;
+    const sql = `SELECT airport_id, airport_name FROM airport ORDER BY airport_name ASC`;
     db.query(sql, (err, results) => {
       if (err) return sendJson(res, 500, { error: err.message });
       sendJson(res, 200, results);
@@ -140,9 +133,9 @@ const server = http.createServer((req, res) => {
         arr.airport_id AS arr_id, arr.airport_name AS arrival,
         r.route_id, COUNT(f.flight_id) AS total_flights
       FROM routes r
-      JOIN Airport dep ON r.departure_airport_id = dep.airport_id
-      JOIN Airport arr ON r.destination_airport_id = arr.airport_id
-      LEFT JOIN Flights f ON r.route_id = f.route_id
+      JOIN airport dep ON r.departure_airport_id = dep.airport_id
+      JOIN airport arr ON r.destination_airport_id = arr.airport_id
+      LEFT JOIN flights f ON r.route_id = f.route_id
       GROUP BY r.route_id, dep.airport_id, dep.airport_name, arr.airport_id, arr.airport_name
       ORDER BY dep.airport_name, arr.airport_name
     `;
@@ -160,7 +153,7 @@ const server = http.createServer((req, res) => {
     const sql = `
       SELECT ua.user_id, ua.passenger_id, ua.email, ua.role, p.first_name, p.last_name
       FROM user_account ua
-      LEFT JOIN Passenger p ON ua.passenger_id = p.passenger_id
+      LEFT JOIN passenger p ON ua.passenger_id = p.passenger_id
       ORDER BY ua.user_id ASC
     `;
     db.query(sql, (err, results) => {
@@ -178,7 +171,7 @@ const server = http.createServer((req, res) => {
       SELECT p.passenger_id, p.first_name, p.last_name, p.email, p.phone_number,
         p.seat_preferences, p.meal_preferences, p.passport_status, p.visa_status,
         p.country_of_origin, ua.role AS user_role, ua.user_id
-      FROM Passenger p
+      FROM passenger p
       INNER JOIN user_account ua ON ua.passenger_id = p.passenger_id
       WHERE ua.role IN ('Passenger', 'Employee')
       ORDER BY p.last_name ASC
@@ -197,10 +190,10 @@ const server = http.createServer((req, res) => {
     const sql = `
       SELECT f.flight_id, f.date_of_departure, f.seats_available,
         dep.airport_name AS departure_airport, arr.airport_name AS arrival_airport
-      FROM Flights f
+      FROM flights f
       JOIN routes r ON f.route_id = r.route_id
-      JOIN Airport dep ON r.departure_airport_id = dep.airport_id
-      JOIN Airport arr ON r.destination_airport_id = arr.airport_id
+      JOIN airport dep ON r.departure_airport_id = dep.airport_id
+      JOIN airport arr ON r.destination_airport_id = arr.airport_id
       ORDER BY f.date_of_departure DESC
       LIMIT 200
     `;
@@ -219,9 +212,9 @@ const server = http.createServer((req, res) => {
       SELECT b.booking_id, b.user_id, b.booking_date, b.booking_status,
         p.passenger_id, p.first_name, p.last_name, p.email, p.phone_number,
         p.seat_preferences, p.meal_preferences
-      FROM Bookings b
-      JOIN Booking_Passengers bp ON b.booking_id = bp.booking_id
-      JOIN Passenger p ON bp.passenger_id = p.passenger_id
+      FROM bookings b
+      JOIN booking_passengers bp ON b.booking_id = bp.booking_id
+      JOIN passenger p ON bp.passenger_id = p.passenger_id
       ORDER BY b.booking_id DESC
     `;
     db.query(sql, (err, results) => {
@@ -237,7 +230,7 @@ const server = http.createServer((req, res) => {
     if (!isStaff(requester.role)) return deny(res);
     const sql = `
       SELECT aircraft_id, model, manufacturer, seating_capacity, max_baggage_capacity
-      FROM Aircraft ORDER BY aircraft_id ASC
+      FROM aircraft ORDER BY aircraft_id ASC
     `;
     db.query(sql, (err, results) => {
       if (err) return sendJson(res, 500, { error: err.message });
@@ -254,9 +247,9 @@ const server = http.createServer((req, res) => {
       SELECT r.route_id, dep.airport_name AS departure, arr.airport_name AS arrival,
         COALESCE(r.is_active, 1) AS is_active, COUNT(f.flight_id) AS total_flights
       FROM routes r
-      JOIN Airport dep ON r.departure_airport_id = dep.airport_id
-      JOIN Airport arr ON r.destination_airport_id = arr.airport_id
-      LEFT JOIN Flights f ON r.route_id = f.route_id
+      JOIN airport dep ON r.departure_airport_id = dep.airport_id
+      JOIN airport arr ON r.destination_airport_id = arr.airport_id
+      LEFT JOIN flights f ON r.route_id = f.route_id
       GROUP BY r.route_id, dep.airport_name, arr.airport_name, r.is_active
       ORDER BY r.route_id
     `;
@@ -266,9 +259,9 @@ const server = http.createServer((req, res) => {
           SELECT r.route_id, dep.airport_name AS departure, arr.airport_name AS arrival,
             1 AS is_active, COUNT(f.flight_id) AS total_flights
           FROM routes r
-          JOIN Airport dep ON r.departure_airport_id = dep.airport_id
-          JOIN Airport arr ON r.destination_airport_id = arr.airport_id
-          LEFT JOIN Flights f ON r.route_id = f.route_id
+          JOIN airport dep ON r.departure_airport_id = dep.airport_id
+          JOIN airport arr ON r.destination_airport_id = arr.airport_id
+          LEFT JOIN flights f ON r.route_id = f.route_id
           GROUP BY r.route_id, dep.airport_name, arr.airport_name
           ORDER BY r.route_id
         `;
@@ -292,9 +285,9 @@ const server = http.createServer((req, res) => {
         COUNT(DISTINCT f.flight_id) AS total_flights,
         COALESCE(SUM(f.seats_available), 0) AS total_seats
       FROM routes r
-      JOIN Airport dep ON r.departure_airport_id = dep.airport_id
-      JOIN Airport arr ON r.destination_airport_id = arr.airport_id
-      LEFT JOIN Flights f ON r.route_id = f.route_id
+      JOIN airport dep ON r.departure_airport_id = dep.airport_id
+      JOIN airport arr ON r.destination_airport_id = arr.airport_id
+      LEFT JOIN flights f ON r.route_id = f.route_id
       GROUP BY r.route_id, r.departure_airport_id, r.destination_airport_id, dep.airport_name, arr.airport_name
       ORDER BY total_flights DESC
     `;
@@ -346,9 +339,9 @@ const server = http.createServer((req, res) => {
       SELECT b.booking_id, b.user_id, b.booking_date, b.booking_status,
         p.passenger_id, p.first_name, p.last_name, p.email, p.phone_number,
         p.seat_preferences, p.meal_preferences
-      FROM Bookings b
-      JOIN Booking_Passengers bp ON b.booking_id = bp.booking_id
-      JOIN Passenger p ON bp.passenger_id = p.passenger_id
+      FROM bookings b
+      JOIN booking_passengers bp ON b.booking_id = bp.booking_id
+      JOIN passenger p ON bp.passenger_id = p.passenger_id
       WHERE b.user_id = ? ORDER BY b.booking_id DESC
     `;
     db.query(sql, [requestedUserId], (err, results) => {
@@ -367,10 +360,10 @@ const server = http.createServer((req, res) => {
     const sql = `
       SELECT f.flight_id, f.date_of_departure, f.seats_available,
         dep.airport_name AS departure_airport, arr.airport_name AS arrival_airport
-      FROM Flights f
+      FROM flights f
       JOIN routes r ON f.route_id = r.route_id
-      JOIN Airport dep ON r.departure_airport_id = dep.airport_id
-      JOIN Airport arr ON r.destination_airport_id = arr.airport_id
+      JOIN airport dep ON r.departure_airport_id = dep.airport_id
+      JOIN airport arr ON r.destination_airport_id = arr.airport_id
       WHERE f.route_id = ? ORDER BY f.date_of_departure ASC
     `;
     db.query(sql, [routeId], (err, results) => {
@@ -409,9 +402,9 @@ const server = http.createServer((req, res) => {
       SELECT r.route_id, dep.airport_name AS departure, arr.airport_name AS arrival,
         COUNT(f.flight_id) AS total_flights
       FROM routes r
-      JOIN Airport dep ON r.departure_airport_id = dep.airport_id
-      JOIN Airport arr ON r.destination_airport_id = arr.airport_id
-      LEFT JOIN Flights f ON r.route_id = f.route_id
+      JOIN airport dep ON r.departure_airport_id = dep.airport_id
+      JOIN airport arr ON r.destination_airport_id = arr.airport_id
+      LEFT JOIN flights f ON r.route_id = f.route_id
       GROUP BY r.route_id, dep.airport_name, arr.airport_name
       ORDER BY r.route_id
     `;
@@ -434,11 +427,11 @@ const server = http.createServer((req, res) => {
       db.query("SELECT user_id FROM user_account WHERE email = ?", [email], (err, rows) => {
         if (err) return sendJson(res, 500, { error: err.message });
         if (rows.length > 0) return sendJson(res, 409, { error: "An account with this email already exists." });
-        db.query("SELECT COALESCE(MAX(passenger_id), 0) + 1 AS nextId FROM Passenger", (idErr, idRows) => {
+        db.query("SELECT COALESCE(MAX(passenger_id), 0) + 1 AS nextId FROM passenger", (idErr, idRows) => {
           if (idErr) return sendJson(res, 500, { error: idErr.message });
           const newPassengerId = idRows[0].nextId;
           const pSql = `
-            INSERT INTO Passenger (passenger_id, first_name, last_name, date_of_birth, email, phone_number,
+            INSERT INTO passenger (passenger_id, first_name, last_name, date_of_birth, email, phone_number,
               address, id_number, passport_status, visa_status, country_of_origin,
               seat_preferences, meal_preferences, special_needs)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -482,7 +475,7 @@ const server = http.createServer((req, res) => {
           p.first_name, p.last_name, p.date_of_birth, p.phone_number, p.address, p.id_number,
           p.passport_status, p.visa_status, p.country_of_origin, p.seat_preferences, p.meal_preferences, p.special_needs
         FROM user_account ua
-        LEFT JOIN Passenger p ON ua.passenger_id = p.passenger_id
+        LEFT JOIN passenger p ON ua.passenger_id = p.passenger_id
         WHERE ua.email = ? AND ua.password = ? AND ua.role = ? LIMIT 1
       `;
       db.query(sql, [email, password, role], (err, results) => {
@@ -494,22 +487,22 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // POST /search-flights → public (searches by city — finds all airports in each city)
+  // POST /search-flights → public
   if (req.url === "/search-flights" && req.method === "POST") {
     parseBody(req).then((body) => {
       const sql = `
         SELECT f.flight_id, f.route_id, f.date_of_departure, f.seats_available,
           dep.airport_name AS departure_airport, arr.airport_name AS arrival_airport
-        FROM Flights f
+        FROM flights f
         JOIN routes r ON f.route_id = r.route_id
-        JOIN Airport dep ON r.departure_airport_id = dep.airport_id
-        JOIN Airport arr ON r.destination_airport_id = arr.airport_id
-        WHERE (? IS NULL OR dep.city_id = ?) AND (? IS NULL OR arr.city_id = ?)
+        JOIN airport dep ON r.departure_airport_id = dep.airport_id
+        JOIN airport arr ON r.destination_airport_id = arr.airport_id
+        WHERE (? IS NULL OR r.departure_airport_id = ?) AND (? IS NULL OR r.destination_airport_id = ?)
         ORDER BY f.date_of_departure ASC LIMIT 10
       `;
-      const depCityId = body.departureCityId || null;
-      const arrCityId = body.arrivalCityId || null;
-      db.query(sql, [depCityId, depCityId, arrCityId, arrCityId], (err, results) => {
+      const depId = body.departureAirportId || null;
+      const arrId = body.arrivalAirportId || null;
+      db.query(sql, [depId, depId, arrId, arrId], (err, results) => {
         if (err) return sendJson(res, 500, { error: err.message });
         // Assign consistent price per flight based on route + flight id
         const priced = results.map((f) => ({
@@ -522,54 +515,134 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-// POST /book-flight → Passenger, Employee, System Admin
-  if (req.url === "/book-flight" && req.method === "POST") {
-    parseBody(req).then((body) => {
-      const requester = getRequestUser(req);
-      if (!hasRole(requester.role, ["Passenger", "Employee", "System Admin"])) return deny(res);
-      const { userId, passengerId } = body;
-      if (requester.role === "Passenger" && requester.userId !== Number(userId)) return deny(res);
-      db.query(
-        "INSERT INTO Bookings (user_id, booking_date, booking_status) VALUES (?, NOW(), 'Confirmed')",
-        [userId], (err, result) => {
-          if (err) return sendJson(res, 500, { error: err.message });
-          const bookingId = result.insertId;
-          db.query(
-            "INSERT INTO Booking_Passengers (booking_id, passenger_id) VALUES (?, ?)",
-            [bookingId, passengerId], (err2) => {
-              if (err2) return sendJson(res, 500, { error: err2.message });
-              db.query(
-                "SELECT miles_balance, tier FROM loyalty_program WHERE passenger_id = ?",
-                [passengerId], (loyErr, loyRows) => {
-                  if (!loyErr && loyRows.length > 0) {
-                    const oldMiles = loyRows[0].miles_balance;
-                    const newMiles = oldMiles + 500;
-                    let newTier = loyRows[0].tier;
-                    if (newMiles >= 10000) newTier = "Diamond";
-                    else if (newMiles >= 5000) newTier = "Platinum";
-                    else if (newMiles >= 1000) newTier = "Gold";
-                    db.query(
-                      "UPDATE loyalty_program SET miles_balance = ?, tier = ? WHERE passenger_id = ?",
-                      [newMiles, newTier, passengerId], () => {}
-                    );
-                    let milestone = null;
-                    if (oldMiles < 1000 && newMiles >= 1000) milestone = { tier: "Gold", miles: newMiles, threshold: 1000 };
-                    else if (oldMiles < 5000 && newMiles >= 5000) milestone = { tier: "Platinum", miles: newMiles, threshold: 5000 };
-                    else if (oldMiles < 10000 && newMiles >= 10000) milestone = { tier: "Diamond", miles: newMiles, threshold: 10000 };
-                    sendJson(res, 201, { message: "Booked!", booking_id: bookingId, miles_earned: 500, new_miles: newMiles, new_tier: newTier, milestone });
-                  } else {
-                    sendJson(res, 201, { message: "Booked!", booking_id: bookingId, miles_earned: 0, new_miles: 0, milestone: null });
-                  }
-                }
-              );
-            }
-          );
+  if (req.url.startsWith("/book-flight") && req.method === "POST") {
+    console.log("\n=== BOOK-FLIGHT HIT ===");
+
+    parseBody(req)
+      .then((body) => {
+        console.log("[1] Body:", body);
+
+        const requester = getRequestUser(req);
+        console.log("[2] Requester:", requester);
+
+        if (!hasRole(requester.role, ["Passenger", "Employee", "System Admin"])) {
+          console.log("[AUTH FAIL]");
+          return deny(res);
         }
-      );
-    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
+
+        const { userId, passengerId, flightId } = body;
+
+        if (!userId || !passengerId) {
+          console.log("[VALIDATION FAIL]");
+          return sendJson(res, 400, {
+            error: "userId and passengerId are required",
+          });
+        }
+
+        if (
+          requester.role === "Passenger" &&
+          requester.userId !== Number(userId)
+        ) {
+          console.log("[AUTH FAIL] Passenger mismatch");
+          return deny(res);
+        }
+
+        console.log("[3] Inserting booking...");
+
+        db.query(
+          `INSERT INTO bookings (user_id, booking_date, booking_status, flight_id)
+          VALUES (?, NOW(), 'Confirmed', ?)`,
+          [userId, flightId || null],
+          (err, result) => {
+            if (err) {
+              console.error("=== BOOKING INSERT FAILED ===");
+              console.error(err);
+              return sendJson(res, 500, { error: err.message });
+            }
+
+            const bookingId = result.insertId;
+            console.log("[4] Booking created:", bookingId);
+
+            db.query(
+              "INSERT INTO booking_passengers (booking_id, passenger_id) VALUES (?, ?)",
+              [bookingId, passengerId],
+              (err2) => {
+                if (err2) {
+                  console.error("=== BOOKING_PASSENGERS FAILED ===");
+                  console.error(err2);
+                  return sendJson(res, 500, { error: err2.message });
+                }
+
+                console.log("[5] Passenger linked");
+
+                // Loyalty logic
+                db.query(
+                  "SELECT miles_balance, tier FROM loyalty_program WHERE passenger_id = ?",
+                  [passengerId],
+                  (loyErr, loyRows) => {
+                    if (loyErr) {
+                      console.error("=== LOYALTY SELECT FAILED ===");
+                      console.error(loyErr);
+                      return sendJson(res, 500, { error: loyErr.message });
+                    }
+
+                    let newMiles = 0;
+                    let newTier = "Silver";
+                    let milestone = null;
+
+                    if (loyRows.length > 0) {
+                      const oldMiles = loyRows[0].miles_balance || 0;
+                      newMiles = oldMiles + 500;
+
+                      if (newMiles >= 10000) newTier = "Diamond";
+                      else if (newMiles >= 5000) newTier = "Platinum";
+                      else if (newMiles >= 1000) newTier = "Gold";
+                      else newTier = loyRows[0].tier;
+
+                      db.query(
+                        "UPDATE loyalty_program SET miles_balance = ?, tier = ? WHERE passenger_id = ?",
+                        [newMiles, newTier, passengerId],
+                        (updErr) => {
+                          if (updErr) console.error("LOYALTY UPDATE FAILED:", updErr);
+                        }
+                      );
+
+                      if (oldMiles < 1000 && newMiles >= 1000)
+                        milestone = { tier: "Gold", miles: newMiles };
+                      else if (oldMiles < 5000 && newMiles >= 5000)
+                        milestone = { tier: "Platinum", miles: newMiles };
+                      else if (oldMiles < 10000 && newMiles >= 10000)
+                        milestone = { tier: "Diamond", miles: newMiles };
+                    }
+
+                    console.log("[6] SUCCESS");
+
+                    return sendJson(res, 201, {
+                      message: "Booked!",
+                      booking_id: bookingId,
+                      miles_earned: 500,
+                      new_miles: newMiles,
+                      new_tier: newTier,
+                      milestone,
+                    });
+                  }
+                );
+              }
+            );
+          }
+        );
+      })
+      .catch((err) => {
+        console.error("=== PARSE BODY FAILED ===");
+        console.error(err);
+        return sendJson(res, 400, {
+          error: "Invalid JSON body",
+          details: err.message,
+        });
+      });
+
     return;
   }
-
 
   // POST /manage-booking
   if (req.url === "/manage-booking" && req.method === "POST") {
@@ -579,9 +652,9 @@ const server = http.createServer((req, res) => {
         SELECT b.booking_id, b.user_id, b.booking_status, b.booking_date,
           p.passenger_id, p.first_name, p.last_name, p.email, p.phone_number,
           p.seat_preferences, p.meal_preferences
-        FROM Bookings b
-        JOIN Booking_Passengers bp ON b.booking_id = bp.booking_id
-        JOIN Passenger p ON bp.passenger_id = p.passenger_id
+        FROM bookings b
+        JOIN booking_passengers bp ON b.booking_id = bp.booking_id
+        JOIN passenger p ON bp.passenger_id = p.passenger_id
         WHERE b.booking_id = ?
       `;
       const params = [body.bookingId];
@@ -601,13 +674,13 @@ const server = http.createServer((req, res) => {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
       const bookingId = body.bookingId;
-      db.query("SELECT user_id FROM Bookings WHERE booking_id = ? LIMIT 1", [bookingId], (checkErr, rows) => {
+      db.query("SELECT user_id FROM bookings WHERE booking_id = ? LIMIT 1", [bookingId], (checkErr, rows) => {
         if (checkErr) return sendJson(res, 500, { error: checkErr.message });
         if (rows.length === 0) return sendJson(res, 404, { error: "Booking not found." });
         const bookingOwnerId = Number(rows[0].user_id);
         const canCancel = isStaff(requester.role) || (requester.role === "Passenger" && requester.userId === bookingOwnerId);
         if (!canCancel) return deny(res);
-        db.query("UPDATE Bookings SET booking_status = 'Cancelled' WHERE booking_id = ?", [bookingId], (err) => {
+        db.query("UPDATE bookings SET booking_status = 'Cancelled' WHERE booking_id = ?", [bookingId], (err) => {
           if (err) return sendJson(res, 500, { error: err.message });
           sendJson(res, 200, { message: "Cancelled." });
         });
@@ -629,7 +702,7 @@ const server = http.createServer((req, res) => {
           const canUpdate = isStaff(requester.role) || (requester.role === "Passenger" && requesterPassengerId === passengerId);
           if (!canUpdate) return deny(res);
           db.query(
-            "UPDATE Passenger SET seat_preferences = ?, meal_preferences = ? WHERE passenger_id = ?",
+            "UPDATE passenger SET seat_preferences = ?, meal_preferences = ? WHERE passenger_id = ?",
             [body.seatPreferences, body.mealPreferences, passengerId], (err) => {
               if (err) return sendJson(res, 500, { error: err.message });
               sendJson(res, 200, { message: "Updated." });
@@ -647,7 +720,7 @@ const server = http.createServer((req, res) => {
       const requester = getRequestUser(req);
       if (!isStaff(requester.role)) return deny(res);
       db.query(
-        "INSERT INTO Flights (route_id, date_of_departure, seats_available) VALUES (?, ?, ?)",
+        "INSERT INTO flights (route_id, date_of_departure, seats_available) VALUES (?, ?, ?)",
         [body.routeId, body.departureDate, body.seats], (err) => {
           if (err) return sendJson(res, 500, { error: err.message });
           sendJson(res, 201, { message: "Flight added." });
@@ -663,7 +736,7 @@ const server = http.createServer((req, res) => {
       const requester = getRequestUser(req);
       if (!isStaff(requester.role)) return deny(res);
       db.query(
-        "UPDATE Aircraft SET seating_capacity = ? WHERE aircraft_id = ?",
+        "UPDATE aircraft SET seating_capacity = ? WHERE aircraft_id = ?",
         [body.capacity, body.aircraftId], (err) => {
           if (err) return sendJson(res, 500, { error: err.message });
           sendJson(res, 200, { message: "Aircraft updated." });
@@ -741,12 +814,12 @@ const server = http.createServer((req, res) => {
       const { userId, passengerId } = body;
       if (!userId || !passengerId) return sendJson(res, 400, { error: "userId and passengerId are required." });
       db.query(
-        "INSERT INTO Bookings (user_id, booking_date, booking_status) VALUES (?, NOW(), 'Confirmed')",
+        "INSERT INTO bookings (user_id, booking_date, booking_status) VALUES (?, NOW(), 'Confirmed')",
         [userId], (err, result) => {
           if (err) return sendJson(res, 500, { error: err.message });
           const bookingId = result.insertId;
           db.query(
-            "INSERT INTO Booking_Passengers (booking_id, passenger_id) VALUES (?, ?)",
+            "INSERT INTO booking_passengers (booking_id, passenger_id) VALUES (?, ?)",
             [bookingId, passengerId], (err2) => {
               if (err2) return sendJson(res, 500, { error: err2.message });
               sendJson(res, 201, { message: "Booking created successfully.", booking_id: bookingId });
@@ -766,7 +839,7 @@ const server = http.createServer((req, res) => {
       const validStatuses = ["Confirmed", "Cancelled", "Pending", "Completed"];
       if (!validStatuses.includes(body.status)) return sendJson(res, 400, { error: "Invalid status." });
       db.query(
-        "UPDATE Bookings SET booking_status = ? WHERE booking_id = ?",
+        "UPDATE bookings SET booking_status = ? WHERE booking_id = ?",
         [body.status, body.bookingId], (err, result) => {
           if (err) return sendJson(res, 500, { error: err.message });
           if (result.affectedRows === 0) return sendJson(res, 404, { error: "Booking not found." });
@@ -783,10 +856,10 @@ const server = http.createServer((req, res) => {
       const sql = `
         SELECT f.flight_id, f.date_of_departure, f.seats_available,
           dep.airport_name AS departure_airport, arr.airport_name AS arrival_airport
-        FROM Flights f
+        FROM flights f
         JOIN routes r ON f.route_id = r.route_id
-        JOIN Airport dep ON r.departure_airport_id = dep.airport_id
-        JOIN Airport arr ON r.destination_airport_id = arr.airport_id
+        JOIN airport dep ON r.departure_airport_id = dep.airport_id
+        JOIN airport arr ON r.destination_airport_id = arr.airport_id
         WHERE f.flight_id = ? LIMIT 1
       `;
       db.query(sql, [body.flightId], (err, results) => {
@@ -805,7 +878,7 @@ const server = http.createServer((req, res) => {
     const sql = `
       SELECT p.passenger_id, p.first_name, p.last_name, p.email,
         p.phone_number, p.seat_preferences, p.meal_preferences
-      FROM Passenger p
+      FROM passenger p
       INNER JOIN user_account ua ON ua.passenger_id = p.passenger_id
       WHERE ua.role = 'Passenger'
       ORDER BY p.last_name ASC, p.first_name ASC
@@ -824,10 +897,10 @@ const server = http.createServer((req, res) => {
     const sql = `
       SELECT f.flight_id, f.date_of_departure, f.seats_available,
         dep.airport_name AS departure_airport, arr.airport_name AS arrival_airport
-      FROM Flights f
+      FROM flights f
       JOIN routes r ON f.route_id = r.route_id
-      JOIN Airport dep ON r.departure_airport_id = dep.airport_id
-      JOIN Airport arr ON r.destination_airport_id = arr.airport_id
+      JOIN airport dep ON r.departure_airport_id = dep.airport_id
+      JOIN airport arr ON r.destination_airport_id = arr.airport_id
       ORDER BY f.date_of_departure ASC
     `;
     db.query(sql, (err, results) => {
