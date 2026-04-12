@@ -57,20 +57,7 @@ db.connect((err) => {
     if (tblErr) console.error("Could not create booking_packages table:", tblErr.message);
     else console.log("booking_packages table ready.");
   });
-  // Soft delete columns
-const softDeleteQueries = [
-  `ALTER TABLE user_account ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) DEFAULT 0`,
-  `ALTER TABLE passenger ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) DEFAULT 0`,
-  `ALTER TABLE employee ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) DEFAULT 0`
-];
-
-softDeleteQueries.forEach(q => {
-  db.query(q, (err) => {
-    if (err) console.log("Soft delete column may already exist");
-  });
 });
-  
-//});
 
 // ── Helpers ──
 function parseBody(req) {
@@ -500,7 +487,7 @@ const server = http.createServer((req, res) => {
           p.passport_status, p.visa_status, p.country_of_origin, p.seat_preferences, p.meal_preferences, p.special_needs
         FROM user_account ua
         LEFT JOIN passenger p ON ua.passenger_id = p.passenger_id
-        WHERE ua.email = ? AND ua.password = ? AND ua.role = ? AND is_deleted = 0 LIMIT 1
+        WHERE ua.email = ? AND ua.password = ? AND ua.role = ? LIMIT 1
       `;
       db.query(sql, [email, password, role], (err, results) => {
         if (err) return sendJson(res, 500, { error: err.message });
@@ -532,12 +519,6 @@ const server = http.createServer((req, res) => {
 
   // POST /create-staff — System Admin only — creates a new Employee or System Admin account
   if (req.url === "/create-staff" && req.method === "POST") {
-    const requester = getRequestUser(req);
-
-  // Only System Admin can create employees
-  if (requester.role !== "System Admin") {
-    return deny(res);
-  }
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
       if (!hasRole(requester.role, ["System Admin"])) return deny(res);
@@ -1165,27 +1146,4 @@ const server = http.createServer((req, res) => {
 });
 
 const PORT = 8000;
-// POST /self-delete
-if (req.url === "/self-delete" && req.method === "POST") {
-  parseBody(req).then(() => {
-    const requester = getRequestUser(req);
-
-    if (!requester.userId) {
-      return sendJson(res, 401, { error: "Not logged in" });
-    }
-
-    db.query(
-      `UPDATE user_account 
-       SET is_deleted = 1 
-       WHERE user_id = ?`,
-      [requester.userId],
-      (err) => {
-        if (err) return sendJson(res, 500, { error: err.message });
-
-        sendJson(res, 200, { message: "Account deleted" });
-      }
-    );
-  });
-  return;
-}
 server.listen(PORT, () => { console.log(`Server running on port ${PORT}`); });
