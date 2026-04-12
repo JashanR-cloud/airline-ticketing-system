@@ -801,7 +801,7 @@ function App() {
     setActiveTab("login");
   };
 
-  const handleEditSaved = (updatedUser) => { setLoggedInUser((prev) => ({ ...prev, ...updatedUser })); };
+  const handleEditSaved = (updatedUser) => { setLoggedInUser((prev) => ({ ...prev, ...updatedUser }));
 
     setShowEditModal(false);
     setLoggedInUser(null);
