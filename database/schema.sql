@@ -54,7 +54,7 @@ CREATE TABLE Flights (
     FOREIGN KEY (route_id) REFERENCES routes(route_id),
     FOREIGN KEY (airline_id) REFERENCES airline(airline_id),
     FOREIGN KEY (destination_airport_id) REFERENCES Airport(airport_id),
-    FOREIGN KEY (destination_airport_id) REFERENCES Airport(airport_id)
+    
 
     CHECK (seats_available <= total_seats),
     CHECK (departure_airport_id <> destination_airport_id)
