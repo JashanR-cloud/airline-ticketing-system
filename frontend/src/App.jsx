@@ -809,6 +809,15 @@ function App() {
     alert("Your account has been deactivated. You have been logged out.");
   };
 
+  const handleAccountDeleted = () => {
+    setShowEditModal(false);
+
+    localStorage.clear(); 
+
+    setTimeout(() => {
+      window.location.href = "/login";
+    }, 800);
+  };
 
   const groupedDestinations = destinations.reduce((acc, d) => {
     if (!acc[d.departure]) acc[d.departure] = [];

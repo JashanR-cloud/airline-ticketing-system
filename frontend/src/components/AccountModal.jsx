@@ -337,7 +337,12 @@ export function EditAccountModal({ user, onClose, onSaved, onAccountDeleted }) {
       const data = await res.json();
       if (!res.ok) { setDeleteError(data.error || "Could not delete account."); return; }
       // Notify parent to log out and show confirmation
-      if (onAccountDeleted) onAccountDeleted();
+      if (onAccountDeleted) {
+        onAccountDeleted();
+      } else {
+        console.warn("onAccountDeleted was not provided");
+        window.location.href = "/login";
+      }
     } catch {
       setDeleteError("Could not connect to backend.");
     } finally {
