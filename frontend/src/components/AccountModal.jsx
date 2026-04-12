@@ -345,6 +345,13 @@ export function EditAccountModal({ user, onClose, onSaved, onAccountDeleted }) {
     }
   };
 
+    return (
+    <div className="acct-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="acct-modal">
+        <button className="acct-close" onClick={onClose}>✕</button>
+        <div className="acct-header">
+          <div className="acct-logo">RHA</div>
+          <h2>Edit Account</h2>
 
           <p className="acct-sub">{user.email} · <span className="acct-role-tag">{user.role}</span></p>
         </div>
