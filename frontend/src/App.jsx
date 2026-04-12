@@ -803,6 +803,13 @@ function App() {
 
   const handleEditSaved = (updatedUser) => { setLoggedInUser((prev) => ({ ...prev, ...updatedUser })); };
 
+    setShowEditModal(false);
+    setLoggedInUser(null);
+    // Show a brief confirmation — reuse the existing login error area or just alert
+    alert("Your account has been deactivated. You have been logged out.");
+  };
+
+
   const groupedDestinations = destinations.reduce((acc, d) => {
     if (!acc[d.departure]) acc[d.departure] = [];
     acc[d.departure].push(d);
@@ -1635,7 +1642,7 @@ function App() {
 
 
       {showCreateModal && <CreateAccountModal onClose={() => setShowCreateModal(false)} onSuccess={handleRegisterSuccess} />}
-      {showEditModal && loggedInUser && <EditAccountModal user={loggedInUser} onClose={() => setShowEditModal(false)} onSaved={handleEditSaved} />}
+      {showEditModal && loggedInUser && <EditAccountModal user={loggedInUser} onClose={() => setShowEditModal(false)} onSaved={handleEditSaved} onAccountDeleted={handleAccountDeleted} />}
 
       <div className="top-alert">
         <span className="important">Important:</span> Welcome to Royal Horizon Airways — Travel Beyond the Horizon
