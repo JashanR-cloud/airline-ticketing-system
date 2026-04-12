@@ -88,7 +88,7 @@ function hasRole(role, allowedRoles) {
   return allowedRoles.includes(role);
 }
 
-// Now only 3 roles: Passenger, Employee, System Admin
+// Now only 3 roles: passenger, Employee, System Admin
 // Employee = merged Flight Admin + Booking Admin + Operations Admin + Employee
 function isStaff(role) {
   return ["Employee", "System Admin"].includes(role);
@@ -174,7 +174,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // GET /all-passengers → Employee, System Admin — Passenger + Employee roles (excludes System Admin)
+  // GET /all-passengers → Employee, System Admin — passenger + Employee roles (excludes System Admin)
   if (req.url === "/all-passengers" && req.method === "GET") {
     const requester = getRequestUser(req);
     if (!isStaff(requester.role)) return deny(res);
@@ -363,9 +363,9 @@ const server = http.createServer((req, res) => {
   }
 
   // GET /route-flights/:routeId → Employee, System Admin
-  const routeFlightsMatch = req.url.match(/^\/route-flights\/(\d+)$/);
-  if (routeFlightsMatch && req.method === "GET") {
-    const routeId = Number(routeFlightsMatch[1]);
+  const routeflightsMatch = req.url.match(/^\/route-flights\/(\d+)$/);
+  if (routeflightsMatch && req.method === "GET") {
+    const routeId = Number(routeflightsMatch[1]);
     const requester = getRequestUser(req);
     if (!isStaff(requester.role)) return deny(res);
     const sql = `
@@ -426,7 +426,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // POST /register → public, Passenger only
+  // POST /register → public, passenger only
   if (req.url === "/register" && req.method === "POST") {
     parseBody(req).then((body) => {
       const {
@@ -498,7 +498,127 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // POST /search-flights → public
+  // GET /all-staff — System Admin only — list of all Employee + System Admin accounts
+  if (req.url === "/all-staff" && req.method === "GET") {
+    const requester = getRequestUser(req);
+    if (!hasRole(requester.role, ["System Admin"])) return deny(res);
+    const sql = `
+      SELECT ua.user_id, ua.employee_id, ua.email, ua.role,
+        e.first_name, e.last_name, e.department, e.position, e.hire_date
+      FROM user_account ua
+      LEFT JOIN employee e ON ua.employee_id = e.id_number
+      WHERE ua.role IN ('Employee', 'System Admin')
+      ORDER BY ua.role DESC, e.last_name ASC
+    `;
+    db.query(sql, (err, results) => {
+      if (err) return sendJson(res, 500, { error: err.message });
+      sendJson(res, 200, results);
+    });
+    return;
+  }
+
+  // POST /create-staff — System Admin only — creates a new Employee or System Admin account
+  if (req.url === "/create-staff" && req.method === "POST") {
+    parseBody(req).then((body) => {
+      const requester = getRequestUser(req);
+      if (!hasRole(requester.role, ["System Admin"])) return deny(res);
+      const { email, password, first_name, last_name, department, position, role } = body;
+      if (!email || !password || !first_name || !role) {
+        return sendJson(res, 400, { error: "Email, password, first name, and role are required." });
+      }
+      if (!["Employee", "System Admin"].includes(role)) {
+        return sendJson(res, 400, { error: "Role must be Employee or System Admin." });
+      }
+      // Check if email is already used
+      db.query("SELECT user_id FROM user_account WHERE email = ?", [email], (err, rows) => {
+        if (err) return sendJson(res, 500, { error: err.message });
+        if (rows.length > 0) return sendJson(res, 409, { error: "An account with this email already exists." });
+        // Auto-generate employee ID — 2xx for admins, 1xx for employees
+        const prefix = role === "System Admin" ? "2" : "1";
+        db.query(
+          "SELECT id_number FROM employee WHERE id_number LIKE ? ORDER BY CAST(id_number AS UNSIGNED) DESC LIMIT 1",
+          [prefix + "%"],
+          (maxErr, maxRows) => {
+            if (maxErr) return sendJson(res, 500, { error: maxErr.message });
+            const nextId = maxRows.length > 0 ? String(Number(maxRows[0].id_number) + 1) : prefix + "01";
+            // Insert into employee first (user_account has FK to employee)
+            db.query(
+              `INSERT INTO employee (id_number, first_name, last_name, email, department, position, hire_date)
+               VALUES (?, ?, ?, ?, ?, ?, CURDATE())`,
+              [nextId, first_name, last_name || null, email, department || null, position || null],
+              (empErr) => {
+                if (empErr) return sendJson(res, 500, { error: empErr.message });
+                db.query(
+                  "INSERT INTO user_account (employee_id, email, password, role) VALUES (?, ?, ?, ?)",
+                  [nextId, email, password, role],
+                  (uaErr, result) => {
+                    if (uaErr) return sendJson(res, 500, { error: uaErr.message });
+                    sendJson(res, 201, { message: "Staff account created.", user_id: result.insertId, employee_id: nextId, role });
+                  }
+                );
+              }
+            );
+          }
+        );
+      });
+    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
+    return;
+  }
+
+  // DELETE /delete-staff — System Admin only — deletes an Employee or System Admin account
+  if (req.url === "/delete-staff" && req.method === "DELETE") {
+    parseBody(req).then((body) => {
+      const requester = getRequestUser(req);
+      if (!hasRole(requester.role, ["System Admin"])) return deny(res);
+      const userId = Number(body.userId);
+      if (!userId) return sendJson(res, 400, { error: "userId is required." });
+      if (userId === requester.userId) return sendJson(res, 400, { error: "You cannot delete your own account." });
+      // Look up the staff account's employee_id and role
+      db.query(
+        "SELECT employee_id, role FROM user_account WHERE user_id = ? LIMIT 1",
+        [userId], (err, rows) => {
+          if (err) return sendJson(res, 500, { error: err.message });
+          if (rows.length === 0) return sendJson(res, 404, { error: "Account not found." });
+          if (!["Employee", "System Admin"].includes(rows[0].role)) {
+            return sendJson(res, 400, { error: "This endpoint only deletes staff accounts." });
+          }
+          const employeeId = rows[0].employee_id;
+          // Delete user_account first (it references employee via FK)
+          db.query("DELETE FROM user_account WHERE user_id = ?", [userId], (delErr) => {
+            if (delErr) return sendJson(res, 500, { error: delErr.message });
+            if (employeeId) {
+              db.query("DELETE FROM employee WHERE id_number = ?", [employeeId], () => {});
+            }
+            sendJson(res, 200, { message: "Staff account deleted." });
+          });
+        }
+      );
+    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
+    return;
+  }
+
+  // POST /staff-login — Employee and System Admin login (role is looked up from the database)
+  if (req.url === "/staff-login" && req.method === "POST") {
+    parseBody(req).then((body) => {
+      const email = body.email?.trim();
+      const password = body.password?.trim();
+      const sql = `
+        SELECT ua.user_id, ua.email, ua.role, ua.passenger_id, ua.employee_id,
+          e.first_name, e.last_name
+        FROM user_account ua
+        LEFT JOIN employee e ON ua.employee_id = e.id_number
+        WHERE ua.email = ? AND ua.password = ? AND ua.role IN ('Employee', 'System Admin') LIMIT 1
+      `;
+      db.query(sql, [email, password], (err, results) => {
+        if (err) return sendJson(res, 500, { error: err.message });
+        if (results.length === 0) return sendJson(res, 401, { error: "Invalid credentials or not a staff account." });
+        sendJson(res, 200, { message: "Login successful.", user: results[0] });
+      });
+    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
+    return;
+  }
+
+  // POST /search-flights → public (searches by city — finds all airports in each city)
   if (req.url === "/search-flights" && req.method === "POST") {
     parseBody(req).then((body) => {
       const sql = `
@@ -680,7 +800,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // POST /cancel-booking → Passenger (own), Employee, System Admin
+  // POST /cancel-booking → passenger (own), Employee, System Admin
   if (req.url === "/cancel-booking" && req.method === "POST") {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
@@ -700,7 +820,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // PUT /update-preferences → Passenger (own), Employee, System Admin
+  // PUT /update-preferences → passenger (own), Employee, System Admin
   if (req.url === "/update-preferences" && req.method === "PUT") {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
@@ -750,7 +870,7 @@ const server = http.createServer((req, res) => {
         "UPDATE aircraft SET seating_capacity = ? WHERE aircraft_id = ?",
         [body.capacity, body.aircraftId], (err) => {
           if (err) return sendJson(res, 500, { error: err.message });
-          sendJson(res, 200, { message: "Aircraft updated." });
+          sendJson(res, 200, { message: "aircraft updated." });
         }
       );
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
@@ -921,7 +1041,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // POST /redeem-flight → Passenger, Employee, System Admin — deducts 1000 miles, books a free flight
+  // POST /redeem-flight → passenger, Employee, System Admin — deducts 1000 miles, books a free flight
   if (req.url === "/redeem-flight" && req.method === "POST") {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
@@ -951,13 +1071,13 @@ const server = http.createServer((req, res) => {
 
           // Create the booking
           db.query(
-            "INSERT INTO Bookings (user_id, booking_date, booking_status) VALUES (?, NOW(), 'Confirmed')",
+            "INSERT INTO bookings (user_id, booking_date, booking_status) VALUES (?, NOW(), 'Confirmed')",
             [userId], (err, result) => {
               if (err) return sendJson(res, 500, { error: err.message });
               const bookingId = result.insertId;
 
               db.query(
-                "INSERT INTO Booking_Passengers (booking_id, passenger_id) VALUES (?, ?)",
+                "INSERT INTO booking_passengers (booking_id, passenger_id) VALUES (?, ?)",
                 [bookingId, passengerId], (err2) => {
                   if (err2) return sendJson(res, 500, { error: err2.message });
 

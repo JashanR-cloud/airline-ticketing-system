@@ -205,6 +205,16 @@ function App() {
   const [empSection, setEmpSection] = useState("passengers");
 
   const [loginData, setLoginData] = useState({ email: "", password: "", role: "Passenger" });
+  // Staff Portal login state — separate from passenger login
+  const [staffLoginData, setStaffLoginData] = useState({ email: "", password: "" });
+  const [staffLoginMessage, setStaffLoginMessage] = useState("");
+  const [loadingStaffLogin, setLoadingStaffLogin] = useState(false);
+
+  // Manage Staff (admin only) — list all staff and create/delete accounts
+  const [allStaff, setAllStaff] = useState([]);
+  const [showReportRows, setShowReportRows] = useState(false);
+  const [newStaffData, setNewStaffData] = useState({ email: "", password: "", first_name: "", last_name: "", department: "", position: "", role: "Employee" });
+  const [staffManageMessage, setStaffManageMessage] = useState("");
   const [flightSearch, setFlightSearch] = useState({ departureCityId: "", arrivalCityId: "", departureDate: "", returnDate: "", passengers: 1 });
   const [manageData, setManageData] = useState({ bookingId: "" });
   const [statusData, setStatusData] = useState({ flightId: "" });
@@ -527,6 +537,61 @@ function App() {
 
   // ── Event handlers ──
   const handleLoginChange = (e) => setLoginData({ ...loginData, [e.target.name]: e.target.value });
+  // Staff Portal login handler — uses /staff-login endpoint, role is determined from the database
+  const handleStaffLoginChange = (e) => setStaffLoginData({ ...staffLoginData, [e.target.name]: e.target.value });
+  const handleStaffLoginSubmit = async (e) => {
+    e.preventDefault(); setLoadingStaffLogin(true); setStaffLoginMessage("");
+    try {
+      const response = await fetch(`${API}/staff-login`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: staffLoginData.email, password: staffLoginData.password }),
+      });
+      const data = await response.json();
+      if (!response.ok) { setStaffLoginMessage(data.error || "Login failed."); return; }
+      setLoggedInUser(data.user);
+      setStaffLoginMessage(`Login successful. Logged in as ${data.user.role}.`);
+      setActiveTab(data.user.role === "System Admin" ? "systemAdmin" : "employee");
+    } catch { setStaffLoginMessage("Could not connect to backend."); }
+    finally { setLoadingStaffLogin(false); }
+  };
+
+  // Manage Staff handlers — admin creates/deletes employee and admin accounts
+  const fetchAllStaff = async () => {
+    try {
+      const response = await fetch(`${API}/all-staff`, { headers: getAuthHeaders(false) });
+      const data = await response.json();
+      if (response.ok) setAllStaff(data);
+    } catch { setStaffManageMessage("Could not load staff list."); }
+  };
+  const handleNewStaffChange = (e) => setNewStaffData({ ...newStaffData, [e.target.name]: e.target.value });
+  const handleCreateStaff = async (e) => {
+    e.preventDefault(); setStaffManageMessage("");
+    try {
+      const response = await fetch(`${API}/create-staff`, {
+        method: "POST", headers: getAuthHeaders(true),
+        body: JSON.stringify(newStaffData),
+      });
+      const data = await response.json();
+      if (!response.ok) { setStaffManageMessage(data.error || "Could not create account."); return; }
+      setStaffManageMessage(`Created ${data.role} account (ID: ${data.employee_id}).`);
+      setNewStaffData({ email: "", password: "", first_name: "", last_name: "", department: "", position: "", role: "Employee" });
+      fetchAllStaff();
+    } catch { setStaffManageMessage("Could not connect to backend."); }
+  };
+  const handleDeleteStaff = async (userId, label) => {
+    if (!window.confirm(`Delete staff account for ${label}?`)) return;
+    setStaffManageMessage("");
+    try {
+      const response = await fetch(`${API}/delete-staff`, {
+        method: "DELETE", headers: getAuthHeaders(true),
+        body: JSON.stringify({ userId }),
+      });
+      const data = await response.json();
+      if (!response.ok) { setStaffManageMessage(data.error || "Could not delete account."); return; }
+      setStaffManageMessage("Staff account deleted.");
+      fetchAllStaff();
+    } catch { setStaffManageMessage("Could not connect to backend."); }
+  };
   const handleFlightChange = (e) => setFlightSearch({ ...flightSearch, [e.target.name]: e.target.value });
   const handleManageChange = (e) => setManageData({ ...manageData, [e.target.name]: e.target.value });
   const handleStatusChange = (e) => setStatusData({ ...statusData, [e.target.name]: e.target.value });
@@ -550,6 +615,7 @@ function App() {
   const handleLogout = () => {
     setLoggedInUser(null);
     setLoginData({ email: "", password: "", role: "Passenger" });
+    setStaffLoginData({ email: "", password: "" }); setStaffLoginMessage("");
     setLoginMessage(""); setManageMessage(""); setStatusMessage("");
     setManageResult(null); setStatusResult(null);
     setUserBookings([]); setReports([]); setAllAircrafts([]);
@@ -1586,6 +1652,10 @@ function App() {
           <li onClick={async () => { setShowExperienceModal(true); await fetchExperienceRatings(); }} style={{ cursor: "pointer" }}>EXPERIENCE</li>
           <li onClick={async () => { setShowDestinationsModal(true); await fetchDestinations(); }} style={{ cursor: "pointer" }}>WHERE WE FLY</li>
           <li onClick={handleCheckLoyalty} style={{ cursor: "pointer", color: "#ffcc00", fontWeight: "bold" }}>LOYALTY</li>
+          {/* Staff Portal link — for Employee and Admin login */}
+          {!loggedInUser && (
+            <li onClick={() => setActiveTab("staffLogin")} style={{ cursor: "pointer" }}>STAFF PORTAL</li>
+          )}
         </ul>
         <div className="nav-right-group">
           {loggedInUser ? (
@@ -1615,7 +1685,8 @@ function App() {
       </header>
 
       <section className="booking-panel">
-        <div className="tabs">
+        {!isSystemAdmin && !isEmployee && (
+          <div className="tabs">
           <button className={activeTab === "search" ? "tab active" : "tab"} onClick={() => setActiveTab("search")}>Search Flights</button>
 
           <button className={activeTab === "manage" ? "tab active" : "tab"} onClick={() => setActiveTab("manage")}>
@@ -1628,12 +1699,13 @@ function App() {
             <button className={activeTab === "login" ? "tab active" : "tab"} onClick={() => setActiveTab("login")}>Login</button>
           )}
 
+
           {(isEmployee || isSystemAdmin) && (
             <button
               className={activeTab === "employee" ? "tab active" : "tab"}
               onClick={() => { setActiveTab("employee"); loadEmployeePortal(); }}
             >
-              Employee Portal
+              Employee Dashboard
             </button>
           )}
 
@@ -1645,7 +1717,8 @@ function App() {
               System Admin
             </button>
           )}
-        </div>
+          </div>
+        )}
 
         <div className="panel-content">
           {loggedInUser && (
@@ -1655,6 +1728,12 @@ function App() {
                 <span className="banner-role">{loggedInUser.role}</span>
               </div>
               <div className="banner-actions">
+                {isSystemAdmin && activeTab !== "systemAdmin" && (
+                  <button className="banner-edit-btn" onClick={() => { setActiveTab("systemAdmin"); fetchReports(); }}>← Back to Dashboard</button>
+                )}
+                {isEmployee && !isSystemAdmin && activeTab !== "employee" && (
+                  <button className="banner-edit-btn" onClick={() => { setActiveTab("employee"); loadEmployeePortal(); }}>← Back to Dashboard</button>
+                )}
                 <button className="banner-edit-btn" onClick={() => setShowEditModal(true)}>✏️ Edit Account</button>
                 <button className="banner-logout-btn" onClick={handleLogout}>Log Out</button>
               </div>
@@ -2042,7 +2121,7 @@ function App() {
           {/* ── Employee Portal ── */}
           {activeTab === "employee" && (isEmployee || isSystemAdmin) && (
             <div>
-              <h2>Employee Portal</h2>
+              <h2>Employee Dashboard</h2>
               <p style={{ color: "#666", marginBottom: "18px" }}>Full access: passenger management, bookings, flight operations, and administrative actions.</p>
 
               {/* Section navigation */}
@@ -2053,6 +2132,18 @@ function App() {
                 <SectionBtn id="routes" label="🗺️ Routes" />
                 <SectionBtn id="aircraft" label="✈️ Aircraft" />
                 <SectionBtn id="actions" label="⚙️ Admin Actions" />
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("search")}
+                  style={{
+                    padding: "8px 18px", borderRadius: "20px", border: "none", cursor: "pointer",
+                    fontWeight: "600", fontSize: "13px",
+                    background: "#f0f0f0", color: "#333",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  🔍 Search Flights
+                </button>
               </div>
 
               {/* ── SECTION: Passengers ── */}
@@ -2459,7 +2550,7 @@ function App() {
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px", marginBottom: "24px" }}>
                 {[
-                  { icon: "👤", label: "Employee Portal", desc: "All staff features: passengers, bookings, routes, aircraft, flight ops", tab: "employee" },
+                  { icon: "👤", label: "Employee Dashboard", desc: "All staff features: passengers, bookings, routes, aircraft, flight ops", tab: "employee" },
                   { icon: "🔍", label: "Manage Any Booking", desc: "Look up and modify any booking by ID", tab: "manage" },
                   { icon: "🛫", label: "Flight Status", desc: "Check live flight status by flight ID", tab: "status" },
                   { icon: "✈️", label: "Search & Book Flights", desc: "Search flights and book on behalf of any user", tab: "search" },
@@ -2476,8 +2567,13 @@ function App() {
 
               <div className="result-card">
                 <h3>Route Summary Report</h3>
-                <button className="nav-edit-btn" style={{ color: "#222", borderColor: "#222", margin: "10px 0" }} onClick={fetchReports}>{loadingReports ? "Generating..." : "Generate Report"}</button>
+                <button className="nav-edit-btn" style={{ color: "#222", borderColor: "#222", margin: "10px 0" }} onClick={() => { fetchReports(); setShowReportRows(true); }}>{loadingReports ? "Generating..." : "Generate Reports"}</button>
                 {reports.length > 0 && (
+                  <button className="nav-edit-btn" style={{ color: "#222", borderColor: "#222", margin: "10px 0 10px 10px" }} onClick={() => setShowReportRows(!showReportRows)}>
+                    {showReportRows ? `▲ Hide Reports (${reports.length})` : `▼ Show Reports (${reports.length})`}
+                  </button>
+                )}
+                {reports.length > 0 && showReportRows && (
                   <table style={{ width: "100%", textAlign: "left", marginTop: "10px", borderCollapse: "collapse" }}>
                     <thead>
                       <tr style={{ borderBottom: "2px solid #ddd" }}>
@@ -2500,7 +2596,81 @@ function App() {
                   </table>
                 )}
               </div>
+
+              {/* ── Manage Staff (create/delete employees and admins) ── */}
+              <div className="result-card" style={{ marginTop: "24px" }}>
+                <h3>Manage Staff</h3>
+                <p style={{ color: "#666", marginBottom: "12px", fontSize: "14px" }}>Create or remove Employee and System Admin accounts.</p>
+                <button className="nav-edit-btn" style={{ color: "#222", borderColor: "#222", margin: "10px 0" }} onClick={fetchAllStaff}>Load Staff List</button>
+
+                <form onSubmit={handleCreateStaff} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px", marginTop: "16px", padding: "16px", background: "#f9f9f9", borderRadius: "8px" }}>
+                  <input name="first_name" value={newStaffData.first_name} onChange={handleNewStaffChange} placeholder="First Name *" required />
+                  <input name="last_name" value={newStaffData.last_name} onChange={handleNewStaffChange} placeholder="Last Name" />
+                  <input name="email" type="email" value={newStaffData.email} onChange={handleNewStaffChange} placeholder="Email *" required />
+                  <input name="password" value={newStaffData.password} onChange={handleNewStaffChange} placeholder="Password *" required />
+                  <input name="department" value={newStaffData.department} onChange={handleNewStaffChange} placeholder="Department" />
+                  <input name="position" value={newStaffData.position} onChange={handleNewStaffChange} placeholder="Position" />
+                  <select name="role" value={newStaffData.role} onChange={handleNewStaffChange}>
+                    <option value="Employee">Employee</option>
+                    <option value="System Admin">System Admin</option>
+                  </select>
+                  <button type="submit" className="primary-btn">Create Staff Account</button>
+                </form>
+
+                {staffManageMessage && (
+                  <p style={{ marginTop: "12px", fontSize: "15px", color: staffManageMessage.toLowerCase().includes("created") || staffManageMessage.toLowerCase().includes("deleted") ? "#1a6e3c" : "#cf102d" }}>{staffManageMessage}</p>
+                )}
+
+                {allStaff.length > 0 && (
+                  <table style={{ width: "100%", textAlign: "left", marginTop: "16px", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "2px solid #ddd" }}>
+                        {["ID", "Name", "Email", "Role", "Department", "Position", ""].map((h) => <th key={h} style={{ padding: "10px" }}>{h}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allStaff.map((s) => (
+                        <tr key={s.user_id} style={{ borderBottom: "1px solid #ddd", height: "40px" }}>
+                          <td style={{ padding: "10px" }}>{s.employee_id}</td>
+                          <td style={{ padding: "10px" }}>{s.first_name} {s.last_name || ""}</td>
+                          <td style={{ padding: "10px" }}>{s.email}</td>
+                          <td style={{ padding: "10px" }}>{s.role}</td>
+                          <td style={{ padding: "10px" }}>{s.department || "—"}</td>
+                          <td style={{ padding: "10px" }}>{s.position || "—"}</td>
+                          <td style={{ padding: "10px" }}>
+                            {s.user_id !== loggedInUser?.user_id ? (
+                              <button className="nav-logout-btn" onClick={() => handleDeleteStaff(s.user_id, `${s.first_name} ${s.last_name || ""}`)}>Delete</button>
+                            ) : (
+                              <span style={{ color: "#999", fontSize: "13px" }}>(you)</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
             </div>
+          )}
+
+          {/* ── Staff Portal Login ── */}
+          {activeTab === "staffLogin" && !loggedInUser && (
+            <form className="login-form" onSubmit={handleStaffLoginSubmit}>
+              <h2>Staff Portal</h2>
+              <p style={{ marginBottom: "16px", fontSize: "15px", color: "#666" }}>Employee and Admin access only.</p>
+              <div className="form-group">
+                <label>Email</label>
+                <input type="email" name="email" value={staffLoginData.email} onChange={handleStaffLoginChange} placeholder="Enter your staff email" required />
+              </div>
+              <div className="form-group">
+                <label>Password</label>
+                <input type="password" name="password" value={staffLoginData.password} onChange={handleStaffLoginChange} placeholder="Enter your password" required />
+              </div>
+              <button type="submit" className="primary-btn">{loadingStaffLogin ? "Logging in..." : "Log In"}</button>
+              {staffLoginMessage && (
+                <p style={{ marginTop: "14px", fontSize: "18px", color: staffLoginMessage.includes("successful") ? "#1a6e3c" : "#cf102d" }}>{staffLoginMessage}</p>
+              )}
+            </form>
           )}
 
           {/* ── Login ── */}
@@ -2515,14 +2685,7 @@ function App() {
                 <label>Password</label>
                 <input type="password" name="password" value={loginData.password} onChange={handleLoginChange} placeholder="Enter your password" required />
               </div>
-              <div className="form-group">
-                <label>Role</label>
-                <select name="role" value={loginData.role} onChange={handleLoginChange}>
-                  <option value="Passenger">Passenger</option>
-                  <option value="Employee">Employee</option>
-                  <option value="System Admin">System Admin</option>
-                </select>
-              </div>
+              {/* Removed role dropdown, login on main page is for Passengers only */}
               <button type="submit" className="primary-btn">{loadingLogin ? "Logging in..." : "Log In"}</button>
               {loginMessage && (
                 <p style={{ marginTop: "14px", fontSize: "18px", color: loginMessage.includes("successful") || loginMessage.includes("created") ? "#1a6e3c" : "#cf102d" }}>{loginMessage}</p>

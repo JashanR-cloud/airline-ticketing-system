@@ -139,20 +139,7 @@ export function CreateAccountModal({ onClose, onSuccess }) {
 
         {step === 1 && (
           <div className="acct-section">
-            <Field label="Account Type" required>
-              <div className="acct-role-toggle">
-                {["Passenger", "Employee"].map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    className={`acct-role-btn ${form.role === r ? "acct-role-active" : ""}`}
-                    onClick={() => setForm({ ...form, role: r })}
-                  >
-                    {r === "Passenger" ? "✈ Passenger" : "🏢 Employee"}
-                  </button>
-                ))}
-              </div>
-            </Field>
+            {/* Removed role toggle — all new accounts are automatically Passenger */}
 
             <Field label="Email Address" required>
               <input
