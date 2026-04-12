@@ -277,3 +277,11 @@ END//
 
 DELIMITER ;
 
+
+-- ── Soft-Delete Support (migration) ──────────────────────────────────────────
+-- Run this if upgrading an existing database (server.js also auto-applies it):
+ALTER TABLE user_account ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) NOT NULL DEFAULT 0;
+-- When is_deleted = 1 the account is treated as deleted on the website, but all
+-- data (user_account row, Passenger/Employee row, Bookings, loyalty_program rows)
+-- is intentionally retained in the database for record-keeping purposes.
+
