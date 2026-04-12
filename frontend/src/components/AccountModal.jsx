@@ -249,10 +249,19 @@ export function CreateAccountModal({ onClose, onSuccess }) {
 
 // ─── Edit Account Modal ──────────────────────────────────────────────────────
 
-export function EditAccountModal({ user, onClose, onSaved }) {
+export function EditAccountModal({ user, onClose, onSaved, onAccountDeleted }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // Delete-account state
+  const [showDeleteSection, setShowDeleteSection] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  const CONFIRM_PHRASE = "DELETE MY ACCOUNT";
 
   const [form, setForm] = useState({
     first_name: user.first_name || "",
@@ -308,13 +317,35 @@ export function EditAccountModal({ user, onClose, onSaved }) {
     }
   };
 
-  return (
-    <div className="acct-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="acct-modal">
-        <button className="acct-close" onClick={onClose}>✕</button>
-        <div className="acct-header">
-          <div className="acct-logo">RHA</div>
-          <h2>Edit Account</h2>
+  const handleDelete = async () => {
+    if (deleteConfirmText !== CONFIRM_PHRASE) {
+      setDeleteError(`Please type "${CONFIRM_PHRASE}" exactly to confirm.`);
+      return;
+    }
+    if (!deletePassword.trim()) {
+      setDeleteError("Please enter your password to confirm.");
+      return;
+    }
+    setDeleteError("");
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`${API}/deactivate-account`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", "x-user-id": user.user_id, "x-user-role": user.role },
+        body: JSON.stringify({ password: deletePassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setDeleteError(data.error || "Could not delete account."); return; }
+      // Notify parent to log out and show confirmation
+      if (onAccountDeleted) onAccountDeleted();
+    } catch {
+      setDeleteError("Could not connect to backend.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+
           <p className="acct-sub">{user.email} · <span className="acct-role-tag">{user.role}</span></p>
         </div>
 
@@ -398,8 +429,63 @@ export function EditAccountModal({ user, onClose, onSaved }) {
               {loading ? "Saving…" : "Save Changes"}
             </button>
           </div>
+
+          {/* ── Delete Account Section ── */}
+          <div className="acct-delete-zone">
+            <button
+              className="acct-delete-toggle"
+              onClick={() => { setShowDeleteSection((v) => !v); setDeleteError(""); setDeletePassword(""); setDeleteConfirmText(""); }}
+            >
+              {showDeleteSection ? "▲ Hide" : "▼ Delete My Account"}
+            </button>
+
+            {showDeleteSection && (
+              <div className="acct-delete-panel">
+                <div className="acct-delete-warning">
+                  <span className="acct-delete-icon">⚠️</span>
+                  <div>
+                    <strong>This action cannot be undone on the website.</strong>
+                    <p>Your account will be deactivated and you will be logged out immediately. All associated bookings, loyalty points, and profile data will no longer be accessible through your account.</p>
+                  </div>
+                </div>
+
+                <Field label={`Type "${CONFIRM_PHRASE}" to confirm`} required>
+                  <input
+                    className={`acct-input ${deleteConfirmText && deleteConfirmText !== CONFIRM_PHRASE ? "acct-input-error" : ""}`}
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder={CONFIRM_PHRASE}
+                    autoComplete="off"
+                  />
+                </Field>
+
+                <Field label="Enter your password to confirm" required>
+                  <input
+                    className="acct-input"
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    placeholder="Your current password"
+                    autoComplete="current-password"
+                  />
+                </Field>
+
+                {deleteError && <p className="acct-error">{deleteError}</p>}
+
+                <button
+                  className="acct-btn-delete"
+                  onClick={handleDelete}
+                  disabled={deleteLoading || deleteConfirmText !== CONFIRM_PHRASE || !deletePassword.trim()}
+                >
+                  {deleteLoading ? "Deleting…" : "Permanently Delete My Account"}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
