@@ -40,6 +40,28 @@ db.connect((err) => {
     }
   });
 
+  // Auto-add is_deleted column to user_account for soft-delete support
+  db.query(`
+    ALTER TABLE user_account ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) NOT NULL DEFAULT 0
+  `, (delColErr) => {
+    if (delColErr) {
+      // MySQL < 8 fallback
+      db.query(`
+        SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_account' AND COLUMN_NAME = 'is_deleted'
+      `, (checkErr, rows) => {
+        if (!checkErr && rows[0].cnt === 0) {
+          db.query(`ALTER TABLE user_account ADD COLUMN is_deleted TINYINT(1) NOT NULL DEFAULT 0`, (addErr) => {
+            if (addErr) console.error("Could not add is_deleted column:", addErr.message);
+            else console.log("Added is_deleted column to user_account table.");
+          });
+        }
+      });
+    } else {
+      console.log("user_account.is_deleted column ready.");
+    }
+  });
+
   // Auto-create booking_packages table if it doesn't exist
   db.query(`
     CREATE TABLE IF NOT EXISTS booking_packages (
@@ -487,7 +509,7 @@ const server = http.createServer((req, res) => {
           p.passport_status, p.visa_status, p.country_of_origin, p.seat_preferences, p.meal_preferences, p.special_needs
         FROM user_account ua
         LEFT JOIN passenger p ON ua.passenger_id = p.passenger_id
-        WHERE ua.email = ? AND ua.password = ? AND ua.role = ? LIMIT 1
+        WHERE ua.email = ? AND ua.password = ? AND ua.role = ? AND COALESCE(ua.is_deleted, 0) = 0 LIMIT 1
       `;
       db.query(sql, [email, password, role], (err, results) => {
         if (err) return sendJson(res, 500, { error: err.message });
@@ -607,7 +629,7 @@ const server = http.createServer((req, res) => {
           e.first_name, e.last_name
         FROM user_account ua
         LEFT JOIN employee e ON ua.employee_id = e.id_number
-        WHERE ua.email = ? AND ua.password = ? AND ua.role IN ('Employee', 'System Admin') LIMIT 1
+        WHERE ua.email = ? AND ua.password = ? AND ua.role IN ('Employee', 'System Admin') AND COALESCE(ua.is_deleted, 0) = 0 LIMIT 1
       `;
       db.query(sql, [email, password], (err, results) => {
         if (err) return sendJson(res, 500, { error: err.message });
@@ -816,6 +838,118 @@ const server = http.createServer((req, res) => {
           sendJson(res, 200, { message: "Cancelled." });
         });
       });
+    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
+    return;
+  }
+
+  // PUT /account/:userId — logged-in user updates their own profile (passengers and employees)
+  const accountUpdateMatch = req.url.match(/^\/account\/(\d+)$/);
+  if (accountUpdateMatch && req.method === "PUT") {
+    parseBody(req).then((body) => {
+      const requester = getRequestUser(req);
+      const targetUserId = Number(accountUpdateMatch[1]);
+      // Users may only edit their own account (staff can edit others)
+      const isSelf = requester.userId === targetUserId;
+      if (!isSelf && !isStaff(requester.role)) return deny(res);
+
+      const {
+        first_name, last_name, date_of_birth, phone_number, address, id_number,
+        passport_status, visa_status, seat_preferences, meal_preferences, special_needs, password,
+      } = body;
+
+      if (!first_name?.trim() || !last_name?.trim()) {
+        return sendJson(res, 400, { error: "First name and last name are required." });
+      }
+
+      // Look up role + linked ids for this account
+      db.query(
+        "SELECT role, passenger_id, employee_id FROM user_account WHERE user_id = ? AND COALESCE(is_deleted,0)=0 LIMIT 1",
+        [targetUserId], (err, rows) => {
+          if (err) return sendJson(res, 500, { error: err.message });
+          if (rows.length === 0) return sendJson(res, 404, { error: "Account not found." });
+          const { role, passenger_id, employee_id } = rows[0];
+
+          const tasks = [];
+
+          if (passenger_id) {
+            tasks.push((cb) => db.query(
+              `UPDATE passenger SET first_name=?, last_name=?, date_of_birth=?, phone_number=?,
+               address=?, id_number=?, passport_status=?, visa_status=?,
+               seat_preferences=?, meal_preferences=?, special_needs=? WHERE passenger_id=?`,
+              [first_name.trim(), last_name.trim() || null, date_of_birth || null,
+               phone_number || null, address || null, id_number || null,
+               passport_status ? 1 : 0, visa_status ? 1 : 0,
+               seat_preferences || null, meal_preferences || null, special_needs || null,
+               passenger_id], cb
+            ));
+          }
+
+          if (employee_id) {
+            tasks.push((cb) => db.query(
+              `UPDATE employee SET first_name=?, last_name=?, date_of_birth=?, phone_number=?,
+               address=?, passport_status=?, visa_status=?,
+               seat_preferences=?, meal_preferences=?, special_needs=? WHERE id_number=?`,
+              [first_name.trim(), last_name.trim() || null, date_of_birth || null,
+               phone_number || null, address || null,
+               passport_status ? 1 : 0, visa_status ? 1 : 0,
+               seat_preferences || null, meal_preferences || null, special_needs || null,
+               employee_id], cb
+            ));
+          }
+
+          if (password?.trim()) {
+            tasks.push((cb) => db.query(
+              "UPDATE user_account SET password=? WHERE user_id=?",
+              [password.trim(), targetUserId], cb
+            ));
+          }
+
+          let done = 0;
+          if (tasks.length === 0) return sendJson(res, 200, { message: "Nothing to update." });
+          let failed = false;
+          tasks.forEach((task) => task((taskErr) => {
+            if (failed) return;
+            if (taskErr) { failed = true; return sendJson(res, 500, { error: taskErr.message }); }
+            done++;
+            if (done === tasks.length) sendJson(res, 200, { message: "Account updated successfully." });
+          }));
+        }
+      );
+    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
+    return;
+  }
+
+  // DELETE /deactivate-account — soft-deletes the logged-in user's own account
+  // Data is retained in the database; the account is simply marked is_deleted=1
+  if (req.url === "/deactivate-account" && req.method === "DELETE") {
+    parseBody(req).then((body) => {
+      const requester = getRequestUser(req);
+      if (!requester.userId) return deny(res);
+
+      // Confirm the password before proceeding
+      const { password } = body;
+      if (!password?.trim()) return sendJson(res, 400, { error: "Password confirmation is required." });
+
+      db.query(
+        "SELECT user_id, password, role FROM user_account WHERE user_id = ? AND COALESCE(is_deleted,0)=0 LIMIT 1",
+        [requester.userId], (err, rows) => {
+          if (err) return sendJson(res, 500, { error: err.message });
+          if (rows.length === 0) return sendJson(res, 404, { error: "Account not found." });
+          if (rows[0].password !== password.trim()) {
+            return sendJson(res, 401, { error: "Incorrect password. Account not deleted." });
+          }
+          // Soft-delete: set is_deleted=1 and anonymise the email so the address can be re-used
+          const deletedAt = Date.now();
+          const anonEmail = `deleted_${deletedAt}_${rows[0].user_id}@deleted.invalid`;
+          db.query(
+            "UPDATE user_account SET is_deleted=1, email=? WHERE user_id=?",
+            [anonEmail, requester.userId], (updateErr) => {
+              if (updateErr) return sendJson(res, 500, { error: updateErr.message });
+              sendJson(res, 200, { message: "Account deactivated successfully." });
+            }
+          );
+        }
+      );
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
@@ -1146,4 +1280,5 @@ const server = http.createServer((req, res) => {
 });
 
 const PORT = 8000;
+server.listen(PORT, () => { console.log(`Server running on port ${PORT}`); });
 server.listen(PORT, () => { console.log(`Server running on port ${PORT}`); });
