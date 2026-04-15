@@ -219,6 +219,15 @@ function App() {
   const [manageData, setManageData] = useState({ bookingId: "" });
   const [statusData, setStatusData] = useState({ flightId: "" });
 
+  // Flight Ticket Class Prices
+  const [selectedClass, setSelectedClass] = useState({});
+
+  const getPriceForClass = (flight, cabinClass) => {
+    if (cabinClass === "business") return flight.business_price;
+    if (cabinClass === "first") return flight.first_class_price;
+    return flight.economy_price; // default
+  };
+
   const getAuthHeaders = (includeJson = true) => {
     const headers = {};
     if (includeJson) headers["Content-Type"] = "application/json";
@@ -661,16 +670,23 @@ function App() {
     finally { setLoadingStatus(false); }
   };
 
-  const handleBookFlight = (flight) => {
+  const handleBookFlight = (flight, cabinClass = 'economy') => {
     if (!loggedInUser) { setActiveTab("login"); return; }
     if (!canBook) { alert("Only Passenger, Employee, or System Admin accounts can book flights."); return; }
 
+    const selectedCabinClass = cabinClass || 'economy'
+
     if (isPassenger) {
-      executeBooking(flight, loggedInUser.user_id, loggedInUser.passenger_id);
+      executeBooking(flight, loggedInUser.user_id, loggedInUser.passenger_id, selectedCabinClass);
     } else {
       // Staff: always re-fetch passenger list so dropdown is ready, then open modal
       fetchAllPassengers();
-      setBookForModal({ show: true, flight, passengerId: "", bookingMsg: "" });
+      setBookForModal({ 
+        show: true, 
+        flight, 
+        cabinClass: selectedCabinClass,
+        passengerId: "", 
+        bookingMsg: "" });
     }
   };
 
@@ -1982,27 +1998,90 @@ function App() {
 
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: "8px" }}>
                         <div>
+                          <p style={{ margin: "0 0 4px", paddingBottom: "10px" }}>
+                            Fly with <strong>{flight.airline_name}</strong>
+                          </p>
                           <p style={{ margin: "0 0 4px" }}><strong>Flight ID:</strong> {flight.flight_id}</p>
-                          <p style={{ margin: "0 0 4px" }}><strong>Departure:</strong> {flight.departure_airport}</p>
-                          <p style={{ margin: "0 0 4px" }}><strong>Arrival:</strong> {flight.arrival_airport}</p>
+                          <p style={{ margin: "0 0 4px" }}><strong>Departure:</strong> {flight.departure_city}, {flight.departure_country} ({flight.departure_code})</p>
+                          <p style={{ margin: "0 0 4px" }}><strong>Arrival:</strong> {flight.arrival_city}, {flight.arrival_country} ({flight.arrival_code})</p>
                           <p style={{ margin: "0 0 4px" }}><strong>Date:</strong> {new Date(flight.date_of_departure).toLocaleString()}</p>
-                          <p style={{ margin: 0 }}><strong>Seats Available:</strong> {flight.seats_available}</p>
+                          <p style={{ margin: "0 0 4px" }}>
+                            <strong>Aircraft:</strong> {flight.aircraft_name}
+                          </p>
                         </div>
-                        {/* Price badge */}
-                        <div style={{ textAlign: "center", background: freeFlightMode ? "#e8f5e9" : "#fff8f8", border: `2px solid ${freeFlightMode ? "#1a6e3c" : "#cf102d"}`, borderRadius: "12px", padding: "12px 20px", minWidth: "110px" }}>
-                          {freeFlightMode ? (
-                            <>
-                              <p style={{ margin: "0 0 2px", fontSize: "11px", color: "#1a6e3c", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.5px" }}>Redemption</p>
-                              <p style={{ margin: "0 0 2px", fontSize: "20px", fontWeight: "800", color: "#1a6e3c" }}>FREE</p>
-                              <p style={{ margin: 0, fontSize: "11px", color: "#555" }}>1,000 miles</p>
-                            </>
-                          ) : (
-                            <>
-                              <p style={{ margin: "0 0 2px", fontSize: "11px", color: "#888", textTransform: "uppercase", letterSpacing: "0.5px" }}>From</p>
-                              <p style={{ margin: "0 0 2px", fontSize: "24px", fontWeight: "800", color: "#cf102d" }}>${flight.price}</p>
-                              <p style={{ margin: 0, fontSize: "11px", color: "#888" }}>per person</p>
-                            </>
-                          )}
+                        
+
+                        {/* Cabin Class Selector + Price */}
+                        <div style={{ minWidth: "190px", textAlign: "center" }}>
+                          <div style={{ 
+                            display: "flex", 
+                            background: "#f8f9fa", 
+                            borderRadius: "8px", 
+                            padding: "4px", 
+                            marginBottom: "12px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
+                          }}>
+                            {[
+                              { key: "economy", label: "Economy", color: "#22c55e" },    
+                              { key: "business", label: "Business", color: "#3b82f6" },   
+                              { key: "first", label: "First", color: "#eab308" }         
+                            ].map((cls) => {
+                              const isSelected = (selectedClass[flight.flight_id] || "economy") === cls.key;
+                              const price = getPriceForClass(flight, cls.key);
+
+                              return (
+                                <button
+                                  key={cls.key}
+                                  type="button"
+                                  onClick={() => setSelectedClass(prev => ({ 
+                                    ...prev, 
+                                    [flight.flight_id]: cls.key 
+                                  }))}
+                                  style={{
+                                    flex: 1,
+                                    padding: "8px 10px",
+                                    fontSize: "13px",
+                                    fontWeight: isSelected ? "700" : "600",
+                                    background: isSelected ? cls.color : "transparent",
+                                    color: isSelected ? "#fff" : "#444",
+                                    border: "none",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s ease",
+                                    textShadow: isSelected ? "0 1px 2px rgba(0,0,0,0.2)" : "none"
+                                  }}
+                                >
+                                  {cls.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Current Price Display */}
+                          <div style={{
+                            background: freeFlightMode ? "#e8f5e9" : "#fff8f8",
+                            border: `2px solid ${freeFlightMode ? "#1a6e3c" : "#cf102d"}`,
+                            borderRadius: "12px",
+                            padding: "12px 16px"
+                          }}>
+                            {freeFlightMode ? (
+                              <>
+                                <p style={{ margin: "0 0 2px", fontSize: "11px", color: "#1a6e3c", fontWeight: "700", textTransform: "uppercase" }}>Redemption</p>
+                                <p style={{ margin: "0 0 2px", fontSize: "22px", fontWeight: "800", color: "#1a6e3c" }}>FREE</p>
+                                <p style={{ margin: 0, fontSize: "11px", color: "#555" }}>1,000 miles</p>
+                              </>
+                            ) : (
+                              <>
+                                <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#888", textTransform: "uppercase" }}>
+                                  { (selectedClass[flight.flight_id] || "economy").toUpperCase() }
+                                </p>
+                                <p style={{ margin: "0 0 2px", fontSize: "26px", fontWeight: "800", color: "#cf102d" }}>
+                                  ${getPriceForClass(flight, selectedClass[flight.flight_id] || "economy")}
+                                </p>
+                                <p style={{ margin: 0, fontSize: "11px", color: "#888" }}>per person</p>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -2037,8 +2116,14 @@ function App() {
                                   </div>
                                 );
                               })()}
-                              <button type="button" className="book-btn" style={{ marginTop: "10px" }} onClick={() => handleBookFlight(flight)}>
-                                Book This Flight — ${flight.price}{selectedPackage && VACATION_PACKAGES.some((p) => p.id === selectedPackage.id && p.arrival === flight.arrival_airport) ? ` + ${selectedPackage.name}` : ""}
+                              <button 
+                                type="button" 
+                                className="book-btn" 
+                                style={{ marginTop: "12px", width: "auto", minWidth: "280px" }} 
+                                onClick={() => handleBookFlight(flight, selectedClass[flight.flight_id] || "economy")}
+                              >
+                                Book This Flight — ${getPriceForClass(flight, selectedClass[flight.flight_id] || "economy")}
+                                {selectedPackage && VACATION_PACKAGES.some((p) => p.id === selectedPackage.id && p.arrival === flight.arrival_airport) ? ` + ${selectedPackage.name}` : ""}
                               </button>
                             </>
                           ) : null

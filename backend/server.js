@@ -644,29 +644,56 @@ const server = http.createServer((req, res) => {
   if (req.url === "/search-flights" && req.method === "POST") {
     parseBody(req).then((body) => {
       const sql = `
-        SELECT f.flight_id, f.route_id, f.date_of_departure, f.seats_available,
-          dep.airport_name AS departure_airport, arr.airport_name AS arrival_airport
+        SELECT 
+          f.flight_id,
+          f.route_id,
+          f.date_of_departure,
+          f.seats_available,
+          f.airline_id,
+          f.economy_price,
+          f.business_price,
+          f.first_class_price,
+          f.aircraft_id,
+          ac.model AS aircraft_name,
+          dep.airport_code AS departure_code,
+          dep.city_id AS departure_city_id,
+          dep_city.country_id AS departure_country_id,
+          arr.airport_code AS arrival_code,
+          arr.city_id AS arrival_city_id,
+          arr_city.country_id AS arrival_country_id,
+          al.airline_name,
+          dep_city.city_name AS departure_city,
+          dep_country.country_name AS departure_country,
+          arr_city.city_name AS arrival_city,
+          arr_country.country_name AS arrival_country
         FROM flights f
         JOIN routes r ON f.route_id = r.route_id
         JOIN airport dep ON r.departure_airport_id = dep.airport_id
         JOIN airport arr ON r.destination_airport_id = arr.airport_id
-        WHERE (? IS NULL OR dep.city_id = ?) AND (? IS NULL OR arr.city_id = ?)
-        ORDER BY f.date_of_departure ASC LIMIT 10
+        JOIN airline al ON f.airline_id = al.airline_id
+        JOIN aircraft ac ON f.aircraft_id = ac.aircraft_id
+        JOIN city dep_city ON dep.city_id = dep_city.city_id
+        JOIN country dep_country ON dep_city.country_id = dep_country.country_id
+        JOIN city arr_city ON arr.city_id = arr_city.city_id
+        JOIN country arr_country ON arr_city.country_id = arr_country.country_id
+        WHERE (? IS NULL OR dep.city_id = ?) 
+          AND (? IS NULL OR arr.city_id = ?)
+          AND f.date_of_departure >= ?
+        ORDER BY f.date_of_departure ASC 
+        LIMIT 10
       `;
       const depCityId = body.departureCityId || null;
       const arrCityId = body.arrivalCityId || null;
-      db.query(sql, [depCityId, depCityId, arrCityId, arrCityId], (err, results) => {
+      const departureDate = body.departureDate || null;
+
+      db.query(sql, [depCityId, depCityId, arrCityId, arrCityId, departureDate], (err, results) => {
         if (err) return sendJson(res, 500, { error: err.message });
-        // Assign consistent price per flight based on route + flight id
-        const priced = results.map((f) => ({
-          ...f,
-          price: Math.floor(((f.route_id || 1) * 53 + f.flight_id * 17) % 500) + 149,
-        }));
-        sendJson(res, 200, priced);
+        sendJson(res, 200, results || []);
       });
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
+
 
   if (req.url.startsWith("/book-flight") && req.method === "POST") {
     console.log("\n=== BOOK-FLIGHT HIT ===");
