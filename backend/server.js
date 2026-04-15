@@ -362,20 +362,52 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // GET /my-bookings/:userId → own user or Employee/System Admin
+// GET /my-bookings/:userId → own user or Employee/System Admin
   const bookingsMatch = req.url.match(/^\/my-bookings\/(\d+)$/);
   if (bookingsMatch && req.method === "GET") {
     const requestedUserId = Number(bookingsMatch[1]);
     const requester = getRequestUser(req);
+
     if (requester.userId !== requestedUserId && !isStaff(requester.role)) return deny(res);
+
+
     const sql = `
-      SELECT b.booking_id, b.user_id, b.booking_date, b.booking_status,
-        p.passenger_id, p.first_name, p.last_name, p.email, p.phone_number,
-        p.seat_preferences, p.meal_preferences
+      SELECT 
+        b.booking_id,
+        b.user_id,
+        b.booking_date,
+        b.booking_status,
+        f.flight_id,
+        f.date_of_departure,
+        f.estimated_time_hours,
+        al.airline_name,
+        dep.airport_name AS departure_name,
+        dep_city.city_name AS departure_city,
+        dep_country.country_name AS departure_country,
+        arr.airport_name AS arrival_name,
+        arr_city.city_name AS arrival_city,
+        arr_country.country_name AS arrival_country,
+        p.passenger_id,
+        p.first_name,
+        p.last_name,
+        p.email,
+        p.phone_number,
+        p.seat_preferences,
+        p.meal_preferences
       FROM bookings b
       JOIN booking_passengers bp ON b.booking_id = bp.booking_id
       JOIN passenger p ON bp.passenger_id = p.passenger_id
-      WHERE b.user_id = ? ORDER BY b.booking_id DESC
+      JOIN flights f ON b.flight_id = f.flight_id
+      JOIN routes r ON f.route_id = r.route_id
+      JOIN airport dep ON r.departure_airport_id = dep.airport_id
+      JOIN city dep_city ON dep.city_id = dep_city.city_id
+      JOIN country dep_country ON dep_city.country_id = dep_country.country_id
+      JOIN airport arr ON r.destination_airport_id = arr.airport_id
+      JOIN city arr_city ON arr.city_id = arr_city.city_id
+      JOIN country arr_country ON arr_city.country_id = arr_country.country_id
+      JOIN airline al ON f.airline_id = al.airline_id
+      WHERE b.user_id = ?
+      ORDER BY f.date_of_departure DESC
     `;
     db.query(sql, [requestedUserId], (err, results) => {
       if (err) return sendJson(res, 500, { error: err.message });
@@ -828,24 +860,59 @@ const server = http.createServer((req, res) => {
   if (req.url === "/manage-booking" && req.method === "POST") {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
-      let sql = `
-        SELECT b.booking_id, b.user_id, b.booking_status, b.booking_date,
-          p.passenger_id, p.first_name, p.last_name, p.email, p.phone_number,
-          p.seat_preferences, p.meal_preferences
+      if (!requester) return sendJson(res, 401, { error: "Unauthorized" });
+
+      const sql = `
+        SELECT 
+          b.booking_id,
+          b.user_id,
+          b.booking_date,
+          b.booking_status,
+          f.flight_id,
+          f.date_of_departure,
+          f.estimated_time_hours,
+          al.airline_name,
+          dep.airport_name AS departure_name,
+          dep_city.city_name AS departure_city,
+          dep_country.country_name AS departure_country,
+          arr.airport_name AS arrival_name,
+          arr_city.city_name AS arrival_city,
+          arr_country.country_name AS arrival_country,
+          p.passenger_id,
+          p.first_name,
+          p.last_name,
+          p.email,
+          p.phone_number,
+          p.seat_preferences,
+          p.meal_preferences
         FROM bookings b
         JOIN booking_passengers bp ON b.booking_id = bp.booking_id
         JOIN passenger p ON bp.passenger_id = p.passenger_id
+        JOIN flights f ON b.flight_id = f.flight_id
+        JOIN routes r ON f.route_id = r.route_id
+        JOIN airport dep ON r.departure_airport_id = dep.airport_id
+        JOIN city dep_city ON dep.city_id = dep_city.city_id
+        JOIN country dep_country ON dep_city.country_id = dep_country.country_id
+        JOIN airport arr ON r.destination_airport_id = arr.airport_id
+        JOIN city arr_city ON arr.city_id = arr_city.city_id
+        JOIN country arr_country ON arr_city.country_id = arr_country.country_id
+        JOIN airline al ON f.airline_id = al.airline_id
         WHERE b.booking_id = ?
       `;
-      const params = [body.bookingId];
-      if (requester.role === "Passenger") { sql += " AND b.user_id = ? "; params.push(requester.userId); }
-      sql += " LIMIT 1";
+
+      // Security: Passengers can only view their own bookings, staff can view any
+      let params = [body.bookingId];
+      if (requester.role === "Passenger") {
+        sql += " AND b.user_id = ?";
+        params.push(requester.userId);
+      }
+
       db.query(sql, params, (err, results) => {
         if (err) return sendJson(res, 500, { error: err.message });
         if (results.length === 0) return sendJson(res, 404, { error: "Booking not found." });
         sendJson(res, 200, results[0]);
       });
-    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
+    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body" }));
     return;
   }
 

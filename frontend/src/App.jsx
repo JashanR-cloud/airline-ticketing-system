@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import { CreateAccountModal, EditAccountModal } from "./components/AccountModal";
+import PassengerMyBookings from "./components/PassengerMyBookings";
+import BookingResultCard from "./components/BookingResultCard";
 import "./components/AccountModal.css";
 
 const API = "https://airline-ticketing-system-gjnr.onrender.com";
@@ -858,69 +860,6 @@ function App() {
     </button>
   );
 
-  // ── Shared booking result card (used by Passenger manage & Employee find booking) ──
-  const BookingResultCard = ({ result, onCancel, showPrefs = true }) => (
-    <div className="result-card">
-      <p><strong>Booking ID:</strong> {result.booking_id}</p>
-      <p><strong>Status:</strong> {result.booking_status}</p>
-      <p><strong>Passenger:</strong> {result.first_name} {result.last_name}</p>
-      <p><strong>Email:</strong> {result.email || "N/A"}</p>
-      <p><strong>Phone:</strong> {result.phone_number || "N/A"}</p>
-      {showPrefs && (
-        <>
-          <hr style={{ margin: "15px 0", border: 0, borderTop: "1px solid #eee" }} />
-          {isEditingPrefs ? (
-            <div style={{ background: "#f9f9f9", padding: "15px", borderRadius: "6px", marginBottom: "15px" }}>
-              <h4 style={{ marginBottom: "10px" }}>Edit Preferences</h4>
-              <div className="form-group" style={{ marginBottom: "10px" }}>
-                <label>Seat Preference</label>
-                <select value={prefData.seat_preferences} onChange={(e) => setPrefData({ ...prefData, seat_preferences: e.target.value })}>
-                  {SEAT_OPTIONS.map((o) => <option key={o} value={o === "No Preference" ? "" : o}>{o}</option>)}
-                </select>
-              </div>
-              <div className="form-group" style={{ marginBottom: "15px" }}>
-                <label>Meal Preference</label>
-                <select value={prefData.meal_preferences} onChange={(e) => setPrefData({ ...prefData, meal_preferences: e.target.value })}>
-                  {MEAL_OPTIONS.map((o) => <option key={o} value={o === "No Preference" ? "" : o}>{o}</option>)}
-                </select>
-              </div>
-              <div style={{ display: "flex", gap: "10px" }}>
-                <button type="button" className="primary-btn" style={{ padding: "10px 20px", fontSize: "14px", backgroundColor: "#1a6e3c" }} onClick={handleUpdatePreferences}>Save Changes</button>
-                <button type="button" className="nav-edit-btn" style={{ padding: "10px 20px", fontSize: "14px" }} onClick={() => setIsEditingPrefs(false)}>Cancel</button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <p><strong>Seat Preference:</strong> {result.seat_preferences || "None selected"}</p>
-              <p><strong>Meal Preference:</strong> {result.meal_preferences || "None selected"}</p>
-            </>
-          )}
-        </>
-      )}
-      <div style={{ display: "flex", gap: "15px", marginTop: "20px", flexWrap: "wrap" }}>
-        {result.booking_status !== "Cancelled" ? (
-          <>
-            {showPrefs && !isEditingPrefs && (
-              <button type="button" className="primary-btn" style={{ backgroundColor: "#22252b", padding: "12px 20px", fontSize: "15px" }}
-                onClick={() => { setIsEditingPrefs(true); setPrefData({ seat_preferences: result.seat_preferences || "", meal_preferences: result.meal_preferences || "" }); }}>
-                Modify Preferences
-              </button>
-            )}
-            <button type="button" className="primary-btn" style={{ backgroundColor: "#b00020", padding: "12px 20px", fontSize: "15px" }} onClick={() => onCancel(result.booking_id)}>
-              Cancel Booking
-            </button>
-          </>
-        ) : (
-          <p style={{ color: "#b00020", fontWeight: "bold", width: "100%" }}>This booking is cancelled.</p>
-        )}
-      </div>
-      {actionMsg.text && (
-        <p style={{ marginTop: "14px", fontWeight: "600", fontSize: "15px", color: actionMsg.type === "success" ? "#1a6e3c" : "#b00020" }}>
-          {actionMsg.text}
-        </p>
-      )}
-    </div>
-  );
 
   return (
     <div className="app">
@@ -2155,21 +2094,18 @@ function App() {
                   <button className="primary-btn" onClick={() => setActiveTab("login")} style={{ marginTop: "15px" }}>Log In Now</button>
                 </div>
               ) : isPassenger ? (
-                /* PASSENGER: select from their own bookings */
-                <form onSubmit={handleManageSubmit}>
-                  <div className="form-group">
-                    <label>Select Booking</label>
-                    <select name="bookingId" value={manageData.bookingId} onChange={handleManageChange} required disabled={loadingUserBookings}>
-                      <option value="">{loadingUserBookings ? "Loading bookings..." : "-- Select a Booking --"}</option>
-                      {userBookings.map((b) => (
-                        <option key={b.booking_id} value={b.booking_id}>Booking #{b.booking_id} ({b.booking_status})</option>
-                      ))}
-                    </select>
-                  </div>
-                  <button type="submit" className="primary-btn" disabled={!manageData.bookingId}>{loadingManage ? "Searching..." : "View Details"}</button>
-                  {manageMessage && <p style={{ marginTop: "14px", fontSize: "18px" }}>{manageMessage}</p>}
-                  {manageResult && <BookingResultCard result={manageResult} onCancel={handleCancelBooking} showPrefs={true} />}
-                </form>
+                <PassengerMyBookings
+                  bookings={userBookings}
+                  loading={loadingUserBookings}
+                  onSearchFlights={() => setActiveTab("search")}
+                  onCancelBooking={handleCancelBooking}
+                  isEditingPrefs={isEditingPrefs}
+                  setIsEditingPrefs={setIsEditingPrefs}
+                  prefData={prefData}
+                  setPrefData={setPrefData}
+                  handleUpdatePreferences={handleUpdatePreferences}
+                  actionMsg={actionMsg}
+                />
               ) : (
                 /* EMPLOYEE / SYSTEM ADMIN: dropdown of all bookings */
                 <form onSubmit={handleManageSubmit}>
@@ -2186,7 +2122,19 @@ function App() {
                   </div>
                   <button type="submit" className="primary-btn" disabled={!manageData.bookingId}>{loadingManage ? "Searching..." : "View Details"}</button>
                   {manageMessage && <p style={{ marginTop: "14px", fontSize: "18px" }}>{manageMessage}</p>}
-                  {manageResult && <BookingResultCard result={manageResult} onCancel={handleCancelBooking} showPrefs={true} />}
+                  {manageResult && (
+                    <BookingResultCard 
+                      result={manageResult} 
+                      onCancel={handleCancelBooking} 
+                      showPrefs={true} 
+                      isEditingPrefs={isEditingPrefs}
+                      setIsEditingPrefs={setIsEditingPrefs}
+                      prefData={prefData}
+                      setPrefData={setPrefData}
+                      handleUpdatePreferences={handleUpdatePreferences}
+                      actionMsg={actionMsg}
+                    />
+                  )}
                 </form>
               )}
             </div>
@@ -2319,7 +2267,19 @@ function App() {
                       </div>
                       <button type="submit" className="primary-btn" disabled={!manageData.bookingId}>{loadingManage ? "Searching..." : "View Details"}</button>
                       {manageMessage && <p style={{ marginTop: "14px", fontSize: "18px" }}>{manageMessage}</p>}
-                      {manageResult && <BookingResultCard result={manageResult} onCancel={handleCancelBooking} showPrefs={true} />}
+                      {manageResult && (
+                        <BookingResultCard 
+                          result={manageResult} 
+                          onCancel={handleCancelBooking} 
+                          showPrefs={true} 
+                          isEditingPrefs={isEditingPrefs}
+                          setIsEditingPrefs={setIsEditingPrefs}
+                          prefData={prefData}
+                          setPrefData={setPrefData}
+                          handleUpdatePreferences={handleUpdatePreferences}
+                          actionMsg={actionMsg}
+                        />
+                      )}
                     </form>
                   </div>
 
