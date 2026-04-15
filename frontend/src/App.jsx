@@ -1948,10 +1948,6 @@ function App() {
                   <input type="date" name="departureDate" value={flightSearch.departureDate} onChange={handleFlightChange} required />
                 </div>
                 <div className="form-group">
-                  <label>Return Date</label>
-                  <input type="date" name="returnDate" value={flightSearch.returnDate} onChange={handleFlightChange} />
-                </div>
-                <div className="form-group">
                   <label>Passengers</label>
                   <select name="passengers" value={flightSearch.passengers} onChange={handleFlightChange}>
                     {[1,2,3,4,5,6,7,8,9].map((n) => <option key={n} value={n}>{n} Passenger{n > 1 ? "s" : ""}</option>)}
