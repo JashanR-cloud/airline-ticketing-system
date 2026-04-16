@@ -45,7 +45,6 @@ const PassengerMyBookings = ({
 
   return (
     <div>
-      <h2>My Bookings</h2>
 
       {/* Category Tabs */}
       <div style={{ 

@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import { CreateAccountModal, EditAccountModal } from "./components/AccountModal";
-import PassengerMyBookings from "./components/PassengerMyBookings";
-import BookingResultCard from "./components/BookingResultCard";
+import MainTabs from './components/MainTabs';
+import LoggedInBanner from "./components/LoggedInBanner";
+import SearchFlightsPanel from "./components/SearchFlightsPanel"
+import ManageBookingsPanel from "./components/ManageBookingsPanel"
+import EmployeeDashboard from "./components/EmployeeDashboard";
+import FlightStatusPanel from "./components/FlightStatusPanel";
+import SystemAdminDashboard from "./components/SystemAdminDashboard";
 import "./components/AccountModal.css";
 
 const API = "https://airline-ticketing-system-gjnr.onrender.com";
@@ -377,7 +382,9 @@ function App() {
       const res = await fetch(`${API}/destinations`);
       const data = await res.json();
       if (res.ok) setDestinations(data);
-    } catch { }
+    } catch (err) {
+      console.error("Network error while fetching destinations:", err)
+    }
     finally { setLoadingDestinations(false); }
   };
 
@@ -387,7 +394,9 @@ function App() {
       const res = await fetch(`${API}/experience-ratings`);
       const data = await res.json();
       if (res.ok) setExperienceRatings(data);
-    } catch { }
+    } catch (err) { 
+      console.error("Network error while fetching experience ratings:", err);
+    }
     finally { setLoadingExperience(false); }
   };
 
@@ -398,7 +407,9 @@ function App() {
       const res = await fetch(`${API}/route-flights/${routeId}`, { headers: getAuthHeaders(false) });
       const data = await res.json();
       if (res.ok) setRouteFlights(data);
-    } catch { }
+    } catch (err) { 
+      console.error("Network error while fetching route flights:", err);
+    }
     finally { setLoadingRouteFlights(false); }
   };
 
@@ -409,7 +420,9 @@ function App() {
       const res = await fetch(`${API}/aircrafts`, { headers: getAuthHeaders(false) });
       const data = await res.json();
       if (res.ok) setAllAircrafts(data);
-    } catch { }
+    } catch (err) { 
+      console.error("Network error while fetching aircrafts:", err);
+    }
     finally { setLoadingAircrafts(false); }
   };
 
@@ -420,7 +433,9 @@ function App() {
       const res = await fetch(`${API}/routes-with-status`, { headers: getAuthHeaders(false) });
       const data = await res.json();
       if (res.ok) setRoutesWithStatus(data);
-    } catch { }
+    } catch (err) { 
+      console.error("Network error while fetching routes with status:", err);
+    }
     finally { setLoadingRoutesStatus(false); }
   };
 
@@ -431,7 +446,9 @@ function App() {
       const res = await fetch(`${API}/all-passengers`, { headers: getAuthHeaders(false) });
       const data = await res.json();
       if (res.ok) setAllPassengers(data);
-    } catch { }
+    } catch (err) { 
+      console.error("Network error while fetching all passengers:", err);
+    }
     finally { setLoadingPassengers(false); }
   };
 
@@ -442,7 +459,9 @@ function App() {
       const res = await fetch(`${API}/all-bookings`, { headers: getAuthHeaders(false) });
       const data = await res.json();
       if (res.ok) setAllBookingsAdmin(data);
-    } catch { }
+    } catch (err) { 
+      console.error("Network error while fetching all bookings:", err);
+    }
     finally { setLoadingAllBookings(false); }
   };
 
@@ -462,7 +481,9 @@ function App() {
       const res = await fetch(`${API}/all-flights`, { headers: getAuthHeaders(false) });
       const data = await res.json();
       if (res.ok) setAllFlights(data);
-    } catch { }
+    } catch (err) { 
+      console.error("Network error while fetching all flights:", err);
+    }
     finally { setLoadingAllFlights(false); }
   };
 
@@ -813,7 +834,9 @@ function App() {
       const res = await fetch(`${API}/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: regData.email, password: regData.password, role: regData.role }) });
       const data = await res.json();
       if (res.ok) { setLoggedInUser(data.user); setActiveTab("search"); return; }
-    } catch { }
+    } catch (err) { 
+      console.error("Network error while handling register success:", err);
+    }
     setLoginMessage("Account created! Please log in.");
     setLoginData((prev) => ({ ...prev, role: regData.role }));
     setActiveTab("login");
@@ -1657,1057 +1680,214 @@ function App() {
 
       <section className="booking-panel">
         {!isSystemAdmin && !isEmployee && (
-          <div className="tabs">
-          <button className={activeTab === "search" ? "tab active" : "tab"} onClick={() => setActiveTab("search")}>Search Flights</button>
-
-          <button className={activeTab === "manage" ? "tab active" : "tab"} onClick={() => setActiveTab("manage")}>
-            {isPassenger ? "My Bookings" : "Manage Booking"}
-          </button>
-
-          <button className={activeTab === "status" ? "tab active" : "tab"} onClick={() => setActiveTab("status")}>Flight Status</button>
-
-          {!loggedInUser && (
-            <button className={activeTab === "login" ? "tab active" : "tab"} onClick={() => setActiveTab("login")}>Login</button>
-          )}
-
-
-          {(isEmployee || isSystemAdmin) && (
-            <button
-              className={activeTab === "employee" ? "tab active" : "tab"}
-              onClick={() => { setActiveTab("employee"); loadEmployeePortal(); }}
-            >
-              Employee Dashboard
-            </button>
-          )}
-
-          {isSystemAdmin && (
-            <button
-              className={activeTab === "systemAdmin" ? "tab active" : "tab"}
-              onClick={() => { setActiveTab("systemAdmin"); fetchReports(); }}
-            >
-              System Admin
-            </button>
-          )}
-          </div>
+          <MainTabs
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            isPassenger={isPassenger}
+            isEmployee={isEmployee}
+            isSystemAdmin={isSystemAdmin}
+            loggedInUser={loggedInUser}
+            loadEmployeePortal={loadEmployeePortal}
+            fetchReports={fetchReports}
+          />
         )}
 
         <div className="panel-content">
           {loggedInUser && (
-            <div className="logged-in-banner">
-              <div>
-                <strong>Welcome back, {loggedInUser.first_name || loggedInUser.email}!</strong>
-                <span className="banner-role">{loggedInUser.role}</span>
-              </div>
-              <div className="banner-actions">
-                {isSystemAdmin && activeTab !== "systemAdmin" && (
-                  <button className="banner-edit-btn" onClick={() => { setActiveTab("systemAdmin"); fetchReports(); }}>← Back to Dashboard</button>
-                )}
-                {isEmployee && !isSystemAdmin && activeTab !== "employee" && (
-                  <button className="banner-edit-btn" onClick={() => { setActiveTab("employee"); loadEmployeePortal(); }}>← Back to Dashboard</button>
-                )}
-                <button className="banner-edit-btn" onClick={() => setShowEditModal(true)}>✏️ Edit Account</button>
-                <button className="banner-logout-btn" onClick={handleLogout}>Log Out</button>
-              </div>
-            </div>
+            <LoggedInBanner
+              loggedInUser={loggedInUser}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              setShowEditModal={setShowEditModal}
+              handleLogout={handleLogout}
+              isSystemAdmin={isSystemAdmin}
+              isEmployee={isEmployee}
+            />
           )}
 
           {/* ── Search Flights ── */}
           {activeTab === "search" && (
-            <>
-            {/* ── MODE TOGGLE ── */}
-            <div className="trip-toggle" style={{ marginBottom: "0" }}>
-              <button type="button"
-                className={!vacationMode ? "toggle-btn active-toggle" : "toggle-btn"}
-                onClick={() => { setVacationMode(false); setSelectedPackage(null); }}>
-                ✈️ Flight
-              </button>
-              <button type="button"
-                className={vacationMode ? "toggle-btn active-toggle" : "toggle-btn"}
-                onClick={() => setVacationMode(true)}>
-                🏖️ Vacation Package
-              </button>
-            </div>
+            <SearchFlightsPanel
+              flightSearch={flightSearch}
+              handleFlightChange={handleFlightChange}
+              handleFlightSubmit={handleFlightSubmit}
+              loadingFlights={loadingFlights}
+              searchMessage={searchMessage}
+              flightResults={flightResults}
+              loadingAirports={loadingAirports}
+              setActiveTab={setActiveTab}
+              setShowCreateModal={setShowCreateModal}
+              cities={cities}
 
-            {/* ── VACATION PACKAGE BROWSER ── */}
-            {vacationMode ? (
-              <div style={{ marginTop: "0" }}>
-                {/* Package browser header */}
-                <div style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%)", borderRadius: "12px", padding: "24px 28px", marginBottom: "20px" }}>
-                  <h3 style={{ margin: "0 0 6px", color: "#fff", fontSize: "20px", fontWeight: "800" }}>🏖️ Vacation Packages</h3>
-                  <p style={{ margin: "0 0 16px", color: "rgba(255,255,255,0.7)", fontSize: "13px" }}>All-inclusive bundles with flights, hotel, car rental & activities</p>
-                  {/* Search */}
-                  <div style={{ position: "relative", marginBottom: "14px" }}>
-                    <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }}>🔍</span>
-                    <input type="text" placeholder="Search destination or package name..."
-                      value={pkgSearch} onChange={(e) => setPkgSearch(e.target.value)}
-                      style={{ width: "100%", padding: "10px 14px 10px 36px", borderRadius: "8px", border: "none", fontSize: "14px", boxSizing: "border-box", background: "rgba(255,255,255,0.12)", color: "#fff" }} />
-                  </div>
-                  {/* Category filters */}
-                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                    {PACKAGE_CATEGORIES.map((cat) => {
-                      const style = cat !== "All" ? CATEGORY_STYLES[cat] : null;
-                      return (
-                        <button key={cat} type="button" onClick={() => setPkgCategory(cat)}
-                          style={{ padding: "6px 14px", borderRadius: "999px", border: "none", cursor: "pointer", fontWeight: "700", fontSize: "13px",
-                            background: pkgCategory === cat ? "#fff" : "rgba(255,255,255,0.15)",
-                            color: pkgCategory === cat ? (style?.color || "#1a1a2e") : "rgba(255,255,255,0.85)" }}>
-                          {cat !== "All" && CATEGORY_STYLES[cat]?.icon + " "}{cat}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+              vacationMode={vacationMode}
+              setVacationMode={setVacationMode}
+              selectedPackage={selectedPackage}
+              setSelectedPackage={setSelectedPackage}
+              pkgSearch={pkgSearch}
+              setPkgSearch={setPkgSearch}
+              pkgCategory={pkgCategory}
+              setPkgCategory={setPkgCategory}
+              VACATION_PACKAGES={VACATION_PACKAGES}
+              PACKAGE_CATEGORIES={PACKAGE_CATEGORIES}
+              CATEGORY_STYLES={CATEGORY_STYLES}
 
-                {/* Selected package bar */}
-                {selectedPackage && (
-                  <div style={{ background: "linear-gradient(135deg, #1a6e3c, #22a85a)", borderRadius: "10px", padding: "12px 18px", marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
-                    <div>
-                      <p style={{ margin: 0, color: "#fff", fontWeight: "800", fontSize: "15px" }}>✅ Package Selected: {selectedPackage.name}</p>
-                      <p style={{ margin: "2px 0 0", color: "rgba(255,255,255,0.85)", fontSize: "13px" }}>{selectedPackage.city} · {selectedPackage.duration} nights · ${selectedPackage.price}/person</p>
-                    </div>
-                    <div style={{ display: "flex", gap: "10px" }}>
-                      <button type="button" onClick={() => { setVacationMode(false); }}
-                        style={{ background: "#fff", color: "#1a6e3c", border: "none", borderRadius: "8px", padding: "8px 16px", fontWeight: "800", cursor: "pointer", fontSize: "13px" }}>
-                        ✈️ Now Pick a Flight
-                      </button>
-                      <button type="button" onClick={() => setSelectedPackage(null)}
-                        style={{ background: "rgba(255,255,255,0.2)", color: "#fff", border: "none", borderRadius: "8px", padding: "8px 12px", cursor: "pointer", fontSize: "13px" }}>
-                        ✕
-                      </button>
-                    </div>
-                  </div>
-                )}
+              selectedClass={selectedClass}
+              setSelectedClass={setSelectedClass}
+              getPriceForClass={getPriceForClass}
+              handleBookFlight={handleBookFlight}
+              handleRedeemFlight={handleRedeemFlight}
+              freeFlightMode={freeFlightMode}
+              setFreeFlightMode={setFreeFlightMode}
 
-                {/* Package grid */}
-                {(() => {
-                  const filtered = VACATION_PACKAGES.filter((pkg) => {
-                    const matchCat = pkgCategory === "All" || pkg.category === pkgCategory;
-                    const q = pkgSearch.toLowerCase();
-                    const matchSearch = !q || pkg.city.toLowerCase().includes(q) || pkg.name.toLowerCase().includes(q) || pkg.category.toLowerCase().includes(q);
-                    return matchCat && matchSearch;
-                  });
-                  if (filtered.length === 0) return (
-                    <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
-                      <p style={{ fontSize: "32px" }}>🔍</p>
-                      <p>No packages match your search.</p>
-                      <button type="button" onClick={() => { setPkgSearch(""); setPkgCategory("All"); }} style={{ marginTop: "8px", background: "#f0f0f0", border: "none", borderRadius: "8px", padding: "8px 16px", cursor: "pointer" }}>Clear filters</button>
-                    </div>
-                  );
-                  return (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px" }}>
-                      {filtered.map((pkg) => {
-                        const catStyle = CATEGORY_STYLES[pkg.category] || {};
-                        const savings = pkg.originalPrice - pkg.price;
-                        const isSelected = selectedPackage?.id === pkg.id;
-                        return (
-                          <div key={pkg.id} style={{ border: `2px solid ${isSelected ? "#1a6e3c" : "#eee"}`, borderRadius: "16px", overflow: "hidden", background: "#fff", boxShadow: isSelected ? "0 0 0 3px rgba(26,110,60,0.15)" : "0 2px 8px rgba(0,0,0,0.06)", transition: "all 0.2s" }}>
-                            {/* Card header */}
-                            <div style={{ background: catStyle.bg || "#f8f8f8", padding: "18px 18px 14px", position: "relative" }}>
-                              <div style={{ position: "absolute", top: "10px", right: "10px", display: "flex", gap: "6px", flexDirection: "column", alignItems: "flex-end" }}>
-                                <span style={{ background: catStyle.color, color: "#fff", fontSize: "10px", fontWeight: "800", padding: "3px 10px", borderRadius: "999px", textTransform: "uppercase", letterSpacing: "0.5px" }}>{catStyle.icon} {pkg.category}</span>
-                                {savings > 0 && <span style={{ background: "#cf102d", color: "#fff", fontSize: "10px", fontWeight: "800", padding: "3px 10px", borderRadius: "999px" }}>Save ${savings}</span>}
-                              </div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                <span style={{ fontSize: "36px" }}>{pkg.flag}</span>
-                                <div>
-                                  <p style={{ margin: "0 0 2px", fontWeight: "800", fontSize: "17px", color: "#1a1a2e" }}>{pkg.name}</p>
-                                  <p style={{ margin: 0, fontSize: "13px", color: "#666" }}>{pkg.city} · {pkg.duration} nights</p>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Inclusions */}
-                            <div style={{ padding: "14px 18px" }}>
-                              <p style={{ margin: "0 0 8px", fontSize: "12px", color: "#888", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>Includes</p>
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "10px" }}>
-                                <span style={{ background: "#eff6ff", color: "#1d4ed8", fontSize: "11px", fontWeight: "600", padding: "3px 10px", borderRadius: "999px" }}>🏨 {pkg.hotel.split(" ").slice(-1)[0]}</span>
-                                {pkg.carRental && <span style={{ background: "#f0fdf4", color: "#16a34a", fontSize: "11px", fontWeight: "600", padding: "3px 10px", borderRadius: "999px" }}>🚗 {pkg.carType}</span>}
-                                <span style={{ background: "#fef9c3", color: "#854d0e", fontSize: "11px", fontWeight: "600", padding: "3px 10px", borderRadius: "999px" }}>🍽️ {pkg.meals.split(" ").slice(0,2).join(" ")}</span>
-                              </div>
-                              <p style={{ margin: "0 0 4px", fontSize: "12px", color: "#555", fontWeight: "600" }}>Activities:</p>
-                              <ul style={{ margin: "0 0 12px", paddingLeft: "16px", fontSize: "12px", color: "#666" }}>
-                                {pkg.activities.slice(0, 3).map((a) => <li key={a} style={{ marginBottom: "2px" }}>{a}</li>)}
-                                {pkg.activities.length > 3 && <li style={{ color: "#aaa" }}>+{pkg.activities.length - 3} more</li>}
-                              </ul>
-                              {pkg.highlights?.length > 0 && (
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "12px" }}>
-                                  {pkg.highlights.slice(0,2).map((h) => <span key={h} style={{ background: "#f9f9f9", border: "1px solid #eee", fontSize: "11px", color: "#555", padding: "2px 8px", borderRadius: "6px" }}>✓ {h}</span>)}
-                                </div>
-                              )}
-
-                              {/* Price + button */}
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "10px", borderTop: "1px solid #f0f0f0" }}>
-                                <div>
-                                  {pkg.originalPrice > pkg.price && <p style={{ margin: "0 0 2px", fontSize: "12px", color: "#aaa", textDecoration: "line-through" }}>${pkg.originalPrice}</p>}
-                                  <p style={{ margin: 0, fontSize: "22px", fontWeight: "900", color: catStyle.color || "#1a1a2e" }}>${pkg.price}<span style={{ fontSize: "12px", fontWeight: "400", color: "#888" }}>/person</span></p>
-                                </div>
-                                {loggedInUser ? (
-                                  isSelected ? (
-                                    <button type="button" onClick={() => setSelectedPackage(null)}
-                                      style={{ background: "#1a6e3c", color: "#fff", border: "none", borderRadius: "10px", padding: "10px 16px", fontWeight: "700", cursor: "pointer", fontSize: "13px" }}>
-                                      ✅ Selected
-                                    </button>
-                                  ) : (
-                                    <button type="button" onClick={() => setSelectedPackage(pkg)}
-                                      style={{ background: catStyle.color || "#cf102d", color: "#fff", border: "none", borderRadius: "10px", padding: "10px 16px", fontWeight: "700", cursor: "pointer", fontSize: "13px" }}>
-                                      Select Package
-                                    </button>
-                                  )
-                                ) : (
-                                  <button type="button" onClick={() => setActiveTab("login")}
-                                    style={{ background: "#f0f0f0", color: "#333", border: "none", borderRadius: "10px", padding: "10px 16px", fontWeight: "600", cursor: "pointer", fontSize: "13px" }}>
-                                    Log in to Book
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </div>
-            ) : (
-            /* ── REGULAR FLIGHT SEARCH ── */
-            <form className="search-form" onSubmit={handleFlightSubmit}>
-              {selectedPackage && (
-                <div style={{ background: "linear-gradient(135deg, #e8f5e9, #f1fff5)", border: "2px solid #1a6e3c", borderRadius: "10px", padding: "12px 16px", marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div>
-                    <p style={{ margin: 0, fontWeight: "800", color: "#1a4d2e", fontSize: "14px" }}>📦 Package: {selectedPackage.name}</p>
-                    <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#555" }}>Search flights to <strong>{selectedPackage.city}</strong> to complete your bundle</p>
-                  </div>
-                  <button type="button" onClick={() => setSelectedPackage(null)} style={{ background: "none", border: "1px solid #1a6e3c", color: "#1a6e3c", borderRadius: "6px", padding: "4px 10px", cursor: "pointer", fontSize: "12px" }}>Remove</button>
-                </div>
-              )}
-              <div className="advanced-search">Advanced search: multi-city, promo codes, and partner airlines</div>
-              <div className="form-row">
-                <div className="form-group large-group">
-                  <label>Leaving from?</label>
-                  <select name="departureCityId" value={flightSearch.departureCityId} onChange={handleFlightChange} required disabled={loadingAirports}>
-                    <option value="">{loadingAirports ? "Loading cities..." : "Select departure city"}</option>
-                    {cities.map((c) => <option key={c.city_id} value={c.city_id}>{c.city_name}, {c.country_name}</option>)}
-                  </select>
-                </div>
-                <div className="form-group large-group">
-                  <label>Going to?</label>
-                  <select name="arrivalCityId" value={flightSearch.arrivalCityId} onChange={handleFlightChange} required disabled={loadingAirports}>
-                    <option value="">{loadingAirports ? "Loading cities..." : "Select destination city"}</option>
-                    {cities.map((c) => <option key={c.city_id} value={c.city_id}>{c.city_name}, {c.country_name}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Departure Date</label>
-                  <input type="date" name="departureDate" value={flightSearch.departureDate} onChange={handleFlightChange} required />
-                </div>
-                <div className="form-group">
-                  <label>Passengers</label>
-                  <select name="passengers" value={flightSearch.passengers} onChange={handleFlightChange}>
-                    {[1,2,3,4,5,6,7,8,9].map((n) => <option key={n} value={n}>{n} Passenger{n > 1 ? "s" : ""}</option>)}
-                  </select>
-                </div>
-              </div>
-              <button type="submit" className="primary-btn">{loadingFlights ? "Searching..." : "Continue"}</button>
-              {searchMessage && <p style={{ marginTop: "14px", fontSize: "18px" }}>{searchMessage}</p>}
-
-              {/* Free flight mode banner */}
-              {freeFlightMode && (
-                <div style={{ marginTop: "16px", background: "linear-gradient(135deg, #1a6e3c, #22a85a)", borderRadius: "12px", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
-                  <div>
-                    <p style={{ margin: 0, color: "#fff", fontWeight: "800", fontSize: "16px" }}>🎟️ Free Flight Redemption Mode</p>
-                    <p style={{ margin: "3px 0 0", color: "rgba(255,255,255,0.85)", fontSize: "13px" }}>Select any flight below to book it for free (1,000 miles)</p>
-                  </div>
-                  <button type="button" onClick={() => setFreeFlightMode(false)} style={{ background: "rgba(255,255,255,0.2)", color: "#fff", border: "1px solid rgba(255,255,255,0.4)", borderRadius: "8px", padding: "6px 14px", cursor: "pointer", fontSize: "13px", fontWeight: "600" }}>Cancel</button>
-                </div>
-              )}
-
-              {flightResults.length > 0 && (
-                <div style={{ marginTop: "20px" }}>
-                  <h2>Available Flights</h2>
-                  {flightResults.map((flight) => (
-                    <div key={flight.flight_id} className="flight-card" style={{ position: "relative", overflow: "hidden" }}>
-                      {/* Free flight badge */}
-                      {freeFlightMode && (
-                        <div style={{ position: "absolute", top: 0, right: 0, background: "#1a6e3c", color: "#fff", fontSize: "11px", fontWeight: "800", padding: "4px 12px", borderBottomLeftRadius: "8px", letterSpacing: "0.5px" }}>
-                          FREE REDEMPTION
-                        </div>
-                      )}
-
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: "8px" }}>
-                        <div>
-                          <p style={{ margin: "0 0 4px", paddingBottom: "10px" }}>
-                            Fly with <strong>{flight.airline_name}</strong>
-                          </p>
-                          <p style={{ margin: "0 0 4px" }}><strong>Flight ID:</strong> {flight.flight_id}</p>
-                          <p style={{ margin: "0 0 4px" }}><strong>Departure:</strong> {flight.departure_city}, {flight.departure_country} ({flight.departure_code})</p>
-                          <p style={{ margin: "0 0 4px" }}><strong>Arrival:</strong> {flight.arrival_city}, {flight.arrival_country} ({flight.arrival_code})</p>
-                          <p style={{ margin: "0 0 4px" }}><strong>Date:</strong> {new Date(flight.date_of_departure).toLocaleString()}</p>
-                          <p style={{ margin: "0 0 4px" }}>
-                            <strong>Aircraft:</strong> {flight.aircraft_name}
-                          </p>
-                        </div>
-                        
-
-                        {/* Cabin Class Selector + Price */}
-                        <div style={{ minWidth: "190px", textAlign: "center" }}>
-                          <div style={{ 
-                            display: "flex", 
-                            background: "#f8f9fa", 
-                            borderRadius: "8px", 
-                            padding: "4px", 
-                            marginBottom: "12px",
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
-                          }}>
-                            {[
-                              { key: "economy", label: "Economy", color: "#22c55e" },    
-                              { key: "business", label: "Business", color: "#3b82f6" },   
-                              { key: "first", label: "First", color: "#eab308" }         
-                            ].map((cls) => {
-                              const isSelected = (selectedClass[flight.flight_id] || "economy") === cls.key;
-                              const price = getPriceForClass(flight, cls.key);
-
-                              return (
-                                <button
-                                  key={cls.key}
-                                  type="button"
-                                  onClick={() => setSelectedClass(prev => ({ 
-                                    ...prev, 
-                                    [flight.flight_id]: cls.key 
-                                  }))}
-                                  style={{
-                                    flex: 1,
-                                    padding: "8px 10px",
-                                    fontSize: "13px",
-                                    fontWeight: isSelected ? "700" : "600",
-                                    background: isSelected ? cls.color : "transparent",
-                                    color: isSelected ? "#fff" : "#444",
-                                    border: "none",
-                                    borderRadius: "6px",
-                                    cursor: "pointer",
-                                    transition: "all 0.2s ease",
-                                    textShadow: isSelected ? "0 1px 2px rgba(0,0,0,0.2)" : "none"
-                                  }}
-                                >
-                                  {cls.label}
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          {/* Current Price Display */}
-                          <div style={{
-                            background: freeFlightMode ? "#e8f5e9" : "#fff8f8",
-                            border: `2px solid ${freeFlightMode ? "#1a6e3c" : "#cf102d"}`,
-                            borderRadius: "12px",
-                            padding: "12px 16px"
-                          }}>
-                            {freeFlightMode ? (
-                              <>
-                                <p style={{ margin: "0 0 2px", fontSize: "11px", color: "#1a6e3c", fontWeight: "700", textTransform: "uppercase" }}>Redemption</p>
-                                <p style={{ margin: "0 0 2px", fontSize: "22px", fontWeight: "800", color: "#1a6e3c" }}>FREE</p>
-                                <p style={{ margin: 0, fontSize: "11px", color: "#555" }}>1,000 miles</p>
-                              </>
-                            ) : (
-                              <>
-                                <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#888", textTransform: "uppercase" }}>
-                                  { (selectedClass[flight.flight_id] || "economy").toUpperCase() }
-                                </p>
-                                <p style={{ margin: "0 0 2px", fontSize: "26px", fontWeight: "800", color: "#cf102d" }}>
-                                  ${getPriceForClass(flight, selectedClass[flight.flight_id] || "economy")}
-                                </p>
-                                <p style={{ margin: 0, fontSize: "11px", color: "#888" }}>per person</p>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {loggedInUser ? (
-                        canBook ? (
-                          freeFlightMode && isPassenger ? (
-                            <button type="button" className="book-btn" style={{ background: "#1a6e3c", marginTop: "10px" }} onClick={() => handleRedeemFlight(flight)}>
-                              🎟️ Redeem Free Flight
-                            </button>
-                          ) : !freeFlightMode ? (
-                            <>
-                              {/* Show matching packages for this destination */}
-                              {(() => {
-                                const pkgsForDest = VACATION_PACKAGES.filter((p) => p.arrival === flight.arrival_airport);
-                                if (pkgsForDest.length === 0) return null;
-                                const alreadyPkg = selectedPackage && pkgsForDest.some((p) => p.id === selectedPackage.id);
-                                return (
-                                  <div style={{ marginTop: "10px", background: "#f0f9ff", border: "1px solid #7dd3fc", borderRadius: "8px", padding: "10px 14px" }}>
-                                    <p style={{ margin: "0 0 6px", fontSize: "12px", fontWeight: "700", color: "#0369a1" }}>🏖️ {pkgsForDest.length} vacation package{pkgsForDest.length > 1 ? "s" : ""} available for {flight.arrival_airport.split(" ")[0]}</p>
-                                    {alreadyPkg ? (
-                                      <p style={{ margin: 0, fontSize: "12px", color: "#1a6e3c", fontWeight: "600" }}>✅ {selectedPackage.name} will be added to this booking</p>
-                                    ) : (
-                                      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                                        {pkgsForDest.slice(0, 3).map((p) => (
-                                          <button key={p.id} type="button" onClick={() => setSelectedPackage(p)}
-                                            style={{ background: "#fff", border: "1px solid #7dd3fc", color: "#0369a1", borderRadius: "6px", padding: "4px 10px", fontSize: "11px", fontWeight: "600", cursor: "pointer" }}>
-                                            {p.emoji} {p.category} · ${p.price}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })()}
-                              <button 
-                                type="button" 
-                                className="book-btn" 
-                                style={{ marginTop: "12px", width: "auto", minWidth: "280px" }} 
-                                onClick={() => handleBookFlight(flight, selectedClass[flight.flight_id] || "economy")}
-                              >
-                                Book This Flight — ${getPriceForClass(flight, selectedClass[flight.flight_id] || "economy")}
-                                {selectedPackage && VACATION_PACKAGES.some((p) => p.id === selectedPackage.id && p.arrival === flight.arrival_airport) ? ` + ${selectedPackage.name}` : ""}
-                              </button>
-                            </>
-                          ) : null
-                        ) : (
-                          <p className="book-hint">Your current role cannot book flights from this screen.</p>
-                        )
-                      ) : (
-                        <p className="book-hint">
-                          <span onClick={() => setActiveTab("login")} className="book-hint-link">Log in</span>{" "}or{" "}
-                          <span onClick={() => setShowCreateModal(true)} className="book-hint-link">create an account</span> to book.
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </form>
-            )}
-            </>
+              loggedInUser={loggedInUser}
+              isPassenger={isPassenger}
+              canBook={canBook}
+            />
           )}
 
           {/* ── Manage Booking ── */}
           {activeTab === "manage" && (
-            <div className="login-form">
-              <h2>{isPassenger ? "My Bookings" : "Manage Booking"}</h2>
-              {!loggedInUser ? (
-                <div style={{ textAlign: "center", marginTop: "20px" }}>
-                  <p>You must be logged in to view and manage bookings.</p>
-                  <button className="primary-btn" onClick={() => setActiveTab("login")} style={{ marginTop: "15px" }}>Log In Now</button>
-                </div>
-              ) : isPassenger ? (
-                <PassengerMyBookings
-                  bookings={userBookings}
-                  loading={loadingUserBookings}
-                  onSearchFlights={() => setActiveTab("search")}
-                  onCancelBooking={handleCancelBooking}
-                  isEditingPrefs={isEditingPrefs}
-                  setIsEditingPrefs={setIsEditingPrefs}
-                  prefData={prefData}
-                  setPrefData={setPrefData}
-                  handleUpdatePreferences={handleUpdatePreferences}
-                  actionMsg={actionMsg}
-                />
-              ) : (
-                /* EMPLOYEE / SYSTEM ADMIN: dropdown of all bookings */
-                <form onSubmit={handleManageSubmit}>
-                  <div className="form-group">
-                    <label>Select Booking</label>
-                    <select name="bookingId" value={manageData.bookingId} onChange={handleManageChange} required disabled={loadingAllBookings}>
-                      <option value="">{loadingAllBookings ? "Loading bookings..." : "-- Select a Booking --"}</option>
-                      {allBookingsAdmin.map((b) => (
-                        <option key={b.booking_id} value={b.booking_id}>
-                          #{b.booking_id} — {b.first_name} {b.last_name} ({b.booking_status})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <button type="submit" className="primary-btn" disabled={!manageData.bookingId}>{loadingManage ? "Searching..." : "View Details"}</button>
-                  {manageMessage && <p style={{ marginTop: "14px", fontSize: "18px" }}>{manageMessage}</p>}
-                  {manageResult && (
-                    <BookingResultCard 
-                      result={manageResult} 
-                      onCancel={handleCancelBooking} 
-                      showPrefs={true} 
-                      isEditingPrefs={isEditingPrefs}
-                      setIsEditingPrefs={setIsEditingPrefs}
-                      prefData={prefData}
-                      setPrefData={setPrefData}
-                      handleUpdatePreferences={handleUpdatePreferences}
-                      actionMsg={actionMsg}
-                    />
-                  )}
-                </form>
-              )}
-            </div>
+            <ManageBookingsPanel
+              isPassenger={isPassenger}
+              loggedInUser={loggedInUser}
+              
+              // Passenger props
+              userBookings={userBookings}
+              loadingUserBookings={loadingUserBookings}
+              onSearchFlights={() => setActiveTab("search")}
+              onCancelBooking={handleCancelBooking}
+
+              // Editing props (shared)
+              isEditingPrefs={isEditingPrefs}
+              setIsEditingPrefs={setIsEditingPrefs}
+              prefData={prefData}
+              setPrefData={setPrefData}
+              handleUpdatePreferences={handleUpdatePreferences}
+              actionMsg={actionMsg}
+
+              // Admin props
+              manageData={manageData}
+              handleManageChange={handleManageChange}
+              handleManageSubmit={handleManageSubmit}
+              loadingAllBookings={loadingAllBookings}
+              allBookingsAdmin={allBookingsAdmin}
+              manageMessage={manageMessage}
+              manageResult={manageResult}
+              loadingManage={loadingManage}
+            />
           )}
 
           {/* ── Flight Status ── */}
           {activeTab === "status" && (
-            <form className="login-form" onSubmit={handleStatusSubmit}>
-              <h2>Flight Status</h2>
-              <p>Enter a flight ID to check the flight status.</p>
-              <div className="form-group">
-                <label>Flight ID</label>
-                <input type="text" name="flightId" value={statusData.flightId} onChange={handleStatusChange} placeholder="Enter flight ID" required />
-              </div>
-              <button type="submit" className="primary-btn">{loadingStatus ? "Searching..." : "Check Status"}</button>
-              {statusMessage && <p style={{ marginTop: "14px", fontSize: "18px" }}>{statusMessage}</p>}
-              {statusResult && (
-                <div className="result-card">
-                  <p><strong>Flight ID:</strong> {statusResult.flight_id}</p>
-                  <p><strong>Departure Airport:</strong> {statusResult.departure_airport}</p>
-                  <p><strong>Arrival Airport:</strong> {statusResult.arrival_airport}</p>
-                  <p><strong>Departure Time:</strong> {new Date(statusResult.date_of_departure).toLocaleString()}</p>
-                  <p><strong>Seats Available:</strong> {statusResult.seats_available}</p>
-                </div>
-              )}
-            </form>
+            <FlightStatusPanel
+              statusData={statusData}
+              handleStatusChange={handleStatusChange}
+              handleStatusSubmit={handleStatusSubmit}
+              loadingStatus={loadingStatus}
+              statusMessage={statusMessage}
+              statusResult={statusResult}
+            />
           )}
 
           {/* ── Employee Portal ── */}
           {activeTab === "employee" && (isEmployee || isSystemAdmin) && (
-            <div>
-              <h2>Employee Dashboard</h2>
-              <p style={{ color: "#666", marginBottom: "18px" }}>Full access: passenger management, bookings, flight operations, and administrative actions.</p>
+            <EmployeeDashboard
+              setActiveTab={setActiveTab}
+              setIsEditingPrefs={setIsEditingPrefs}
+              prefData={prefData}
+              setPrefData={setPrefData}
+              handleUpdatePreferences={handleUpdatePreferences}
+              empSection={empSection}
+              setEmpSection={setEmpSection}
 
-              {/* Section navigation */}
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "24px" }}>
-                <SectionBtn id="passengers" label="👤 Passengers" />
-                <SectionBtn id="bookings" label="📋 Bookings" />
-                <SectionBtn id="flightStatus" label="🛫 Flight Status" />
-                <SectionBtn id="routes" label="🗺️ Routes" />
-                <SectionBtn id="aircraft" label="✈️ Aircraft" />
-                <SectionBtn id="actions" label="⚙️ Admin Actions" />
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("search")}
-                  style={{
-                    padding: "8px 18px", borderRadius: "20px", border: "none", cursor: "pointer",
-                    fontWeight: "600", fontSize: "13px",
-                    background: "#f0f0f0", color: "#333",
-                    transition: "all 0.2s"
-                  }}
-                >
-                  🔍 Search Flights
-                </button>
-              </div>
+              // Passengers
+              allPassengers={allPassengers}
+              loadingPassengers={loadingPassengers}
+              fetchAllPassengers={fetchAllPassengers}
 
-              {/* ── SECTION: Passengers ── */}
-              {empSection === "passengers" && (
-                <div className="result-card">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                    <h3 style={{ margin: 0 }}>Passenger Directory</h3>
-                    <RefreshBtn section="passengers" fetchFn={fetchAllPassengers} loading={loadingPassengers} />
-                  </div>
-                  {allPassengers.length === 0 ? (
-                    <p style={{ color: "#888" }}>No passenger data. Click Refresh to load.</p>
-                  ) : (
-                    <div style={{ overflowX: "auto" }}>
-                      <p style={{ margin: "0 0 10px", fontSize: "13px", color: "#888" }}>
-                        Showing <strong>{allPassengers.length}</strong> registered passenger{allPassengers.length !== 1 ? "s" : ""}
-                      </p>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                        <thead>
-                          <tr style={{ background: "#1a1a2e", color: "#fff" }}>
-                            {["ID", "Name", "Role", "Email", "Phone", "Seat Pref", "Meal Pref", "Country", "Passport", "Visa"].map((h) => (
-                              <th key={h} style={{ padding: "10px", textAlign: "left" }}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {allPassengers.map((p) => (
-                            <tr key={p.passenger_id} style={{ borderBottom: "1px solid #eee" }}>
-                              <td style={{ padding: "10px" }}>{p.passenger_id}</td>
-                              <td style={{ padding: "10px", fontWeight: "600" }}>{p.first_name} {p.last_name}</td>
-                              <td style={{ padding: "10px" }}>
-                                <span style={{ background: p.user_role === "Passenger" ? "#e3f2fd" : "#e8f5e9", color: p.user_role === "Passenger" ? "#1565c0" : "#1a6e3c", fontSize: "11px", fontWeight: "700", padding: "2px 10px", borderRadius: "999px" }}>
-                                  {p.user_role}
-                                </span>
-                              </td>
-                              <td style={{ padding: "10px" }}>{p.email}</td>
-                              <td style={{ padding: "10px" }}>{p.phone_number || "—"}</td>
-                              <td style={{ padding: "10px" }}>{p.seat_preferences || "—"}</td>
-                              <td style={{ padding: "10px" }}>{p.meal_preferences || "—"}</td>
-                              <td style={{ padding: "10px" }}>{p.country_of_origin || "—"}</td>
-                              <td style={{ padding: "10px" }}>
-                                <span style={{ color: Number(p.passport_status) === 1 ? "#1a6e3c" : "#b00020", fontWeight: "600" }}>
-                                  {Number(p.passport_status) === 1 ? "✓ Valid" : "✗ Invalid"}
-                                </span>
-                              </td>
-                              <td style={{ padding: "10px" }}>
-                                <span style={{ color: Number(p.visa_status) === 1 ? "#1a6e3c" : "#b00020", fontWeight: "600" }}>
-                                  {Number(p.visa_status) === 1 ? "✓ Valid" : "✗ Invalid"}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
+              // Bookings
+              allBookingsAdmin={allBookingsAdmin}
+              loadingAllBookings={loadingAllBookings}
+              fetchAllBookingsAdmin={fetchAllBookingsAdmin}
+              manageData={manageData}
+              handleManageChange={handleManageChange}
+              handleManageSubmit={handleManageSubmit}
+              loadingManage={loadingManage}
+              manageMessage={manageMessage}
+              manageResult={manageResult}
+              handleCancelBooking={handleCancelBooking}
+              handleUpdateBookingStatus={handleUpdateBookingStatus}
+              bookingStatusUpdate={bookingStatusUpdate}
+              setBookingStatusUpdate={setBookingStatusUpdate}
+              bookingStatusMsg={bookingStatusMsg}
+              handleAddBookingAdmin={handleAddBookingAdmin}
+              adminNewBooking={adminNewBooking}
+              setAdminNewBooking={setAdminNewBooking}
+              adminNewBookingMsg={adminNewBookingMsg}
+              loadingReports={loadingReports}
+              reports={reports}
 
-              {/* ── SECTION: Bookings ── */}
-              {empSection === "bookings" && (
-                <div>
-                  {/* Find & Modify Booking */}
-                  <div className="result-card" style={{ marginBottom: "20px" }}>
-                    <h3>Find Booking</h3>
-                    <form onSubmit={handleManageSubmit}>
-                      <div className="form-group">
-                        <label>Select Booking</label>
-                        <select name="bookingId" value={manageData.bookingId} onChange={handleManageChange} required disabled={loadingAllBookings}>
-                          <option value="">{loadingAllBookings ? "Loading bookings..." : "-- Select a booking --"}</option>
-                          {allBookingsAdmin.map((b) => (
-                            <option key={b.booking_id} value={b.booking_id}>
-                              #{b.booking_id} — {b.first_name} {b.last_name} ({b.booking_status}) · {new Date(b.booking_date).toLocaleDateString()}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <button type="submit" className="primary-btn" disabled={!manageData.bookingId}>{loadingManage ? "Searching..." : "View Details"}</button>
-                      {manageMessage && <p style={{ marginTop: "14px", fontSize: "18px" }}>{manageMessage}</p>}
-                      {manageResult && (
-                        <BookingResultCard 
-                          result={manageResult} 
-                          onCancel={handleCancelBooking} 
-                          showPrefs={true} 
-                          isEditingPrefs={isEditingPrefs}
-                          setIsEditingPrefs={setIsEditingPrefs}
-                          prefData={prefData}
-                          setPrefData={setPrefData}
-                          handleUpdatePreferences={handleUpdatePreferences}
-                          actionMsg={actionMsg}
-                        />
-                      )}
-                    </form>
-                  </div>
 
-                  {/* Modify Booking Status */}
-                  <div className="result-card" style={{ marginBottom: "20px" }}>
-                    <h3>Modify Booking Status</h3>
-                    <form onSubmit={handleUpdateBookingStatus}>
-                      <div className="form-row" style={{ alignItems: "flex-end" }}>
-                        <div className="form-group">
-                          <label>Select Booking</label>
-                          <select value={bookingStatusUpdate.bookingId} onChange={(e) => setBookingStatusUpdate({ ...bookingStatusUpdate, bookingId: e.target.value })} required disabled={loadingAllBookings}>
-                            <option value="">{loadingAllBookings ? "Loading..." : "-- Select a booking --"}</option>
-                            {allBookingsAdmin.map((b) => (
-                              <option key={b.booking_id} value={b.booking_id}>
-                                #{b.booking_id} — {b.first_name} {b.last_name} ({b.booking_status})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="form-group">
-                          <label>New Status</label>
-                          <select value={bookingStatusUpdate.status} onChange={(e) => setBookingStatusUpdate({ ...bookingStatusUpdate, status: e.target.value })}>
-                            <option value="Confirmed">Confirmed</option>
-                            <option value="Pending">Pending</option>
-                            <option value="Completed">Completed</option>
-                            <option value="Cancelled">Cancelled</option>
-                          </select>
-                        </div>
-                        <button type="submit" className="primary-btn" style={{ padding: "16px 20px", backgroundColor: "#333" }}>Update Status</button>
-                      </div>
-                      {bookingStatusMsg && <p style={{ marginTop: "12px", fontWeight: "600", color: bookingStatusMsg.startsWith("✅") ? "#1a6e3c" : "#b00020" }}>{bookingStatusMsg}</p>}
-                    </form>
-                  </div>
+              // Flight Status
+              statusData={statusData}
+              handleStatusChange={handleStatusChange}
+              handleStatusSubmit={handleStatusSubmit}
+              loadingStatus={loadingStatus}
+              statusMessage={statusMessage}
+              statusResult={statusResult}
+              allFlights={allFlights}
+              loadingAllFlights={loadingAllFlights}
 
-                  {/* Add New Booking */}
-                  <div className="result-card" style={{ marginBottom: "20px" }}>
-                    <h3>Add New Booking</h3>
-                    <p style={{ color: "#666", fontSize: "14px", marginBottom: "12px" }}>Create a confirmed booking for any user by entering their User ID and Passenger ID.</p>
-                    <form onSubmit={handleAddBookingAdmin}>
-                      <div className="form-row" style={{ alignItems: "flex-end" }}>
-                        <div className="form-group">
-                          <label>User ID</label>
-                          <input type="number" value={adminNewBooking.userId} onChange={(e) => setAdminNewBooking({ ...adminNewBooking, userId: e.target.value })} placeholder="e.g. 5" required />
-                        </div>
-                        <div className="form-group">
-                          <label>Passenger ID</label>
-                          <input type="number" value={adminNewBooking.passengerId} onChange={(e) => setAdminNewBooking({ ...adminNewBooking, passengerId: e.target.value })} placeholder="e.g. 5" required />
-                        </div>
-                        <button type="submit" className="primary-btn" style={{ padding: "16px 20px", backgroundColor: "#1a6e3c" }}>Create Booking</button>
-                      </div>
-                      {adminNewBookingMsg && <p style={{ marginTop: "12px", fontWeight: "600", color: adminNewBookingMsg.startsWith("✅") ? "#1a6e3c" : "#b00020" }}>{adminNewBookingMsg}</p>}
-                    </form>
-                  </div>
-
-                  {/* All Bookings Table */}
-                  <div className="result-card">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                      <h3 style={{ margin: 0 }}>All Bookings</h3>
-                      <RefreshBtn section="allBookings" fetchFn={fetchAllBookingsAdmin} loading={loadingAllBookings} />
-                    </div>
-                    {allBookingsAdmin.length === 0 ? <p style={{ color: "#888" }}>No bookings loaded. Click Refresh.</p> : (
-                      <div style={{ overflowX: "auto" }}>
-                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                          <thead>
-                            <tr style={{ background: "#1a1a2e", color: "#fff" }}>
-                              {["Booking ID", "Passenger", "Email", "Phone", "Seat Pref", "Meal Pref", "Status", "Date"].map((h) => (
-                                <th key={h} style={{ padding: "10px", textAlign: "left" }}>{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {allBookingsAdmin.map((b) => (
-                              <tr key={b.booking_id} style={{ borderBottom: "1px solid #eee" }}>
-                                <td style={{ padding: "10px" }}>#{b.booking_id}</td>
-                                <td style={{ padding: "10px", fontWeight: "600" }}>{b.first_name} {b.last_name}</td>
-                                <td style={{ padding: "10px" }}>{b.email}</td>
-                                <td style={{ padding: "10px" }}>{b.phone_number || "—"}</td>
-                                <td style={{ padding: "10px" }}>{b.seat_preferences || "—"}</td>
-                                <td style={{ padding: "10px" }}>{b.meal_preferences || "—"}</td>
-                                <td style={{ padding: "10px" }}>
-                                  <span style={{ background: b.booking_status === "Confirmed" ? "#e8f5e9" : b.booking_status === "Cancelled" ? "#fce4ec" : "#fff8e1", color: b.booking_status === "Confirmed" ? "#1a6e3c" : b.booking_status === "Cancelled" ? "#b00020" : "#f57c00", padding: "3px 8px", borderRadius: "10px", fontSize: "12px", fontWeight: "600" }}>{b.booking_status}</span>
-                                </td>
-                                <td style={{ padding: "10px" }}>{new Date(b.booking_date).toLocaleDateString()}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* ── SECTION: Flight Status ── */}
-              {empSection === "flightStatus" && (
-                <div className="result-card">
-                  <h3>Check Flight Status</h3>
-                  <form onSubmit={handleStatusSubmit}>
-                    <div className="form-group">
-                      <label>Select Flight</label>
-                      <select
-                        name="flightId"
-                        value={statusData.flightId}
-                        onChange={handleStatusChange}
-                        required
-                        disabled={loadingAllFlights}
-                      >
-                        <option value="">
-                          {loadingAllFlights ? "Loading flights..." : "-- Select a Flight --"}
-                        </option>
-                        {allFlights.map((f) => (
-                          <option key={f.flight_id} value={f.flight_id}>
-                            #{f.flight_id} — {f.departure_airport} → {f.arrival_airport} ({new Date(f.date_of_departure).toLocaleDateString()}, {f.seats_available} seats)
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <button type="submit" className="primary-btn" disabled={!statusData.flightId}>{loadingStatus ? "Searching..." : "Check Status"}</button>
-                    {statusMessage && <p style={{ marginTop: "14px", fontSize: "18px" }}>{statusMessage}</p>}
-                    {statusResult && (
-                      <div className="result-card" style={{ marginTop: "14px" }}>
-                        <p><strong>Flight ID:</strong> {statusResult.flight_id}</p>
-                        <p><strong>Departure Airport:</strong> {statusResult.departure_airport}</p>
-                        <p><strong>Arrival Airport:</strong> {statusResult.arrival_airport}</p>
-                        <p><strong>Departure Time:</strong> {new Date(statusResult.date_of_departure).toLocaleString()}</p>
-                        <p><strong>Seats Available:</strong> {statusResult.seats_available}</p>
-                      </div>
-                    )}
-                  </form>
-                </div>
-              )}
-
-              {/* ── SECTION: Routes ── */}
-              {empSection === "routes" && (
-                <div>
-                  {/* Route Status Table */}
-                  <div className="result-card" style={{ marginBottom: "20px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                      <h3 style={{ margin: 0 }}>Route Active / Inactive Status</h3>
-                      <RefreshBtn section="routes" fetchFn={fetchRoutesWithStatus} loading={loadingRoutesStatus} />
-                    </div>
-                    <p style={{ color: "#888", fontSize: "13px", marginBottom: "10px" }}>Click Activate or Deactivate to change a route's status. Click any row to see its scheduled flights.</p>
-                    {routeMsg.text && (
-                      <div style={{ marginBottom: "12px", padding: "10px 14px", borderRadius: "8px", fontWeight: "600", fontSize: "14px", background: routeMsg.type === "success" ? "#e8f5e9" : "#fce4ec", color: routeMsg.type === "success" ? "#1a6e3c" : "#b00020" }}>
-                        {routeMsg.text}
-                      </div>
-                    )}
-                    {routesWithStatus.length === 0 ? <p style={{ color: "#888" }}>No route data. Click Refresh.</p> : (
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
-                        <thead>
-                          <tr style={{ background: "#1a1a2e", color: "#fff" }}>
-                            {["Route ID", "Departure", "Arrival", "Flights", "Status", "Action"].map((h) => (
-                              <th key={h} style={{ padding: "10px", textAlign: h === "Flights" || h === "Status" || h === "Action" ? "center" : "left" }}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {routesWithStatus.map((r) => (
-                            <tr key={r.route_id} style={{ borderBottom: "1px solid #ddd", cursor: "pointer", height: "44px" }} onClick={() => fetchRouteFlights(r.route_id, `${r.departure} → ${r.arrival}`)}>
-                              <td style={{ padding: "10px" }}>{r.route_id}</td>
-                              <td style={{ padding: "10px" }}>{r.departure}</td>
-                              <td style={{ padding: "10px" }}>{r.arrival}</td>
-                              <td style={{ padding: "10px", textAlign: "center" }}>{r.total_flights}</td>
-                              <td style={{ padding: "10px", textAlign: "center" }}>
-                                <span style={{ background: r.is_active ? "#e8f5e9" : "#fce4ec", color: r.is_active ? "#1a6e3c" : "#b00020", padding: "3px 10px", borderRadius: "10px", fontSize: "12px", fontWeight: "700" }}>{r.is_active ? "Active" : "Inactive"}</span>
-                              </td>
-                              <td style={{ padding: "10px", textAlign: "center" }}>
-                                <button type="button" onClick={(e) => { e.stopPropagation(); handleToggleRouteStatus(r.route_id); }}
-                                  style={{ background: r.is_active ? "#b00020" : "#1a6e3c", color: "#fff", border: "none", borderRadius: "6px", padding: "5px 12px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}>
-                                  {r.is_active ? "Deactivate" : "Activate"}
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                    <p style={{ fontSize: "12px", color: "#aaa", marginTop: "8px" }}>💡 Click any row to see its flights</p>
-                  </div>
-
-                  {/* Route Report */}
-                  <div className="result-card">
-                    <h3>Flight Route Data Report</h3>
-                    <button className="nav-edit-btn" style={{ color: "#222", borderColor: "#222", margin: "10px 0" }} onClick={fetchReports}>{loadingReports ? "Generating..." : "Generate Report"}</button>
-                    {reports.length > 0 && (
-                      <table style={{ width: "100%", textAlign: "left", marginTop: "10px", borderCollapse: "collapse" }}>
-                        <thead>
-                          <tr style={{ borderBottom: "2px solid #ddd" }}>
-                            {["Route ID", "Departure", "Arrival", "Total Flights"].map((h) => <th key={h} style={{ padding: "10px" }}>{h}</th>)}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {reports.map((r) => (
-                            <tr key={r.route_id} style={{ borderBottom: "1px solid #ddd", height: "40px", cursor: "pointer" }}
-                              onClick={() => fetchRouteFlights(r.route_id, `${r.departure} → ${r.arrival}`)}
-                              onMouseEnter={(e) => e.currentTarget.style.background = "#f5f5f5"}
-                              onMouseLeave={(e) => e.currentTarget.style.background = ""}>
-                              <td style={{ padding: "10px" }}>{r.route_id}</td>
-                              <td style={{ padding: "10px" }}>{r.departure}</td>
-                              <td style={{ padding: "10px" }}>{r.arrival}</td>
-                              <td style={{ padding: "10px" }}>
-                                <span style={{ background: "#e3f2fd", color: "#1565c0", padding: "3px 10px", borderRadius: "10px", fontWeight: "700", fontSize: "13px" }}>{r.total_flights}</span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                    <p style={{ fontSize: "12px", color: "#aaa", marginTop: "8px" }}>💡 Click any row to view its flights</p>
-                  </div>
-                </div>
-              )}
-
-              {/* ── SECTION: Aircraft ── */}
-              {empSection === "aircraft" && (
-                <div className="result-card">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                    <h3 style={{ margin: 0 }}>All Aircraft</h3>
-                    <RefreshBtn section="aircraft" fetchFn={fetchAllAircrafts} loading={loadingAircrafts} />
-                  </div>
-                  {allAircrafts.length === 0 ? <p style={{ color: "#888" }}>No aircraft data. Click Refresh.</p> : (
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
-                      <thead>
-                        <tr style={{ background: "#1a1a2e", color: "#fff" }}>
-                          {["ID", "Model", "Manufacturer", "Seating Capacity", "Baggage Capacity", "Edit"].map((h) => (
-                            <th key={h} style={{ padding: "10px", textAlign: h === "Seating Capacity" || h === "Baggage Capacity" || h === "Edit" ? "center" : "left" }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allAircrafts.map((a) => (
-                          <tr key={a.aircraft_id} style={{ borderBottom: "1px solid #ddd", height: "44px" }}>
-                            <td style={{ padding: "10px" }}>{a.aircraft_id}</td>
-                            <td style={{ padding: "10px", fontWeight: "600" }}>{a.model}</td>
-                            <td style={{ padding: "10px" }}>{a.manufacturer}</td>
-                            <td style={{ padding: "10px", textAlign: "center" }}>
-                              {inlineAircraftEdit.id === a.aircraft_id ? (
-                                <input type="number" value={inlineAircraftEdit.capacity} onChange={(e) => setInlineAircraftEdit({ ...inlineAircraftEdit, capacity: e.target.value })}
-                                  style={{ width: "80px", padding: "4px 8px", border: "1px solid #ccc", borderRadius: "4px", textAlign: "center" }} />
-                              ) : a.seating_capacity}
-                            </td>
-                            <td style={{ padding: "10px", textAlign: "center" }}>{a.max_baggage_capacity}</td>
-                            <td style={{ padding: "10px", textAlign: "center" }}>
-                              {inlineAircraftEdit.id === a.aircraft_id ? (
-                                <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
-                                  <button type="button" onClick={() => handleInlineAircraftUpdate(a.aircraft_id)} style={{ background: "#1a6e3c", color: "#fff", border: "none", borderRadius: "5px", padding: "5px 10px", cursor: "pointer", fontSize: "12px" }}>Save</button>
-                                  <button type="button" onClick={() => setInlineAircraftEdit({ id: null, capacity: "" })} style={{ background: "#666", color: "#fff", border: "none", borderRadius: "5px", padding: "5px 10px", cursor: "pointer", fontSize: "12px" }}>Cancel</button>
-                                </div>
-                              ) : (
-                                <button type="button" onClick={() => setInlineAircraftEdit({ id: a.aircraft_id, capacity: a.seating_capacity })} style={{ background: "#333", color: "#fff", border: "none", borderRadius: "5px", padding: "5px 12px", cursor: "pointer", fontSize: "12px" }}>✏️ Edit</button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                  {aircraftMsg.text && (
-                    <div style={{ marginTop: "12px", padding: "10px 14px", borderRadius: "8px", fontWeight: "600", fontSize: "14px", background: aircraftMsg.type === "success" ? "#e8f5e9" : "#fce4ec", color: aircraftMsg.type === "success" ? "#1a6e3c" : "#b00020" }}>
-                      {aircraftMsg.text}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── SECTION: Admin Actions ── */}
-              {empSection === "actions" && (
-                <div className="result-card">
-                  <h3>Flight Admin Actions</h3>
-                  <p style={{ color: "#666", marginBottom: "15px" }}>Add flights, update aircraft capacity, and delete routes.</p>
-                  <div style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
-                    <button type="button" className="primary-btn" style={{ fontSize: "14px", padding: "10px", backgroundColor: crudAction === "addFlight" ? "#a80d24" : "#cf102d" }} onClick={() => { setCrudAction("addFlight"); setCrudMsg({ text: "", type: "" }); }}>+ Add New Flight</button>
-                    <button type="button" className="primary-btn" style={{ fontSize: "14px", padding: "10px", backgroundColor: crudAction === "updateAircraft" ? "#111" : "#333" }} onClick={() => { setCrudAction("updateAircraft"); setCrudMsg({ text: "", type: "" }); }}>Update Aircraft</button>
-                    <button type="button" className="primary-btn" style={{ fontSize: "14px", padding: "10px", backgroundColor: crudAction === "deleteRoute" ? "#8a0018" : "#b00020" }} onClick={() => { setCrudAction("deleteRoute"); setCrudMsg({ text: "", type: "" }); }}>Delete Route</button>
-                  </div>
-                  {crudMsg.text && (
-                    <div style={{ marginBottom: "16px", padding: "10px 14px", borderRadius: "8px", fontWeight: "600", fontSize: "14px", background: crudMsg.type === "success" ? "#e8f5e9" : "#fce4ec", color: crudMsg.type === "success" ? "#1a6e3c" : "#b00020" }}>
-                      {crudMsg.text}
-                    </div>
-                  )}
-
-                  {crudAction === "addFlight" && (
-                    <form onSubmit={handleCrudSubmit} style={{ background: "#f5f5f5", padding: "15px", borderRadius: "6px" }}>
-                      <h4 style={{ marginBottom: "15px" }}>Create a New Flight</h4>
-                      <div className="form-row" style={{ alignItems: "flex-end" }}>
-                        <div className="form-group"><label>Route ID</label><input type="number" required value={crudData.routeId} onChange={(e) => setCrudData({ ...crudData, routeId: e.target.value })} placeholder="e.g. 1" /></div>
-                        <div className="form-group"><label>Departure Date</label><input type="datetime-local" required value={crudData.departureDate} onChange={(e) => setCrudData({ ...crudData, departureDate: e.target.value })} /></div>
-                        <div className="form-group"><label>Seats Available</label><input type="number" required value={crudData.seats} onChange={(e) => setCrudData({ ...crudData, seats: e.target.value })} placeholder="e.g. 150" /></div>
-                        <button type="submit" className="primary-btn" style={{ padding: "16px 20px" }}>Submit</button>
-                      </div>
-                    </form>
-                  )}
-
-                  {crudAction === "updateAircraft" && (
-                    <form onSubmit={handleCrudSubmit} style={{ background: "#f5f5f5", padding: "15px", borderRadius: "6px" }}>
-                      <h4 style={{ marginBottom: "15px" }}>Update Aircraft Capacity</h4>
-                      <div className="form-row" style={{ alignItems: "flex-end" }}>
-                        <div className="form-group"><label>Aircraft ID</label><input type="number" required value={crudData.aircraftId} onChange={(e) => setCrudData({ ...crudData, aircraftId: e.target.value })} placeholder="e.g. 1" /></div>
-                        <div className="form-group"><label>New Capacity</label><input type="number" required value={crudData.capacity} onChange={(e) => setCrudData({ ...crudData, capacity: e.target.value })} placeholder="e.g. 200" /></div>
-                        <button type="submit" className="primary-btn" style={{ padding: "16px 20px", backgroundColor: "#333" }}>Submit</button>
-                      </div>
-                    </form>
-                  )}
-
-                  {crudAction === "deleteRoute" && (
-                    <form onSubmit={handleCrudSubmit} style={{ background: "#ffebee", padding: "15px", borderRadius: "6px", border: "1px solid #ffcdd2" }}>
-                      <h4 style={{ marginBottom: "15px", color: "#b00020" }}>Delete an Existing Route</h4>
-                      <p style={{ fontSize: "14px", color: "#666", marginBottom: "15px" }}>⚠️ Warning: This permanently removes the route from the database.</p>
-                      <div className="form-row" style={{ alignItems: "flex-end" }}>
-                        <div className="form-group"><label>Route ID to Delete</label><input type="number" required value={crudData.routeId} onChange={(e) => setCrudData({ ...crudData, routeId: e.target.value })} placeholder="e.g. 5" /></div>
-                        <button type="submit" className="primary-btn" style={{ padding: "16px 20px", backgroundColor: "#b00020" }}>Confirm Delete</button>
-                      </div>
-                    </form>
-                  )}
-                </div>
-              )}
-            </div>
+              // Routes section
+              routesWithStatus={routesWithStatus}
+              loadingRoutesStatus={loadingRoutesStatus}
+              fetchRoutesWithStatus={fetchRoutesWithStatus}
+              routeMsg={routeMsg}
+              handleToggleRouteStatus={handleToggleRouteStatus}
+              fetchRouteFlights={fetchRouteFlights}
+              allAircrafts={allAircrafts}
+              loadingAircrafts={loadingAircrafts}
+              fetchAllAircrafts={fetchAllAircrafts}
+              inlineAircraftEdit={inlineAircraftEdit}
+              setInlineAircraftEdit={setInlineAircraftEdit}
+              handleInlineAircraftUpdate={handleInlineAircraftUpdate}
+              aircraftMsg={aircraftMsg}
+              // Admin Actions (CRUD)
+              crudAction={crudAction}
+              setCrudAction={setCrudAction}
+              crudData={crudData}
+              setCrudData={setCrudData}
+              handleCrudSubmit={handleCrudSubmit}
+              crudMsg={crudMsg}
+              actionMsg={actionMsg}
+              fetchReports={fetchReports}
+              setCrudMsg={setCrudMsg}
+            />
           )}
 
           {/* ── System Admin Dashboard ── */}
           {activeTab === "systemAdmin" && isSystemAdmin && (
-            <div>
-              <h2>System Admin Dashboard</h2>
-              <p style={{ color: "#666", marginBottom: "20px" }}>Full system access — passenger, booking, flight operations, and platform oversight.</p>
+            <SystemAdminDashboard
+              setActiveTab={setActiveTab}
+              loadEmployeePortal={loadEmployeePortal}
+              // Reports
+              reports={reports}
+              loadingReports={loadingReports}
+              fetchReports={fetchReports}
+              showReportRows={showReportRows}
+              setShowReportRows={setShowReportRows}
+              fetchRouteFlights={fetchRouteFlights}
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px", marginBottom: "24px" }}>
-                {[
-                  { icon: "👤", label: "Employee Dashboard", desc: "All staff features: passengers, bookings, routes, aircraft, flight ops", tab: "employee" },
-                  { icon: "🔍", label: "Manage Any Booking", desc: "Look up and modify any booking by ID", tab: "manage" },
-                  { icon: "🛫", label: "Flight Status", desc: "Check live flight status by flight ID", tab: "status" },
-                  { icon: "✈️", label: "Search & Book Flights", desc: "Search flights and book on behalf of any user", tab: "search" },
-                ].map(({ icon, label, desc, tab }) => (
-                  <div key={tab} onClick={() => { setActiveTab(tab); if (tab === "employee") loadEmployeePortal(); }} style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: "12px", padding: "20px", cursor: "pointer", transition: "box-shadow 0.2s" }}
-                    onMouseEnter={(e) => e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.12)"}
-                    onMouseLeave={(e) => e.currentTarget.style.boxShadow = "none"}>
-                    <div style={{ fontSize: "28px", marginBottom: "8px" }}>{icon}</div>
-                    <h4 style={{ margin: "0 0 6px", color: "#1a1a2e" }}>{label}</h4>
-                    <p style={{ margin: 0, fontSize: "13px", color: "#888" }}>{desc}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="result-card">
-                <h3>Route Summary Report</h3>
-                <button className="nav-edit-btn" style={{ color: "#222", borderColor: "#222", margin: "10px 0" }} onClick={() => { fetchReports(); setShowReportRows(true); }}>{loadingReports ? "Generating..." : "Generate Reports"}</button>
-                {reports.length > 0 && (
-                  <button className="nav-edit-btn" style={{ color: "#222", borderColor: "#222", margin: "10px 0 10px 10px" }} onClick={() => setShowReportRows(!showReportRows)}>
-                    {showReportRows ? `▲ Hide Reports (${reports.length})` : `▼ Show Reports (${reports.length})`}
-                  </button>
-                )}
-                {reports.length > 0 && showReportRows && (
-                  <table style={{ width: "100%", textAlign: "left", marginTop: "10px", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ borderBottom: "2px solid #ddd" }}>
-                        {["Route ID", "Departure", "Arrival", "Total Flights"].map((h) => <th key={h} style={{ padding: "10px" }}>{h}</th>)}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {reports.map((r) => (
-                        <tr key={r.route_id} style={{ borderBottom: "1px solid #ddd", height: "40px", cursor: "pointer" }}
-                          onClick={() => fetchRouteFlights(r.route_id, `${r.departure} → ${r.arrival}`)}
-                          onMouseEnter={(e) => e.currentTarget.style.background = "#f5f5f5"}
-                          onMouseLeave={(e) => e.currentTarget.style.background = ""}>
-                          <td style={{ padding: "10px" }}>{r.route_id}</td>
-                          <td style={{ padding: "10px" }}>{r.departure}</td>
-                          <td style={{ padding: "10px" }}>{r.arrival}</td>
-                          <td style={{ padding: "10px" }}>{r.total_flights}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-
-              {/* ── Manage Staff (create/delete employees and admins) ── */}
-              <div className="result-card" style={{ marginTop: "24px" }}>
-                <h3>Manage Staff</h3>
-                <p style={{ color: "#666", marginBottom: "12px", fontSize: "14px" }}>Create or remove Employee and System Admin accounts.</p>
-                <button className="nav-edit-btn" style={{ color: "#222", borderColor: "#222", margin: "10px 0" }} onClick={fetchAllStaff}>Load Staff List</button>
-
-                <form onSubmit={handleCreateStaff} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px", marginTop: "16px", padding: "16px", background: "#f9f9f9", borderRadius: "8px" }}>
-                  <input name="first_name" value={newStaffData.first_name} onChange={handleNewStaffChange} placeholder="First Name *" required />
-                  <input name="last_name" value={newStaffData.last_name} onChange={handleNewStaffChange} placeholder="Last Name" />
-                  <input name="email" type="email" value={newStaffData.email} onChange={handleNewStaffChange} placeholder="Email *" required />
-                  <input name="password" value={newStaffData.password} onChange={handleNewStaffChange} placeholder="Password *" required />
-                  <input name="department" value={newStaffData.department} onChange={handleNewStaffChange} placeholder="Department" />
-                  <input name="position" value={newStaffData.position} onChange={handleNewStaffChange} placeholder="Position" />
-                  <select name="role" value={newStaffData.role} onChange={handleNewStaffChange}>
-                    <option value="Employee">Employee</option>
-                    <option value="System Admin">System Admin</option>
-                  </select>
-                  <button type="submit" className="primary-btn">Create Staff Account</button>
-                </form>
-
-                {staffManageMessage && (
-                  <p style={{ marginTop: "12px", fontSize: "15px", color: staffManageMessage.toLowerCase().includes("created") || staffManageMessage.toLowerCase().includes("deleted") ? "#1a6e3c" : "#cf102d" }}>{staffManageMessage}</p>
-                )}
-
-                {allStaff.length > 0 && (
-                  <table style={{ width: "100%", textAlign: "left", marginTop: "16px", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr style={{ borderBottom: "2px solid #ddd" }}>
-                        {["ID", "Name", "Email", "Role", "Department", "Position", ""].map((h) => <th key={h} style={{ padding: "10px" }}>{h}</th>)}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {allStaff.map((s) => (
-                        <tr key={s.user_id} style={{ borderBottom: "1px solid #ddd", height: "40px" }}>
-                          <td style={{ padding: "10px" }}>{s.employee_id}</td>
-                          <td style={{ padding: "10px" }}>{s.first_name} {s.last_name || ""}</td>
-                          <td style={{ padding: "10px" }}>{s.email}</td>
-                          <td style={{ padding: "10px" }}>{s.role}</td>
-                          <td style={{ padding: "10px" }}>{s.department || "—"}</td>
-                          <td style={{ padding: "10px" }}>{s.position || "—"}</td>
-                          <td style={{ padding: "10px" }}>
-                            {s.user_id !== loggedInUser?.user_id ? (
-                              <button className="nav-logout-btn" onClick={() => handleDeleteStaff(s.user_id, `${s.first_name} ${s.last_name || ""}`)}>Delete</button>
-                            ) : (
-                              <span style={{ color: "#999", fontSize: "13px" }}>(you)</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
+              // Staff Management
+              allStaff={allStaff}
+              fetchAllStaff={fetchAllStaff}
+              newStaffData={newStaffData}
+              handleNewStaffChange={handleNewStaffChange}
+              handleCreateStaff={handleCreateStaff}
+              staffManageMessage={staffManageMessage}
+              handleDeleteStaff={handleDeleteStaff}
+              loggedInUser={loggedInUser}
+            />
           )}
 
           {/* ── Staff Portal Login ── */}

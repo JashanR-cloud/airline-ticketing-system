@@ -49,6 +49,10 @@ const BookingResultCard = ({
         </div>
 
         <p style={{ fontSize: "16px", margin: "10px 0 6px", fontWeight: "500" }}>
+          Flight ID: {result.flight_id}
+        </p>
+
+        <p style={{ fontSize: "16px", margin: "10px 0 6px", fontWeight: "500" }}>
           {result.departure_city} ({result.departure_name}) → {result.arrival_city} ({result.arrival_name})
         </p>
         <p style={{ color: "#444" }}>
