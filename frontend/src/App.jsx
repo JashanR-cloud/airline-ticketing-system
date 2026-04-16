@@ -3,10 +3,10 @@ import "./App.css";
 import { CreateAccountModal, EditAccountModal } from "./components/AccountModal";
 import MainTabs from './components/MainTabs';
 import LoggedInBanner from "./components/LoggedInBanner";
-import SearchFlightsPanel from "./components/SearchFlightsPanel"
-import ManageBookingsPanel from "./components/ManageBookingsPanel"
+import SearchFlightsPanel from "./components/main_tabs/SearchFlightsPanel"
+import ManageBookingsPanel from "./components/main_tabs/ManageBookingsPanel"
 import EmployeeDashboard from "./components/EmployeeDashboard";
-import FlightStatusPanel from "./components/FlightStatusPanel";
+import FlightStatusPanel from "./components/main_tabs/FlightStatusPanel";
 import SystemAdminDashboard from "./components/SystemAdminDashboard";
 import "./components/AccountModal.css";
 
