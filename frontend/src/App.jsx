@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import { CreateAccountModal, EditAccountModal } from "./components/AccountModal";
-import MainTabs from './components/MainTabs';
+import MainTabs from './components/main_tabs/MainTabs';
 import LoggedInBanner from "./components/LoggedInBanner";
 import SearchFlightsPanel from "./components/main_tabs/SearchFlightsPanel"
 import ManageBookingsPanel from "./components/main_tabs/ManageBookingsPanel"
