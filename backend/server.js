@@ -730,7 +730,8 @@ const server = http.createServer((req, res) => {
       const sql = `
         SELECT 
           f.flight_id, f.route_id, f.date_of_departure, f.seats_available, f.airline_id,
-          f.economy_price, f.business_price, f.first_class_price, f.aircraft_id,
+          f.economy_price, f.business_price, f.first_class_price, f.aircraft_id, f.estimated_time_hours,
+          r.distance,
           ac.model AS aircraft_name,
           dep.airport_code AS departure_code, dep.city_id AS departure_city_id,
           dep_city.country_id AS departure_country_id,

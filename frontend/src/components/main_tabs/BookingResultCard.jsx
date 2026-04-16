@@ -1,6 +1,13 @@
 
 import React from 'react';
 
+function formatDuration(estimated_time_hours) {
+    const hours = Math.floor(estimated_time_hours);
+    const minutes = Math.round((estimated_time_hours - hours) * 60);
+
+    return `${hours}h ${minutes}m`;
+}
+
 const BookingResultCard = ({
   result,
   onCancel,
@@ -58,7 +65,7 @@ const BookingResultCard = ({
         <p style={{ color: "#444" }}>
           {departureDate.toLocaleString([], { 
             weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
-          })} • Duration {duration}
+          })} • Duration {formatDuration(duration)}
         </p>
       </div>
 

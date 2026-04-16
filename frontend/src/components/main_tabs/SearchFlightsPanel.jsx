@@ -1,5 +1,23 @@
-
 import React from 'react';
+
+function findArrivalDate(date_of_departure, estimated_time_hours) {
+    const departureDate = new Date(date_of_departure);
+
+    // Convert hours (including decimals) to milliseconds
+    const durationMs = estimated_time_hours * 60 * 60 * 1000;
+
+    // Add duration to departure time
+    const arrivalDate = new Date(departureDate.getTime() + durationMs);
+
+    return arrivalDate;
+}
+
+function formatDuration(estimated_time_hours) {
+    const hours = Math.floor(estimated_time_hours);
+    const minutes = Math.round((estimated_time_hours - hours) * 60);
+
+    return `${hours}h ${minutes}m`;
+}
 
 const SearchFlightsPanel = ({
   // Search form state & handlers
@@ -409,8 +427,11 @@ const SearchFlightsPanel = ({
                         </p>
                         <p style={{ margin: "0 0 4px" }}><strong>Flight ID:</strong> {flight.flight_id}</p>
                         <p style={{ margin: "0 0 4px" }}><strong>Departure:</strong> {flight.departure_city}, {flight.departure_country} ({flight.departure_code})</p>
+                        <p style={{ margin: "0 0 4px" }}><strong>Date of Departure:</strong> {new Date(flight.date_of_departure).toLocaleString()}</p>
                         <p style={{ margin: "0 0 4px" }}><strong>Arrival:</strong> {flight.arrival_city}, {flight.arrival_country} ({flight.arrival_code})</p>
+                        <p style={{ margin: "0 0 4px" }}><strong>Date of Arrival: </strong> {new Date(findArrivalDate(flight.date_of_departure, flight.estimated_time_hours)).toLocaleString()}</p>
                         <p style={{ margin: "0 0 4px" }}><strong>Date:</strong> {new Date(flight.date_of_departure).toLocaleString()}</p>
+                        <p style={{ margin: "0 0 4px" }}><strong>Estimated Time: </strong>{formatDuration(flight.estimated_time_hours)}</p>
                         <p style={{ margin: "0 0 4px" }}>
                         <strong>Aircraft:</strong> {flight.aircraft_name}
                         </p>
