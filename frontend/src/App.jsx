@@ -8,6 +8,7 @@ import ManageBookingsPanel from "./components/main_tabs/ManageBookingsPanel"
 import EmployeeDashboard from "./components/EmployeeDashboard";
 import FlightStatusPanel from "./components/main_tabs/FlightStatusPanel";
 import SystemAdminDashboard from "./components/SystemAdminDashboard";
+import TransactionModal from "./components/TransactionModal";
 import "./components/AccountModal.css";
 
 const API = "https://airline-ticketing-system-gjnr.onrender.com";
@@ -155,6 +156,10 @@ function App() {
 
   // Staff "book for passenger" modal
   const [bookForModal, setBookForModal] = useState({ show: false, flight: null, passengerId: "", bookingMsg: "" });
+
+    // Booking Transaction modal
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [selectedFlightForTransaction, setSelectedFlightForTransaction] = useState(null);
 
   // Booking confirmation modal
   const [bookingConfirm, setBookingConfirm] = useState(null);
@@ -567,6 +572,42 @@ function App() {
     } catch { setBookingStatusMsg("❌ Error connecting to server."); }
   };
 
+  const handleProcessPayment = async (paymentData) => {
+    try {
+      const response = await fetch(`${API}/process-booking`, {
+        method: "POST",
+        headers: getAuthHeaders(true),
+        body: JSON.stringify(paymentData)
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        console.log("✅ Payment successful, showing confirmation");
+
+        setShowTransactionModal(false);
+        setSelectedFlightForTransaction(null);
+
+        setBookingConfirm({
+          bookingId: result.booking_id,
+          departure: selectedFlightForTransaction?.flight?.departure_city || "Departure",
+          destination: selectedFlightForTransaction?.flight?.arrival_city || "Destination",
+          passengerName: `${loggedInUser?.first_name || ''} ${loggedInUser?.last_name || ''}`.trim() || loggedInUser?.email || "Passenger",
+          isFree: false,            
+          milesUsed: 0,
+          milesEarned: Math.floor(paymentData.total_amount * 1.5),
+          totalMiles: 10000,     
+        });
+
+      } else {
+        alert(result.error || "Failed to create booking.");
+      }
+    } catch (err) {
+      console.error("Payment processing error:", err);
+      alert("Could not complete the booking. Please try again.");
+    }
+  };
+
   // ── Event handlers ──
   const handleLoginChange = (e) => setLoginData({ ...loginData, [e.target.name]: e.target.value });
   // Staff Portal login handler — uses /staff-login endpoint, role is determined from the database
@@ -693,24 +734,33 @@ function App() {
     finally { setLoadingStatus(false); }
   };
 
-  const handleBookFlight = (flight, cabinClass = 'economy') => {
-    if (!loggedInUser) { setActiveTab("login"); return; }
-    if (!canBook) { alert("Only Passenger, Employee, or System Admin accounts can book flights."); return; }
+  const handleBookFlight = (flight, cabinClass = "economy") => {
+    //debug messages
+    console.log("🚀 handleBookFlight called with:", { 
+      flightId: flight?.flight_id, 
+      cabinClass 
+    });
 
-    const selectedCabinClass = cabinClass || 'economy'
-
-    if (isPassenger) {
-      executeBooking(flight, loggedInUser.user_id, loggedInUser.passenger_id, selectedCabinClass);
-    } else {
-      // Staff: always re-fetch passenger list so dropdown is ready, then open modal
-      fetchAllPassengers();
-      setBookForModal({ 
-        show: true, 
-        flight, 
-        cabinClass: selectedCabinClass,
-        passengerId: "", 
-        bookingMsg: "" });
+    if (!loggedInUser) {
+      console.log("No logged in user → redirecting to login");
+      setActiveTab("login");
+      return;
     }
+
+    if (!canBook) {
+      alert("Only Passenger, Employee, or System Admin accounts can book flights.");
+      return;
+    }
+
+    //debug message
+    console.log("✅ Opening Transaction Modal");
+
+    setSelectedFlightForTransaction({
+      flight,
+      cabinClass,
+      price: getPriceForClass(flight, cabinClass)
+    });
+    setShowTransactionModal(true);
   };
 
   const executeBooking = async (flight, userId, passengerId) => {
@@ -1626,6 +1676,20 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* Transaction Modal */}
+      <TransactionModal
+        isOpen={showTransactionModal}
+        onClose={() => {
+          setShowTransactionModal(false);
+          setSelectedFlightForTransaction(null);
+        }}
+        flight={selectedFlightForTransaction?.flight}
+        selectedCabinClass={selectedFlightForTransaction?.cabinClass}
+        getPriceForClass={getPriceForClass}
+        loggedInUser={loggedInUser}
+        onConfirmBooking={handleProcessPayment}
+      />
 
 
       {showCreateModal && <CreateAccountModal onClose={() => setShowCreateModal(false)} onSuccess={handleRegisterSuccess} />}

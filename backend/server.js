@@ -592,7 +592,8 @@ const server = http.createServer((req, res) => {
       const role = body.role?.trim();
       if (!ROLE_OPTIONS.includes(role)) return sendJson(res, 400, { error: "Invalid role selected." });
       const sql = `
-        SELECT ua.user_id, ua.email, ua.role, ua.passenger_id,
+        SELECT ua.user_id, ua.email, ua.role, ua.passenger_id, ua.card_number, ua.card_expiration_date,
+          ua.card_security_code, ua.card_name,
           p.first_name, p.last_name, p.date_of_birth, p.phone_number, p.address, p.id_number,
           p.passport_status, p.visa_status, p.country_of_origin, p.seat_preferences, p.meal_preferences, p.special_needs
         FROM user_account ua
@@ -763,6 +764,82 @@ const server = http.createServer((req, res) => {
         sendJson(res, 200, results || []);
       });
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
+    return;
+  }
+
+    // POST /process-booking
+  if (req.url === "/process-booking" && req.method === "POST") {
+    parseBody(req).then((body) => {
+      const requester = getRequestUser(req);
+      if (!requester) return sendJson(res, 401, { error: "Unauthorized" });
+
+      const {
+        flight_id,
+        cabin_class,
+        base_fare,
+        taxes,
+        total_amount,
+        save_card = false,
+        card_name,
+        card_number,
+        card_expiration_date,
+        card_security_code
+      } = body;
+
+      // 1. Create Payment
+      const paymentSql = `
+        INSERT INTO payment (amount, base_fare, taxes, payment_status, transaction_date)
+        VALUES (?, ?, ?, 'Successful', CURDATE())
+      `;
+
+      db.query(paymentSql, [total_amount, base_fare, taxes], (err, paymentResult) => {
+        if (err) return sendJson(res, 500, { error: err.message });
+
+        const payment_id = paymentResult.insertId;
+
+        // 2. Create Booking
+        const bookingSql = `
+          INSERT INTO bookings 
+            (user_id, flight_id, booking_status, booking_date, payment_id, cabin_class)
+          VALUES (?, ?, 'Confirmed', NOW(), ?, ?)
+        `;
+
+        db.query(bookingSql, [requester.userId, flight_id, payment_id, cabin_class], (err2, bookingResult) => {
+          if (err2) return sendJson(res, 500, { error: err2.message });
+
+          const booking_id = bookingResult.insertId;
+
+          const bpSql = `
+            INSERT INTO booking_passengers (booking_id, passenger_id)
+            VALUES (?, ?)
+          `;
+
+          db.query(bpSql, [booking_id, requester.passenger_id || requester.userId], (err3) => {
+            if (err3) {
+              console.error("Failed to insert into booking_passengers:", err3.message);
+            }
+
+            //  Save card info
+            if (save_card && card_name && card_number) {
+              const updateCardSql = `
+                UPDATE user_account 
+                SET card_name = ?, card_number = ?, card_expiration_date = ?, card_security_code = ?
+                WHERE user_id = ?
+              `;
+              db.query(updateCardSql, [
+                card_name, card_number, card_expiration_date, card_security_code, requester.userId
+              ]);
+            }
+
+            sendJson(res, 200, { 
+              success: true, 
+              booking_id,
+              payment_id 
+            });
+          });
+        });
+      });
+    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body" }));
     return;
   }
  
