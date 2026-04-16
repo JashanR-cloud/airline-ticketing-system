@@ -1,7 +1,6 @@
-
 const http = require("http");
 const mysql = require("mysql2");
-
+ 
 // ── Database Connection ──
 const db = mysql.createConnection({
   host: "crossover.proxy.rlwy.net",
@@ -10,20 +9,19 @@ const db = mysql.createConnection({
   password: "EFCyKqqRtiXPvYWdtGylKpyExyKggmFa",
   database: "airline",
 });
-
+ 
 db.connect((err) => {
   if (err) {
     console.error("Database connection failed:", err.stack);
     return;
   }
   console.log("Connected to database.");
-
+ 
   // Auto-add is_active column to routes if it doesn't exist yet
   db.query(`
     ALTER TABLE routes ADD COLUMN IF NOT EXISTS is_active TINYINT(1) NOT NULL DEFAULT 1
   `, (alterErr) => {
     if (alterErr) {
-      // MySQL < 8 doesn't support IF NOT EXISTS on ALTER — try the safe fallback
       db.query(`
         SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'routes' AND COLUMN_NAME = 'is_active'
@@ -39,13 +37,12 @@ db.connect((err) => {
       console.log("routes.is_active column ready.");
     }
   });
-
+ 
   // Auto-add is_deleted column to user_account for soft-delete support
   db.query(`
     ALTER TABLE user_account ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) NOT NULL DEFAULT 0
   `, (delColErr) => {
     if (delColErr) {
-      // MySQL < 8 fallback
       db.query(`
         SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_account' AND COLUMN_NAME = 'is_deleted'
@@ -61,7 +58,7 @@ db.connect((err) => {
       console.log("user_account.is_deleted column ready.");
     }
   });
-
+ 
   // Auto-create booking_packages table if it doesn't exist
   db.query(`
     CREATE TABLE IF NOT EXISTS booking_packages (
@@ -79,8 +76,18 @@ db.connect((err) => {
     if (tblErr) console.error("Could not create booking_packages table:", tblErr.message);
     else console.log("booking_packages table ready.");
   });
+ 
+  // Expand loyalty_program tier enum to include Diamond
+  // The DB ships with enum('Silver','Gold','Platinum') — Diamond is needed for 10000+ miles
+  db.query(
+    "ALTER TABLE loyalty_program MODIFY COLUMN tier ENUM('Silver','Gold','Platinum','Diamond') NULL DEFAULT NULL",
+    (tierErr) => {
+      if (tierErr) console.error('Could not expand tier enum:', tierErr.message);
+      else console.log('loyalty_program.tier enum — Diamond tier ready.');
+    }
+  );
 });
-
+ 
 // ── Helpers ──
 function parseBody(req) {
   return new Promise((resolve, reject) => {
@@ -93,50 +100,46 @@ function parseBody(req) {
     req.on("error", reject);
   });
 }
-
+ 
 function sendJson(res, statusCode, data) {
   res.writeHead(statusCode);
   res.end(JSON.stringify(data));
 }
-
+ 
 function getRequestUser(req) {
   return {
     userId: Number(req.headers["x-user-id"] || 0),
     role: req.headers["x-user-role"] || "",
   };
 }
-
+ 
 function hasRole(role, allowedRoles) {
   return allowedRoles.includes(role);
 }
-
-// Now only 3 roles: passenger, Employee, System Admin
-// Employee = merged Flight Admin + Booking Admin + Operations Admin + Employee
+ 
 function isStaff(role) {
   return ["Employee", "System Admin"].includes(role);
 }
-
+ 
 function deny(res) {
   sendJson(res, 403, { error: "Access denied." });
 }
-
+ 
 const ROLE_OPTIONS = ["Passenger", "Employee", "System Admin"];
-
+ 
 // ── Server & Routes ──
 const server = http.createServer((req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-user-id, x-user-role");
   res.setHeader("Content-Type", "application/json");
-
+ 
   if (req.method === "OPTIONS") {
     res.writeHead(204);
     res.end();
     return;
   }
-
-  
-
+ 
   // GET /airports → public
   if (req.url === "/airports" && req.method === "GET") {
     const sql = `SELECT airport_id, airport_name FROM airport ORDER BY airport_name ASC`;
@@ -146,8 +149,8 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-
-    // GET /cities → public (for city-based flight search)
+ 
+  // GET /cities → public (for city-based flight search)
   if (req.url === "/cities" && req.method === "GET") {
     const sql = `SELECT c.city_id, c.city_name, co.country_name FROM city c JOIN country co ON c.country_id = co.country_id ORDER BY c.city_name ASC`;
     db.query(sql, (err, results) => {
@@ -156,8 +159,7 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-
-
+ 
   // GET /destinations → public
   if (req.url === "/destinations" && req.method === "GET") {
     const sql = `
@@ -178,7 +180,7 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-
+ 
   // GET /users → System Admin only
   if (req.url === "/users" && req.method === "GET") {
     const requester = getRequestUser(req);
@@ -195,8 +197,8 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-
-  // GET /all-passengers → Employee, System Admin — passenger + Employee roles (excludes System Admin)
+ 
+  // GET /all-passengers → Employee, System Admin
   if (req.url === "/all-passengers" && req.method === "GET") {
     const requester = getRequestUser(req);
     if (!isStaff(requester.role)) return deny(res);
@@ -215,7 +217,7 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-
+ 
   // GET /all-flights → Employee, System Admin (for dropdown)
   if (req.url === "/all-flights" && req.method === "GET") {
     const requester = getRequestUser(req);
@@ -236,7 +238,7 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-
+ 
   // GET /all-bookings → Employee, System Admin
   if (req.url === "/all-bookings" && req.method === "GET") {
     const requester = getRequestUser(req);
@@ -256,7 +258,7 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-
+ 
   // GET /aircrafts → Employee, System Admin
   if (req.url === "/aircrafts" && req.method === "GET") {
     const requester = getRequestUser(req);
@@ -271,7 +273,7 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-
+ 
   // GET /routes-with-status → Employee, System Admin
   if (req.url === "/routes-with-status" && req.method === "GET") {
     const requester = getRequestUser(req);
@@ -308,7 +310,7 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-
+ 
   // GET /experience-ratings → public
   if (req.url === "/experience-ratings" && req.method === "GET") {
     const sql = `
@@ -326,24 +328,19 @@ const server = http.createServer((req, res) => {
     `;
     db.query(sql, (err, results) => {
       if (err) return sendJson(res, 500, { error: err.message });
-
-      // Generate realistic, varied scores per route using route_id + airport IDs as seeds
       const rated = results.map((r) => {
         const s1 = (r.route_id * 31 + r.dep_id * 13 + r.arr_id * 7) % 100;
         const s2 = (r.route_id * 17 + r.arr_id * 19) % 100;
         const s3 = (r.route_id * 43 + r.dep_id * 11) % 100;
         const s4 = (r.route_id * 23 + r.arr_id * 29 + r.dep_id * 3) % 100;
         const s5 = (r.route_id * 37 + r.dep_id * 17) % 100;
-
-        const overallScore  = (3.5 + (s1 % 15) / 10).toFixed(1);   // 3.5 – 5.0
-        const onTimeNum     = 70 + (s2 % 28);                        // 70 – 97%
-        const comfortScore  = (3.2 + (s3 % 18) / 10).toFixed(1);    // 3.2 – 5.0
-        const valueScore    = (3.0 + (s4 % 20) / 10).toFixed(1);    // 3.0 – 5.0
-        const serviceScore  = (3.3 + (s5 % 17) / 10).toFixed(1);    // 3.3 – 5.0
-
-        const popularity = r.total_flights > 50 ? "High" : r.total_flights > 10 ? "Medium" : "Low";
-        const onTimeLabel = onTimeNum >= 90 ? "Excellent" : onTimeNum >= 80 ? "Good" : "Fair";
-
+        const overallScore  = (3.5 + (s1 % 15) / 10).toFixed(1);
+        const onTimeNum     = 70 + (s2 % 28);
+        const comfortScore  = (3.2 + (s3 % 18) / 10).toFixed(1);
+        const valueScore    = (3.0 + (s4 % 20) / 10).toFixed(1);
+        const serviceScore  = (3.3 + (s5 % 17) / 10).toFixed(1);
+        const popularity    = r.total_flights > 50 ? "High" : r.total_flights > 10 ? "Medium" : "Low";
+        const onTimeLabel   = onTimeNum >= 90 ? "Excellent" : onTimeNum >= 80 ? "Good" : "Fair";
         return {
           ...r,
           experience_score: overallScore,
@@ -356,30 +353,21 @@ const server = http.createServer((req, res) => {
           popularity,
         };
       });
-
       sendJson(res, 200, rated);
     });
     return;
   }
-
-// GET /my-bookings/:userId → own user or Employee/System Admin
+ 
+  // GET /my-bookings/:userId → own user or Employee/System Admin
   const bookingsMatch = req.url.match(/^\/my-bookings\/(\d+)$/);
   if (bookingsMatch && req.method === "GET") {
     const requestedUserId = Number(bookingsMatch[1]);
     const requester = getRequestUser(req);
-
     if (requester.userId !== requestedUserId && !isStaff(requester.role)) return deny(res);
-
-
     const sql = `
       SELECT 
-        b.booking_id,
-        b.user_id,
-        b.booking_date,
-        b.booking_status,
-        f.flight_id,
-        f.date_of_departure,
-        f.estimated_time_hours,
+        b.booking_id, b.user_id, b.booking_date, b.booking_status,
+        f.flight_id, f.date_of_departure, f.estimated_time_hours,
         al.airline_name,
         dep.airport_name AS departure_name,
         dep_city.city_name AS departure_city,
@@ -387,13 +375,8 @@ const server = http.createServer((req, res) => {
         arr.airport_name AS arrival_name,
         arr_city.city_name AS arrival_city,
         arr_country.country_name AS arrival_country,
-        p.passenger_id,
-        p.first_name,
-        p.last_name,
-        p.email,
-        p.phone_number,
-        p.seat_preferences,
-        p.meal_preferences
+        p.passenger_id, p.first_name, p.last_name, p.email,
+        p.phone_number, p.seat_preferences, p.meal_preferences
       FROM bookings b
       JOIN booking_passengers bp ON b.booking_id = bp.booking_id
       JOIN passenger p ON bp.passenger_id = p.passenger_id
@@ -415,7 +398,7 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-
+ 
   // GET /route-flights/:routeId → Employee, System Admin
   const routeflightsMatch = req.url.match(/^\/route-flights\/(\d+)$/);
   if (routeflightsMatch && req.method === "GET") {
@@ -437,28 +420,93 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-
+ 
+  // ─────────────────────────────────────────────────────────────────────────
   // GET /loyalty-balance/:userId
+  // CHANGED: Now returns { enrolled: false } when the passenger has not yet
+  // joined the loyalty program. Returns { enrolled: true, miles, tier, ... }
+  // when they are a member. This mirrors real airlines where enrollment is
+  // a separate, explicit opt-in step (Delta SkyMiles, United MileagePlus, etc.)
+  // ─────────────────────────────────────────────────────────────────────────
   const loyaltyMatch = req.url.match(/^\/loyalty-balance\/(\d+)$/);
-  if (loyaltyMatch && req.method === "GET") {
+  if (loyaltyMatch && req.method === 'GET') {
     const requestedUserId = Number(loyaltyMatch[1]);
     const requester = getRequestUser(req);
     if (requester.userId !== requestedUserId && !isStaff(requester.role)) return deny(res);
-    const sql = `
-      SELECT miles_balance, tier FROM loyalty_program
-      WHERE passenger_id = (SELECT passenger_id FROM user_account WHERE user_id = ?)
-    `;
-    db.query(sql, [requestedUserId], (err, results) => {
-      if (err) return sendJson(res, 500, { error: err.message });
-      if (results.length > 0) {
-        sendJson(res, 200, { miles: results[0].miles_balance, tier: results[0].tier });
-      } else {
-        sendJson(res, 200, { miles: 0, tier: "Silver" });
-      }
-    });
+ 
+    // Try with membership_number; fall back if that column doesn't exist in this DB
+    const tryQuery = (withMembership) => {
+      const cols = withMembership ? 'lp.miles_balance, lp.tier, lp.membership_number' : 'lp.miles_balance, lp.tier';
+      const sql = `SELECT ${cols} FROM loyalty_program lp JOIN user_account ua ON ua.passenger_id = lp.passenger_id WHERE ua.user_id = ? LIMIT 1`;
+      db.query(sql, [requestedUserId], (err, results) => {
+        if (err && withMembership) return tryQuery(false); // retry without membership_number
+        if (err) return sendJson(res, 500, { error: err.message });
+        if (results.length > 0) {
+          sendJson(res, 200, {
+            enrolled: true,
+            miles: results[0].miles_balance,
+            tier: results[0].tier,
+            membership_number: results[0].membership_number || null,
+          });
+        } else {
+          sendJson(res, 200, { enrolled: false });
+        }
+      });
+    };
+    tryQuery(true);
     return;
   }
-
+ 
+  // ─────────────────────────────────────────────────────────────────────────
+  // POST /join-loyalty
+  // NEW: Passenger explicitly opts into the Royal Horizon Loyalty program.
+  // Generates a membership number in RHA-XXXXXX format (airline-style).
+  // Enrollment is free and starts at Silver tier with 0 miles.
+  // ─────────────────────────────────────────────────────────────────────────
+  if (req.url === "/join-loyalty" && req.method === "POST") {
+    parseBody(req).then((body) => {
+      const requester = getRequestUser(req);
+      if (!hasRole(requester.role, ["Passenger", "Employee", "System Admin"])) return deny(res);
+      const passengerId = Number(body.passengerId);
+      if (!passengerId) return sendJson(res, 400, { error: "passengerId is required." });
+ 
+      // Check if already enrolled — use passenger_id (the UNI key), NOT loyalty_id
+      db.query(
+        "SELECT passenger_id FROM loyalty_program WHERE passenger_id = ? LIMIT 1",
+        [passengerId], (checkErr, rows) => {
+          if (checkErr) {
+            console.error("join-loyalty check error:", checkErr.message);
+            return sendJson(res, 500, { error: checkErr.message });
+          }
+          if (rows.length > 0) {
+            return sendJson(res, 409, { error: "Already enrolled in the loyalty program." });
+          }
+ 
+          // membership_number is NOT NULL in the DB — use MEM-{id} format to match existing rows
+          const membershipNumber = "MEM-" + passengerId;
+ 
+          db.query(
+            "INSERT INTO loyalty_program (passenger_id, membership_number, tier, miles_balance) VALUES (?, ?, 'Silver', 0)",
+            [passengerId, membershipNumber], (insErr) => {
+              if (insErr) {
+                console.error("join-loyalty insert error:", insErr.message);
+                return sendJson(res, 500, { error: insErr.message });
+              }
+              sendJson(res, 201, {
+                message: "Successfully enrolled in Royal Horizon Loyalty!",
+                membership_number: membershipNumber,
+                tier: "Silver",
+                miles: 0,
+                enrolled: true,
+              });
+            }
+          );
+        }
+      );
+    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
+    return;
+  }
+ 
   // GET /reports → Employee, System Admin
   if (req.url === "/reports" && req.method === "GET") {
     const requester = getRequestUser(req);
@@ -479,8 +527,13 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-
+ 
+  // ─────────────────────────────────────────────────────────────────────────
   // POST /register → public, passenger only
+  // CHANGED: Loyalty enrollment removed. Passengers must explicitly join via
+  // POST /join-loyalty — exactly how real airlines work (you register for an
+  // account and then separately enroll in the frequent flyer program).
+  // ─────────────────────────────────────────────────────────────────────────
   if (req.url === "/register" && req.method === "POST") {
     parseBody(req).then((body) => {
       const {
@@ -514,11 +567,14 @@ const server = http.createServer((req, res) => {
               [newPassengerId, email?.trim(), password, role],
               (uErr, result) => {
                 if (uErr) return sendJson(res, 500, { error: uErr.message });
-                db.query(
-                  "INSERT INTO loyalty_program (passenger_id, membership_number, tier, miles_balance) VALUES (?, ?, 'Silver', 0)",
-                  [newPassengerId, "MEM-" + newPassengerId], () => {}
-                );
-                sendJson(res, 201, { message: "Account created successfully.", user_id: result.insertId, passenger_id: newPassengerId, role });
+                // NOTE: Loyalty enrollment intentionally NOT done here.
+                // Passengers must opt-in via POST /join-loyalty.
+                sendJson(res, 201, {
+                  message: "Account created successfully.",
+                  user_id: result.insertId,
+                  passenger_id: newPassengerId,
+                  role,
+                });
               }
             );
           });
@@ -527,7 +583,7 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
+ 
   // POST /login
   if (req.url === "/login" && req.method === "POST") {
     parseBody(req).then((body) => {
@@ -551,8 +607,8 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
-  // GET /all-staff — System Admin only — list of all Employee + System Admin accounts
+ 
+  // GET /all-staff — System Admin only
   if (req.url === "/all-staff" && req.method === "GET") {
     const requester = getRequestUser(req);
     if (!hasRole(requester.role, ["System Admin"])) return deny(res);
@@ -570,8 +626,8 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-
-  // POST /create-staff — System Admin only — creates a new Employee or System Admin account
+ 
+  // POST /create-staff — System Admin only
   if (req.url === "/create-staff" && req.method === "POST") {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
@@ -583,11 +639,9 @@ const server = http.createServer((req, res) => {
       if (!["Employee", "System Admin"].includes(role)) {
         return sendJson(res, 400, { error: "Role must be Employee or System Admin." });
       }
-      // Check if email is already used
       db.query("SELECT user_id FROM user_account WHERE email = ?", [email], (err, rows) => {
         if (err) return sendJson(res, 500, { error: err.message });
         if (rows.length > 0) return sendJson(res, 409, { error: "An account with this email already exists." });
-        // Auto-generate employee ID — 2xx for admins, 1xx for employees
         const prefix = role === "System Admin" ? "2" : "1";
         db.query(
           "SELECT id_number FROM employee WHERE id_number LIKE ? ORDER BY CAST(id_number AS UNSIGNED) DESC LIMIT 1",
@@ -595,7 +649,6 @@ const server = http.createServer((req, res) => {
           (maxErr, maxRows) => {
             if (maxErr) return sendJson(res, 500, { error: maxErr.message });
             const nextId = maxRows.length > 0 ? String(Number(maxRows[0].id_number) + 1) : prefix + "01";
-            // Insert into employee first (user_account has FK to employee)
             db.query(
               `INSERT INTO employee (id_number, first_name, last_name, email, department, position, hire_date)
                VALUES (?, ?, ?, ?, ?, ?, CURDATE())`,
@@ -618,8 +671,8 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
-  // DELETE /delete-staff — System Admin only — deletes an Employee or System Admin account
+ 
+  // DELETE /delete-staff — System Admin only
   if (req.url === "/delete-staff" && req.method === "DELETE") {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
@@ -627,7 +680,6 @@ const server = http.createServer((req, res) => {
       const userId = Number(body.userId);
       if (!userId) return sendJson(res, 400, { error: "userId is required." });
       if (userId === requester.userId) return sendJson(res, 400, { error: "You cannot delete your own account." });
-      // Look up the staff account's employee_id and role
       db.query(
         "SELECT employee_id, role FROM user_account WHERE user_id = ? LIMIT 1",
         [userId], (err, rows) => {
@@ -637,7 +689,6 @@ const server = http.createServer((req, res) => {
             return sendJson(res, 400, { error: "This endpoint only deletes staff accounts." });
           }
           const employeeId = rows[0].employee_id;
-          // Delete user_account first (it references employee via FK)
           db.query("DELETE FROM user_account WHERE user_id = ?", [userId], (delErr) => {
             if (delErr) return sendJson(res, 500, { error: delErr.message });
             if (employeeId) {
@@ -650,8 +701,8 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
-  // POST /staff-login — Employee and System Admin login (role is looked up from the database)
+ 
+  // POST /staff-login — Employee and System Admin login
   if (req.url === "/staff-login" && req.method === "POST") {
     parseBody(req).then((body) => {
       const email = body.email?.trim();
@@ -671,33 +722,23 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
-  // POST /search-flights → public (searches by city — finds all airports in each city)
+ 
+  // POST /search-flights → public
   if (req.url === "/search-flights" && req.method === "POST") {
     parseBody(req).then((body) => {
       const sql = `
         SELECT 
-          f.flight_id,
-          f.route_id,
-          f.date_of_departure,
-          f.seats_available,
-          f.airline_id,
-          f.economy_price,
-          f.business_price,
-          f.first_class_price,
-          f.aircraft_id,
+          f.flight_id, f.route_id, f.date_of_departure, f.seats_available, f.airline_id,
+          f.economy_price, f.business_price, f.first_class_price, f.aircraft_id,
           ac.model AS aircraft_name,
-          dep.airport_code AS departure_code,
-          dep.city_id AS departure_city_id,
+          dep.airport_code AS departure_code, dep.city_id AS departure_city_id,
           dep_city.country_id AS departure_country_id,
-          arr.airport_code AS arrival_code,
-          arr.city_id AS arrival_city_id,
+          arr.airport_code AS arrival_code, arr.city_id AS arrival_city_id,
           arr_city.country_id AS arrival_country_id,
           al.airline_name,
-          dep_city.city_name AS departure_city,
-          dep_country.country_name AS departure_country,
-          arr_city.city_name AS arrival_city,
-          arr_country.country_name AS arrival_country
+          dep_city.city_name AS departure_city, dep_country.country_name AS departure_country,
+          arr_city.city_name AS arrival_city, arr_country.country_name AS arrival_country,
+          dep.airport_name AS departure_airport, arr.airport_name AS arrival_airport
         FROM flights f
         JOIN routes r ON f.route_id = r.route_id
         JOIN airport dep ON r.departure_airport_id = dep.airport_id
@@ -717,7 +758,6 @@ const server = http.createServer((req, res) => {
       const depCityId = body.departureCityId || null;
       const arrCityId = body.arrivalCityId || null;
       const departureDate = body.departureDate || null;
-
       db.query(sql, [depCityId, depCityId, arrCityId, arrCityId, departureDate], (err, results) => {
         if (err) return sendJson(res, 500, { error: err.message });
         sendJson(res, 200, results || []);
@@ -725,117 +765,113 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
-
+ 
+  // ─────────────────────────────────────────────────────────────────────────
+  // POST /book-flight
+  // CHANGED: Miles are now only awarded to passengers who have enrolled in
+  // the loyalty program. Non-members can still book flights successfully but
+  // receive no miles. The response includes a `not_enrolled` flag so the
+  // frontend can show a "Join Loyalty" nudge on the confirmation screen.
+  // ─────────────────────────────────────────────────────────────────────────
   if (req.url.startsWith("/book-flight") && req.method === "POST") {
     console.log("\n=== BOOK-FLIGHT HIT ===");
-
     parseBody(req)
       .then((body) => {
         console.log("[1] Body:", body);
-
         const requester = getRequestUser(req);
         console.log("[2] Requester:", requester);
-
+ 
         if (!hasRole(requester.role, ["Passenger", "Employee", "System Admin"])) {
           console.log("[AUTH FAIL]");
           return deny(res);
         }
-
+ 
         const { userId, passengerId, flightId } = body;
-
+ 
         if (!userId || !passengerId) {
           console.log("[VALIDATION FAIL]");
-          return sendJson(res, 400, {
-            error: "userId and passengerId are required",
-          });
+          return sendJson(res, 400, { error: "userId and passengerId are required" });
         }
-
-        if (
-          requester.role === "Passenger" &&
-          requester.userId !== Number(userId)
-        ) {
+ 
+        if (requester.role === "Passenger" && requester.userId !== Number(userId)) {
           console.log("[AUTH FAIL] Passenger mismatch");
           return deny(res);
         }
-
+ 
         console.log("[3] Inserting booking...");
-
+ 
         db.query(
-          `INSERT INTO bookings (user_id, booking_date, booking_status, flight_id)
-          VALUES (?, NOW(), 'Confirmed', ?)`,
+          `INSERT INTO bookings (user_id, booking_date, booking_status, flight_id) VALUES (?, NOW(), 'Confirmed', ?)`,
           [userId, flightId || null],
           (err, result) => {
             if (err) {
-              console.error("=== BOOKING INSERT FAILED ===");
-              console.error(err);
+              console.error("=== BOOKING INSERT FAILED ===", err);
               return sendJson(res, 500, { error: err.message });
             }
-
+ 
             const bookingId = result.insertId;
             console.log("[4] Booking created:", bookingId);
-
+ 
             db.query(
               "INSERT INTO booking_passengers (booking_id, passenger_id) VALUES (?, ?)",
               [bookingId, passengerId],
               (err2) => {
                 if (err2) {
-                  console.error("=== BOOKING_PASSENGERS FAILED ===");
-                  console.error(err2);
+                  console.error("=== BOOKING_PASSENGERS FAILED ===", err2);
                   return sendJson(res, 500, { error: err2.message });
                 }
-
+ 
                 console.log("[5] Passenger linked");
-
-                // Loyalty logic
+ 
+                // Check loyalty enrollment — only enrolled members earn miles
                 db.query(
                   "SELECT miles_balance, tier FROM loyalty_program WHERE passenger_id = ?",
                   [passengerId],
                   (loyErr, loyRows) => {
                     if (loyErr) {
-                      console.error("=== LOYALTY SELECT FAILED ===");
-                      console.error(loyErr);
+                      console.error("=== LOYALTY SELECT FAILED ===", loyErr);
                       return sendJson(res, 500, { error: loyErr.message });
                     }
-
+ 
+                    const isEnrolled = loyRows.length > 0;
                     let newMiles = 0;
-                    let newTier = "Silver";
+                    let newTier = null;
                     let milestone = null;
-
-                    if (loyRows.length > 0) {
+ 
+                    if (isEnrolled) {
+                      // Loyalty member — award 500 miles per booking
                       const oldMiles = loyRows[0].miles_balance || 0;
+                      const oldTier  = loyRows[0].tier;
                       newMiles = oldMiles + 500;
-
-                      if (newMiles >= 10000) newTier = "Diamond";
+ 
+                      if (newMiles >= 10000)     newTier = "Diamond";
                       else if (newMiles >= 5000) newTier = "Platinum";
                       else if (newMiles >= 1000) newTier = "Gold";
-                      else newTier = loyRows[0].tier;
-
+                      else                       newTier = oldTier;
+ 
                       db.query(
                         "UPDATE loyalty_program SET miles_balance = ?, tier = ? WHERE passenger_id = ?",
                         [newMiles, newTier, passengerId],
-                        (updErr) => {
-                          if (updErr) console.error("LOYALTY UPDATE FAILED:", updErr);
-                        }
+                        (updErr) => { if (updErr) console.error("LOYALTY UPDATE FAILED:", updErr); }
                       );
-
-                      if (oldMiles < 1000 && newMiles >= 1000)
-                        milestone = { tier: "Gold", miles: newMiles };
-                      else if (oldMiles < 5000 && newMiles >= 5000)
-                        milestone = { tier: "Platinum", miles: newMiles };
-                      else if (oldMiles < 10000 && newMiles >= 10000)
-                        milestone = { tier: "Diamond", miles: newMiles };
+ 
+                      // Detect tier crossing for the milestone celebration banner
+                      if (oldTier === "Silver"   && newTier === "Gold")     milestone = { tier: "Gold",     miles: newMiles };
+                      if (oldTier === "Gold"     && newTier === "Platinum") milestone = { tier: "Platinum", miles: newMiles };
+                      if (oldTier === "Platinum" && newTier === "Diamond")  milestone = { tier: "Diamond",  miles: newMiles };
                     }
-
-                    console.log("[6] SUCCESS");
-
+                    // Non-members: booking succeeds, 0 miles awarded
+ 
+                    console.log("[6] SUCCESS — enrolled:", isEnrolled, "| miles awarded:", isEnrolled ? 500 : 0);
+ 
                     return sendJson(res, 201, {
                       message: "Booked!",
                       booking_id: bookingId,
-                      miles_earned: 500,
+                      miles_earned: isEnrolled ? 500 : 0,
                       new_miles: newMiles,
                       new_tier: newTier,
                       milestone,
+                      not_enrolled: !isEnrolled, // frontend uses this to show "join loyalty" nudge
                     });
                   }
                 );
@@ -845,32 +881,22 @@ const server = http.createServer((req, res) => {
         );
       })
       .catch((err) => {
-        console.error("=== PARSE BODY FAILED ===");
-        console.error(err);
-        return sendJson(res, 400, {
-          error: "Invalid JSON body",
-          details: err.message,
-        });
+        console.error("=== PARSE BODY FAILED ===", err);
+        return sendJson(res, 400, { error: "Invalid JSON body", details: err.message });
       });
-
     return;
   }
-
+ 
   // POST /manage-booking
   if (req.url === "/manage-booking" && req.method === "POST") {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
       if (!requester) return sendJson(res, 401, { error: "Unauthorized" });
-
-      const sql = `
+ 
+      let sql = `
         SELECT 
-          b.booking_id,
-          b.user_id,
-          b.booking_date,
-          b.booking_status,
-          f.flight_id,
-          f.date_of_departure,
-          f.estimated_time_hours,
+          b.booking_id, b.user_id, b.booking_date, b.booking_status,
+          f.flight_id, f.date_of_departure, f.estimated_time_hours,
           al.airline_name,
           dep.airport_name AS departure_name,
           dep_city.city_name AS departure_city,
@@ -878,13 +904,8 @@ const server = http.createServer((req, res) => {
           arr.airport_name AS arrival_name,
           arr_city.city_name AS arrival_city,
           arr_country.country_name AS arrival_country,
-          p.passenger_id,
-          p.first_name,
-          p.last_name,
-          p.email,
-          p.phone_number,
-          p.seat_preferences,
-          p.meal_preferences
+          p.passenger_id, p.first_name, p.last_name, p.email,
+          p.phone_number, p.seat_preferences, p.meal_preferences
         FROM bookings b
         JOIN booking_passengers bp ON b.booking_id = bp.booking_id
         JOIN passenger p ON bp.passenger_id = p.passenger_id
@@ -899,14 +920,13 @@ const server = http.createServer((req, res) => {
         JOIN airline al ON f.airline_id = al.airline_id
         WHERE b.booking_id = ?
       `;
-
-      // Security: Passengers can only view their own bookings, staff can view any
+ 
       let params = [body.bookingId];
       if (requester.role === "Passenger") {
         sql += " AND b.user_id = ?";
         params.push(requester.userId);
       }
-
+ 
       db.query(sql, params, (err, results) => {
         if (err) return sendJson(res, 500, { error: err.message });
         if (results.length === 0) return sendJson(res, 404, { error: "Booking not found." });
@@ -915,7 +935,7 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body" }));
     return;
   }
-
+ 
   // POST /cancel-booking → passenger (own), Employee, System Admin
   if (req.url === "/cancel-booking" && req.method === "POST") {
     parseBody(req).then((body) => {
@@ -935,36 +955,33 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
-  // PUT /account/:userId — logged-in user updates their own profile (passengers and employees)
+ 
+  // PUT /account/:userId — logged-in user updates their own profile
   const accountUpdateMatch = req.url.match(/^\/account\/(\d+)$/);
   if (accountUpdateMatch && req.method === "PUT") {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
       const targetUserId = Number(accountUpdateMatch[1]);
-      // Users may only edit their own account (staff can edit others)
       const isSelf = requester.userId === targetUserId;
       if (!isSelf && !isStaff(requester.role)) return deny(res);
-
+ 
       const {
         first_name, last_name, date_of_birth, phone_number, address, id_number,
         passport_status, visa_status, seat_preferences, meal_preferences, special_needs, password,
       } = body;
-
+ 
       if (!first_name?.trim() || !last_name?.trim()) {
         return sendJson(res, 400, { error: "First name and last name are required." });
       }
-
-      // Look up role + linked ids for this account
+ 
       db.query(
         "SELECT role, passenger_id, employee_id FROM user_account WHERE user_id = ? AND COALESCE(is_deleted,0)=0 LIMIT 1",
         [targetUserId], (err, rows) => {
           if (err) return sendJson(res, 500, { error: err.message });
           if (rows.length === 0) return sendJson(res, 404, { error: "Account not found." });
-          const { role, passenger_id, employee_id } = rows[0];
-
+          const { passenger_id, employee_id } = rows[0];
           const tasks = [];
-
+ 
           if (passenger_id) {
             tasks.push((cb) => db.query(
               `UPDATE passenger SET first_name=?, last_name=?, date_of_birth=?, phone_number=?,
@@ -977,7 +994,7 @@ const server = http.createServer((req, res) => {
                passenger_id], cb
             ));
           }
-
+ 
           if (employee_id) {
             tasks.push((cb) => db.query(
               `UPDATE employee SET first_name=?, last_name=?, date_of_birth=?, phone_number=?,
@@ -990,14 +1007,14 @@ const server = http.createServer((req, res) => {
                employee_id], cb
             ));
           }
-
+ 
           if (password?.trim()) {
             tasks.push((cb) => db.query(
               "UPDATE user_account SET password=? WHERE user_id=?",
               [password.trim(), targetUserId], cb
             ));
           }
-
+ 
           let done = 0;
           if (tasks.length === 0) return sendJson(res, 200, { message: "Nothing to update." });
           let failed = false;
@@ -1012,18 +1029,14 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
+ 
   // DELETE /deactivate-account — soft-deletes the logged-in user's own account
-  // Data is retained in the database; the account is simply marked is_deleted=1
   if (req.url === "/deactivate-account" && req.method === "DELETE") {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
       if (!requester.userId) return deny(res);
-
-      // Confirm the password before proceeding
       const { password } = body;
       if (!password?.trim()) return sendJson(res, 400, { error: "Password confirmation is required." });
-
       db.query(
         "SELECT user_id, password, role FROM user_account WHERE user_id = ? AND COALESCE(is_deleted,0)=0 LIMIT 1",
         [requester.userId], (err, rows) => {
@@ -1032,7 +1045,6 @@ const server = http.createServer((req, res) => {
           if (rows[0].password !== password.trim()) {
             return sendJson(res, 401, { error: "Incorrect password. Account not deleted." });
           }
-          // Soft-delete: set is_deleted=1 and anonymise the email so the address can be re-used
           const deletedAt = Date.now();
           const anonEmail = `deleted_${deletedAt}_${rows[0].user_id}@deleted.invalid`;
           db.query(
@@ -1047,7 +1059,7 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
+ 
   // PUT /update-preferences → passenger (own), Employee, System Admin
   if (req.url === "/update-preferences" && req.method === "PUT") {
     parseBody(req).then((body) => {
@@ -1072,7 +1084,7 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
+ 
   // POST /add-flight → Employee, System Admin
   if (req.url === "/add-flight" && req.method === "POST") {
     parseBody(req).then((body) => {
@@ -1088,7 +1100,7 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
+ 
   // PUT /update-aircraft → Employee, System Admin
   if (req.url === "/update-aircraft" && req.method === "PUT") {
     parseBody(req).then((body) => {
@@ -1104,7 +1116,7 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
+ 
   // DELETE /delete-route → Employee, System Admin
   if (req.url === "/delete-route" && req.method === "DELETE") {
     parseBody(req).then((body) => {
@@ -1117,34 +1129,20 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
+ 
   // POST /toggle-route-status → Employee, System Admin
   if (req.url === "/toggle-route-status" && req.method === "POST") {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
       if (!isStaff(requester.role)) return deny(res);
-
-      const doToggle = () => {
-        db.query(
-          "UPDATE routes SET is_active = NOT COALESCE(is_active, 1) WHERE route_id = ?",
-          [body.routeId], (err) => {
-            if (err) return sendJson(res, 500, { error: err.message });
-            sendJson(res, 200, { message: "Route status updated." });
-          }
-        );
-      };
-
-      // Try the toggle; if is_active column is missing, add it then retry once
       db.query(
         "UPDATE routes SET is_active = NOT COALESCE(is_active, 1) WHERE route_id = ?",
         [body.routeId], (err) => {
           if (err && err.code === "ER_BAD_FIELD_ERROR") {
-            // Column missing — add it with default 1, then toggle this route to 0
             db.query(
               "ALTER TABLE routes ADD COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1",
               (alterErr) => {
                 if (alterErr) return sendJson(res, 500, { error: alterErr.message });
-                // After adding column all routes default to 1 (active), now deactivate this one
                 db.query(
                   "UPDATE routes SET is_active = 0 WHERE route_id = ?",
                   [body.routeId], (err2) => {
@@ -1164,7 +1162,7 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
+ 
   // POST /add-booking-admin → Employee, System Admin
   if (req.url === "/add-booking-admin" && req.method === "POST") {
     parseBody(req).then((body) => {
@@ -1189,7 +1187,7 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
+ 
   // PUT /update-booking-status → Employee, System Admin
   if (req.url === "/update-booking-status" && req.method === "PUT") {
     parseBody(req).then((body) => {
@@ -1208,7 +1206,7 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
+ 
   // POST /flight-status → public
   if (req.url === "/flight-status" && req.method === "POST") {
     parseBody(req).then((body) => {
@@ -1229,8 +1227,8 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
-  // GET /passenger-users → Employee, System Admin — only users with role='Passenger'
+ 
+  // GET /passenger-users → Employee, System Admin
   if (req.url === "/passenger-users" && req.method === "GET") {
     const requester = getRequestUser(req);
     if (!isStaff(requester.role)) return deny(res);
@@ -1248,73 +1246,42 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-
-  // GET /all-flights → Employee, System Admin — all flights with route info for dropdown
-  if (req.url === "/all-flights" && req.method === "GET") {
-    const requester = getRequestUser(req);
-    if (!isStaff(requester.role)) return deny(res);
-    const sql = `
-      SELECT f.flight_id, f.date_of_departure, f.seats_available,
-        dep.airport_name AS departure_airport, arr.airport_name AS arrival_airport
-      FROM flights f
-      JOIN routes r ON f.route_id = r.route_id
-      JOIN airport dep ON r.departure_airport_id = dep.airport_id
-      JOIN airport arr ON r.destination_airport_id = arr.airport_id
-      ORDER BY f.date_of_departure ASC
-    `;
-    db.query(sql, (err, results) => {
-      if (err) return sendJson(res, 500, { error: err.message });
-      sendJson(res, 200, results);
-    });
-    return;
-  }
-
-  // POST /redeem-flight → passenger, Employee, System Admin — deducts 1000 miles, books a free flight
+ 
+  // POST /redeem-flight → loyalty member redeems 1000 miles for a free flight
   if (req.url === "/redeem-flight" && req.method === "POST") {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
       if (!hasRole(requester.role, ["Passenger", "Employee", "System Admin"])) return deny(res);
-
       const { userId, passengerId, flightId } = body;
       const REDEMPTION_COST = 1000;
-
-      // Check miles balance
       db.query(
         "SELECT miles_balance, tier FROM loyalty_program WHERE passenger_id = ?",
         [passengerId], (loyErr, loyRows) => {
           if (loyErr) return sendJson(res, 500, { error: loyErr.message });
-          if (loyRows.length === 0) return sendJson(res, 400, { error: "No loyalty account found." });
-
+          if (loyRows.length === 0) return sendJson(res, 400, { error: "No loyalty account found. Please join the Royal Horizon Loyalty program first." });
           const currentMiles = loyRows[0].miles_balance;
           if (currentMiles < REDEMPTION_COST) {
             return sendJson(res, 400, { error: `Not enough miles. You need ${REDEMPTION_COST} miles to redeem a free flight.` });
           }
-
           const newMiles = currentMiles - REDEMPTION_COST;
           let newTier = loyRows[0].tier;
-          if (newMiles < 1000) newTier = "Silver";
-          else if (newMiles < 5000) newTier = "Gold";
+          if (newMiles < 1000)       newTier = "Silver";
+          else if (newMiles < 5000)  newTier = "Gold";
           else if (newMiles < 10000) newTier = "Platinum";
-          else newTier = "Diamond";
-
-          // Create the booking
+          else                       newTier = "Diamond";
           db.query(
             "INSERT INTO bookings (user_id, booking_date, booking_status) VALUES (?, NOW(), 'Confirmed')",
             [userId], (err, result) => {
               if (err) return sendJson(res, 500, { error: err.message });
               const bookingId = result.insertId;
-
               db.query(
                 "INSERT INTO booking_passengers (booking_id, passenger_id) VALUES (?, ?)",
                 [bookingId, passengerId], (err2) => {
                   if (err2) return sendJson(res, 500, { error: err2.message });
-
-                  // Deduct the miles
                   db.query(
                     "UPDATE loyalty_program SET miles_balance = ?, tier = ? WHERE passenger_id = ?",
                     [newMiles, newTier, passengerId], () => {}
                   );
-
                   sendJson(res, 201, {
                     message: "Free flight booked!",
                     booking_id: bookingId,
@@ -1331,7 +1298,7 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
+ 
   // POST /save-package-booking → attaches a vacation package to an existing booking
   if (req.url === "/save-package-booking" && req.method === "POST") {
     parseBody(req).then((body) => {
@@ -1339,8 +1306,6 @@ const server = http.createServer((req, res) => {
       if (!hasRole(requester.role, ["Passenger", "Employee", "System Admin"])) return deny(res);
       const { bookingId, packageId, packageName, packageCategory, packagePrice, destination, durationDays } = body;
       if (!bookingId || !packageId) return sendJson(res, 400, { error: "bookingId and packageId are required." });
-
-      // Remove any existing package for this booking first (allow re-selection)
       db.query("DELETE FROM booking_packages WHERE booking_id = ?", [bookingId], (delErr) => {
         if (delErr) return sendJson(res, 500, { error: delErr.message });
         db.query(
@@ -1355,7 +1320,7 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
-
+ 
   // GET /booking-package/:bookingId → returns the package attached to a booking if any
   const bookingPkgMatch = req.url.match(/^\/booking-package\/(\d+)$/);
   if (bookingPkgMatch && req.method === "GET") {
@@ -1369,10 +1334,9 @@ const server = http.createServer((req, res) => {
     );
     return;
   }
-
+ 
   sendJson(res, 404, { message: "Route not found" });
 });
-
+ 
 const PORT = 8000;
-
 server.listen(PORT, () => { console.log(`Server running on port ${PORT}`); });
