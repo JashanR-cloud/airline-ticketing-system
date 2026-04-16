@@ -1412,6 +1412,67 @@ const server = http.createServer((req, res) => {
     );
     return;
   }
+ //REPORTS
+  // 1. REVENUE
+if (req.url.startsWith("/api/reports/airport-revenue")) {
+    const urlParams = new URL(req.url, `http://${req.headers.host}`);
+    const start = urlParams.searchParams.get('start') || '2026-01-01';
+    const end = urlParams.searchParams.get('end') || '2026-12-31';
+    const sort = urlParams.searchParams.get('sort') === 'ASC' ? 'ASC' : 'DESC';
+
+    const sql = `
+        SELECT 
+            a.airport_name, 
+            SUM(b.total_amount) AS total_revenue
+        FROM airports a
+        JOIN flights f ON a.airport_id = f.arrival_airport_id
+        JOIN bookings b ON f.flight_id = b.flight_id
+        WHERE b.booking_status = 'Confirmed'
+        AND b.booking_date BETWEEN ? AND ?
+        GROUP BY a.airport_id
+        ORDER BY total_revenue ${sort};
+    `;
+
+    db.query(sql, [start, end], (err, results) => {
+        if (err) {
+            res.writeHead(500); res.end(JSON.stringify({ error: err.message }));
+        } else {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(results));
+        }
+    });
+    return;
+}
+
+// 2. POPULAR ROUTES 
+if (req.url.startsWith("/api/reports/popular-routes")) {
+    const urlParams = new URL(req.url, `http://${req.headers.host}`);
+    const start = urlParams.searchParams.get('start') || '2026-01-01';
+    const end = urlParams.searchParams.get('end') || '2026-12-31';
+    const sort = urlParams.searchParams.get('sort') === 'ASC' ? 'ASC' : 'DESC';
+
+    const sql = `
+        SELECT 
+            CONCAT(r.origin_airport_id, ' → ', r.destination_airport_id) AS route_name,
+            COUNT(b.booking_id) AS total_bookings
+        FROM routes r
+        JOIN flights f ON r.route_id = f.route_id
+        JOIN bookings b ON f.flight_id = b.flight_id
+        WHERE b.booking_date BETWEEN ? AND ?
+        GROUP BY r.route_id
+        ORDER BY total_bookings ${sort};
+    `;
+
+    db.query(sql, [start, end], (err, results) => {
+        if (err) {
+            res.writeHead(500); res.end(JSON.stringify({ error: err.message }));
+        } else {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(results));
+        }
+    });
+    return;
+}
  
   sendJson(res, 404, { message: "Route not found" });
 });
