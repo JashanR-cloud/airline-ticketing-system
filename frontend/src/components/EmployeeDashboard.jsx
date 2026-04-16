@@ -1,6 +1,6 @@
 import React from 'react';
 import BookingResultCard from './main_tabs/BookingResultCard';
-import AdminReports from './AdminReports';
+//import AdminReports from './AdminReports';
 
 const EmployeeDashboard = ({
     setActiveTab,
