@@ -783,7 +783,8 @@ const server = http.createServer((req, res) => {
         card_name,
         card_number,
         card_expiration_date,
-        card_security_code
+        card_security_code,
+        passenger_id
       } = body;
 
       // 1. Create Payment
@@ -814,7 +815,7 @@ const server = http.createServer((req, res) => {
             VALUES (?, ?)
           `;
 
-          db.query(bpSql, [booking_id, requester.passenger_id || requester.userId], (err3) => {
+          db.query(bpSql, [booking_id, passenger_id || requester.userId], (err3) => {
             if (err3) {
               console.error("Failed to insert into booking_passengers:", err3.message);
             }

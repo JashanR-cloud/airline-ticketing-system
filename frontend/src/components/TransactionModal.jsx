@@ -67,14 +67,26 @@ const TransactionModal = ({
       }
     }
 
+    // Convert MM/YY to proper DATE format (YYYY-MM-DD)
+    let expirationDate = null;
+    if (!useSavedCard && cardInfo.card_exp_month && cardInfo.card_exp_year) {
+      const month = cardInfo.card_exp_month.padStart(2, '0');
+      const year = `20${cardInfo.card_exp_year}`;
+      expirationDate = `${year}-${month}-28`; 
+    }
+
     onConfirmBooking({
       flight_id: flight.flight_id,
       cabin_class: selectedCabinClass,
       base_fare: baseFare,
       taxes: taxes,
       total_amount: total,
+      passenger_id: loggedInUser?.passenger_id,
       save_card: saveCardForFuture && !useSavedCard,
-      ...(useSavedCard ? {} : cardInfo)
+      card_name: useSavedCard ? null : cardInfo.card_name,
+      card_number: useSavedCard ? null : cardInfo.card_number,
+      card_expiration_date: expirationDate,          
+      card_security_code: useSavedCard ? null : cardInfo.card_security_code,
     });
   };
 
