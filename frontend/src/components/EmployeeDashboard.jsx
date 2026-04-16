@@ -1,5 +1,6 @@
 import React from 'react';
 import BookingResultCard from './main_tabs/BookingResultCard';
+import AdminReports from './AdminReports';
 
 const EmployeeDashboard = ({
     setActiveTab,
@@ -57,6 +58,7 @@ const EmployeeDashboard = ({
     handleInlineAircraftUpdate,
     aircraftMsg,
     // Admin Actions (CRUD)
+    isSystemAdmin,
     crudAction,
     setCrudAction,
     crudData,
