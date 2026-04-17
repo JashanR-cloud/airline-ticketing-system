@@ -366,7 +366,7 @@ const server = http.createServer((req, res) => {
     if (requester.userId !== requestedUserId && !isStaff(requester.role)) return deny(res);
     const sql = `
       SELECT 
-        b.booking_id, b.user_id, b.booking_date, b.booking_status, b.cabin_calss, b.num_passengers,
+        b.booking_id, b.user_id, b.booking_date, b.booking_status, b.cabin_class, b.num_passengers,
         f.flight_id, f.date_of_departure, f.estimated_time_hours,
         al.airline_name,
         dep.airport_name AS departure_name,
