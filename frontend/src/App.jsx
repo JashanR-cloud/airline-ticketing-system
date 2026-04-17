@@ -11,7 +11,7 @@ import SystemAdminDashboard from "./components/SystemAdminDashboard";
 import TransactionModal from "./components/TransactionModal";
 import "./components/AccountModal.css";
 
-const API = "https://airline-ticketing-system-gjnr.onrender.com";
+const API = "http://localhost:8000";
 
 const SEAT_OPTIONS = ["No Preference", "Window", "Aisle", "Middle"];
 const MEAL_OPTIONS = ["No Preference", "Standard", "Vegetarian", "Vegan", "Halal", "Kosher", "Gluten-Free", "No Meal"];
@@ -906,7 +906,8 @@ function App() {
     localStorage.clear(); 
 
     setTimeout(() => {
-      window.location.href = "/login";
+      setLoggedInUser(null);
+      setActiveTab("login");
     }, 800);
   };
 
@@ -1711,9 +1712,7 @@ function App() {
           <li onClick={async () => { setShowDestinationsModal(true); await fetchDestinations(); }} style={{ cursor: "pointer" }}>WHERE WE FLY</li>
           <li onClick={handleCheckLoyalty} style={{ cursor: "pointer", color: "#ffcc00", fontWeight: "bold" }}>LOYALTY</li>
           {/* Staff Portal link — for Employee and Admin login */}
-          {!loggedInUser && (
-            <li onClick={() => setActiveTab("staffLogin")} style={{ cursor: "pointer" }}>STAFF PORTAL</li>
-          )}
+          
         </ul>
         <div className="nav-right-group">
           {loggedInUser ? (
@@ -1954,25 +1953,6 @@ function App() {
             />
           )}
 
-          {/* ── Staff Portal Login ── */}
-          {activeTab === "staffLogin" && !loggedInUser && (
-            <form className="login-form" onSubmit={handleStaffLoginSubmit}>
-              <h2>Staff Portal</h2>
-              <p style={{ marginBottom: "16px", fontSize: "15px", color: "#666" }}>Employee and Admin access only.</p>
-              <div className="form-group">
-                <label>Email</label>
-                <input type="email" name="email" value={staffLoginData.email} onChange={handleStaffLoginChange} placeholder="Enter your staff email" required />
-              </div>
-              <div className="form-group">
-                <label>Password</label>
-                <input type="password" name="password" value={staffLoginData.password} onChange={handleStaffLoginChange} placeholder="Enter your password" required />
-              </div>
-              <button type="submit" className="primary-btn">{loadingStaffLogin ? "Logging in..." : "Log In"}</button>
-              {staffLoginMessage && (
-                <p style={{ marginTop: "14px", fontSize: "18px", color: staffLoginMessage.includes("successful") ? "#1a6e3c" : "#cf102d" }}>{staffLoginMessage}</p>
-              )}
-            </form>
-          )}
 
           {/* ── Login ── */}
           {activeTab === "login" && !loggedInUser && (
@@ -2004,3 +1984,4 @@ function App() {
 }
 
 export default App;
+
