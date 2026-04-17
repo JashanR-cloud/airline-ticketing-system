@@ -8,7 +8,8 @@ const TransactionModal = ({
   selectedCabinClass,
   getPriceForClass,
   loggedInUser,
-  onConfirmBooking
+  onConfirmBooking,
+  numPassengers = 1
 }) => {
   const [activeTab, setActiveTab] = useState("summary");
   const [useSavedCard, setUseSavedCard] = useState(true);
@@ -55,9 +56,10 @@ const TransactionModal = ({
 
   if (!isOpen || !flight) return null;
 
-  const baseFare = Number(getPriceForClass(flight, selectedCabinClass)) || 0;
-  const taxes = Number((baseFare * 0.18).toFixed(2));
-  const total = Number((baseFare + taxes).toFixed(2));
+  const baseFarePerTicket = Number(getPriceForClass(flight, selectedCabinClass)) || 0;
+  const baseFareTotal = Number((baseFarePerTicket * numPassengers).toFixed(2));
+  const taxes = Number((baseFareTotal * 0.18).toFixed(2));
+  const total = Number((baseFareTotal + taxes).toFixed(2));
 
   const handlePayNow = () => {
     if (!useSavedCard) {
@@ -78,7 +80,7 @@ const TransactionModal = ({
     onConfirmBooking({
       flight_id: flight.flight_id,
       cabin_class: selectedCabinClass,
-      base_fare: baseFare,
+      base_fare: baseFareTotal,
       taxes: taxes,
       total_amount: total,
       passenger_id: loggedInUser?.passenger_id,
@@ -184,7 +186,7 @@ const TransactionModal = ({
           {activeTab === "payment" && (
             <div>
               <div style={{ background: "#f8f9fa", padding: "20px", borderRadius: "12px", marginBottom: "24px" }}>
-                <p><strong>Base Fare ({selectedCabinClass}):</strong> ${baseFare.toFixed(2)}</p>
+                <p><strong>Base Fare ({selectedCabinClass}) × {numPassengers} passenger{numPassengers > 1 ? 's' : ''}:</strong> ${baseFareTotal.toFixed(2)}</p>
                 <p><strong>Taxes & Fees (18%):</strong> ${taxes.toFixed(2)}</p>
                 <hr style={{ margin: "12px 0" }} />
                 <p style={{ fontSize: "22px", fontWeight: "700", margin: 0 }}>

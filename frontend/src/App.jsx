@@ -11,7 +11,7 @@ import SystemAdminDashboard from "./components/SystemAdminDashboard";
 import TransactionModal from "./components/TransactionModal";
 import "./components/AccountModal.css";
 
-const API = "http://localhost:8000";
+const API = "https://airline-ticketing-system-gjnr.onrender.com";
 
 const SEAT_OPTIONS = ["No Preference", "Window", "Aisle", "Middle"];
 const MEAL_OPTIONS = ["No Preference", "Standard", "Vegetarian", "Vegan", "Halal", "Kosher", "Gluten-Free", "No Meal"];
@@ -734,7 +734,7 @@ function App() {
     finally { setLoadingStatus(false); }
   };
 
-  const handleBookFlight = (flight, cabinClass = "economy") => {
+  const handleBookFlight = (flight, cabinClass = "economy", numPassengers =1 ) => {
     //debug messages
     console.log("🚀 handleBookFlight called with:", { 
       flightId: flight?.flight_id, 
@@ -758,7 +758,8 @@ function App() {
     setSelectedFlightForTransaction({
       flight,
       cabinClass,
-      price: getPriceForClass(flight, cabinClass)
+      price: getPriceForClass(flight, cabinClass),
+      numPassengers: Number(numPassengers) || 1
     });
     setShowTransactionModal(true);
   };
@@ -1689,6 +1690,7 @@ function App() {
         selectedCabinClass={selectedFlightForTransaction?.cabinClass}
         getPriceForClass={getPriceForClass}
         loggedInUser={loggedInUser}
+        numPassengers={selectedFlightForTransaction?.numPassengers || 1}
         onConfirmBooking={handleProcessPayment}
       />
 
@@ -1855,7 +1857,6 @@ function App() {
           {/* ── Employee Portal ── */}
           {activeTab === "employee" && (isEmployee || isSystemAdmin) && (
             <EmployeeDashboard
-              isSystemAdmin={isSystemAdmin}
               setActiveTab={setActiveTab}
               setIsEditingPrefs={setIsEditingPrefs}
               prefData={prefData}

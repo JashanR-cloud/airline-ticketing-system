@@ -430,7 +430,6 @@ const SearchFlightsPanel = ({
                         <p style={{ margin: "0 0 4px" }}><strong>Date of Departure:</strong> {new Date(flight.date_of_departure).toLocaleString()}</p>
                         <p style={{ margin: "0 0 4px" }}><strong>Arrival:</strong> {flight.arrival_city}, {flight.arrival_country} ({flight.arrival_code})</p>
                         <p style={{ margin: "0 0 4px" }}><strong>Date of Arrival: </strong> {new Date(findArrivalDate(flight.date_of_departure, flight.estimated_time_hours)).toLocaleString()}</p>
-                        <p style={{ margin: "0 0 4px" }}><strong>Date:</strong> {new Date(flight.date_of_departure).toLocaleString()}</p>
                         <p style={{ margin: "0 0 4px" }}><strong>Estimated Time: </strong>{formatDuration(flight.estimated_time_hours)}</p>
                         <p style={{ margin: "0 0 4px" }}>
                         <strong>Aircraft:</strong> {flight.aircraft_name}
@@ -509,7 +508,14 @@ const SearchFlightsPanel = ({
                             </>
                         )}
                         </div>
-                    </div>
+                        {flightSearch.passengers > 1 && (
+                          <p style={{ marginTop: 15, fontSize: "15px", fontWeight: "600" }}>
+                            Total price for {flightSearch.passengers} passengers: $
+                            {(getPriceForClass(flight, selectedClass[flight.flight_id] || "economy") * 
+                              Number(flightSearch.passengers)).toFixed(2)}
+                          </p>
+                        )}
+                  </div>
                     </div>
 
                     {loggedInUser ? (
@@ -547,7 +553,7 @@ const SearchFlightsPanel = ({
                             type="button" 
                             className="book-btn" 
                             style={{ marginTop: "12px", width: "auto", minWidth: "280px" }} 
-                            onClick={() => handleBookFlight(flight, selectedClass[flight.flight_id] || "economy")}
+                            onClick={() => handleBookFlight(flight, selectedClass[flight.flight_id] || "economy", Number(flightSearch.passengers) || 1)}
                             >
                             Book This Flight — ${getPriceForClass(flight, selectedClass[flight.flight_id] || "economy")}
                             {selectedPackage && VACATION_PACKAGES.some((p) => p.id === selectedPackage.id && p.arrival === flight.arrival_airport) ? ` + ${selectedPackage.name}` : ""}

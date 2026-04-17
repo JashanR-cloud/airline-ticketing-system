@@ -819,6 +819,17 @@ const server = http.createServer((req, res) => {
               console.error("Failed to insert into booking_passengers:", err3.message);
             }
 
+            // Decrease seats available
+            const updateSeatsSql = `
+              UPDATE flights
+              SET seats_availabel = seats_available - ?
+              WHERE flight_id = ?
+            `;
+
+            db.query(updateSeatsSql, [num_passengers, flight_id], (err4) => {
+              if (err4) console.error("Failed to update seats_available: ", err4.message);
+            })
+
             //  Save card info
             if (save_card && card_name && card_number) {
               const updateCardSql = `

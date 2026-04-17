@@ -23,9 +23,7 @@ const BookingResultCard = ({
     ? new Date(result.date_of_departure) 
     : new Date();
 
-  const duration = result.estimated_time_hours 
-    ? `${result.estimated_time_hours} hrs` 
-    : "N/A";
+  const duration = formatDuration(result.estimated_time_hours)
 
   return (
     <div style={{ 
@@ -33,7 +31,8 @@ const BookingResultCard = ({
       borderRadius: "12px", 
       padding: "20px", 
       background: "#fff",
-      marginBottom: "16px"
+      marginBottom: "16px",
+      width: "550px"
     }}>
       {/* Flight Info */}
       <div style={{ marginBottom: "16px" }}>
@@ -54,18 +53,23 @@ const BookingResultCard = ({
             {result.booking_status}
           </span>
         </div>
-
+        <p style={{ color: "#444" }}>
+          {departureDate.toLocaleString([], { 
+            weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
+          })}
+        </p>
         <p style={{ fontSize: "16px", margin: "10px 0 6px", fontWeight: "500" }}>
           Flight ID: {result.flight_id}
         </p>
 
         <p style={{ fontSize: "16px", margin: "10px 0 6px", fontWeight: "500" }}>
-          {result.departure_city} ({result.departure_name}) → {result.arrival_city} ({result.arrival_name})
+          <strong>FROM {result.departure_city}, {result.departure_country}</strong><br/>{result.departure_name}
         </p>
-        <p style={{ color: "#444" }}>
-          {departureDate.toLocaleString([], { 
-            weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
-          })} • Duration {formatDuration(duration)}
+        <p style={{ fontSize: "16px", margin: "10px 0 6px", fontWeight: "500" }}>
+          <strong>TO {result.arrival_city}, {result.arrival_country}</strong><br/>{result.arrival_name}
+        </p>
+        <p style={{ fontSize: "16px", margin: "10px 0 6px", fontWeight: "500" }}>
+          Travel Time: {duration}
         </p>
       </div>
 
