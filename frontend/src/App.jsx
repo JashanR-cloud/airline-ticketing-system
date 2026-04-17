@@ -863,6 +863,23 @@ function App() {
     }
   };
 
+  const handleUpdatePreferences = async () => {
+    try {
+      const response = await fetch(`${API}/update-preferences`, {
+        method: "PUT", headers: getAuthHeaders(true),
+        body: JSON.stringify({ passengerId: manageResult.passenger_id, seatPreferences: prefData.seat_preferences, mealPreferences: prefData.meal_preferences }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setActionMsg({ text: "✅ Preferences updated successfully!", type: "success" });
+        setIsEditingPrefs(false);
+        setManageResult({ ...manageResult, seat_preferences: prefData.seat_preferences, meal_preferences: prefData.meal_preferences });
+      } else {
+        setActionMsg({ text: "❌ " + (data.error || "Failed to update preferences."), type: "error" });
+      }
+    } catch { setActionMsg({ text: "❌ Error connecting to server.", type: "error" }); }
+  };
+
   const handleCrudSubmit = async (e) => {
     e.preventDefault();
     let endpoint = "", method = "", bodyData = {};
