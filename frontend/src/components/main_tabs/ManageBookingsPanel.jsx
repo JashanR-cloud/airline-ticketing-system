@@ -21,6 +21,7 @@ const ManageBookingsPanel = ({
   setPrefData,
   handleUpdatePreferences,
   actionMsg,
+  setActiveTab,
 
   // Admin-specific (dropdown + search)
   manageData,
@@ -41,7 +42,7 @@ const ManageBookingsPanel = ({
           <p>You must be logged in to view and manage bookings.</p>
           <button 
             className="primary-btn" 
-            onClick={() => {/* You'll pass setActiveTab or a callback */}} 
+            onClick={() => setActiveTab("login")} style={{ marginTop: "15px" }} 
             style={{ marginTop: "15px" }}
           >
             Log In Now

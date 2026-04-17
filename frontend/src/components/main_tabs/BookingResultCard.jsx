@@ -71,6 +71,12 @@ const BookingResultCard = ({
         <p style={{ fontSize: "16px", margin: "10px 0 6px", fontWeight: "500" }}>
           Travel Time: {duration}
         </p>
+        <p style={{ fontSize: "16px", marginTop: "15px 0 6px", fontWeight: "500" }}>
+          <strong>Number of Passengers: </strong>{result.num_passengers}
+        </p>
+        <p style={{ fontSize: "16px", margin: "10px 0 6px", fontWeight: "500" }}>
+          <strong>Cabin Class: </strong>{result.cabin_class}
+        </p>
       </div>
 
       {/* Passenger Info */}

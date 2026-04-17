@@ -1863,6 +1863,7 @@ function App() {
               setPrefData={setPrefData}
               handleUpdatePreferences={handleUpdatePreferences}
               actionMsg={actionMsg}
+              setActiveTab={setActiveTab}
 
               // Admin props
               manageData={manageData}
