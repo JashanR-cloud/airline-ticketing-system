@@ -9,6 +9,7 @@ import EmployeeDashboard from "./components/EmployeeDashboard";
 import FlightStatusPanel from "./components/main_tabs/FlightStatusPanel";
 import SystemAdminDashboard from "./components/SystemAdminDashboard";
 import TransactionModal from "./components/TransactionModal";
+import CancelConfirmationModal from "./components/main_tabs/CancelConfirmationModal";
 import "./components/AccountModal.css";
 
 const API = "https://airline-ticketing-system-gjnr.onrender.com";
@@ -160,6 +161,10 @@ function App() {
     // Booking Transaction modal
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [selectedFlightForTransaction, setSelectedFlightForTransaction] = useState(null);
+
+    // Cancel Booking Confirmation
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState(null);
 
   // Booking confirmation modal
   const [bookingConfirm, setBookingConfirm] = useState(null);
@@ -825,10 +830,25 @@ function App() {
   const [actionMsg, setActionMsg] = useState({ text: "", type: "" }); // type: "success" | "error"
 
   const handleCancelBooking = async (bookingId) => {
+    setBookingToCancel(bookingId);
+    setShowCancelModal(true);
+  }
+
+  const confirmCancelBooking = async () => {
+    if (!bookingToCancel) return;
+
     setActionMsg({ text: "", type: "" });
+    setShowCancelModal(false);
+
     try {
-      const response = await fetch(`${API}/cancel-booking`, { method: "POST", headers: getAuthHeaders(true), body: JSON.stringify({ bookingId }) });
+      const response = await fetch(`${API}/cancel-booking`, {
+        method: "POST",
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({ bookingId: bookingToCancel })
+      });
+
       const data = await response.json();
+
       if (response.ok) {
         setActionMsg({ text: "✅ Booking cancelled successfully.", type: "success" });
         setManageResult(null);
@@ -838,23 +858,9 @@ function App() {
         setActionMsg({ text: "❌ " + (data.error || "Failed to cancel booking."), type: "error" });
       }
     } catch { setActionMsg({ text: "❌ Error connecting to server.", type: "error" }); }
-  };
-
-  const handleUpdatePreferences = async () => {
-    try {
-      const response = await fetch(`${API}/update-preferences`, {
-        method: "PUT", headers: getAuthHeaders(true),
-        body: JSON.stringify({ passengerId: manageResult.passenger_id, seatPreferences: prefData.seat_preferences, mealPreferences: prefData.meal_preferences }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setActionMsg({ text: "✅ Preferences updated successfully!", type: "success" });
-        setIsEditingPrefs(false);
-        setManageResult({ ...manageResult, seat_preferences: prefData.seat_preferences, meal_preferences: prefData.meal_preferences });
-      } else {
-        setActionMsg({ text: "❌ " + (data.error || "Failed to update preferences."), type: "error" });
-      }
-    } catch { setActionMsg({ text: "❌ Error connecting to server.", type: "error" }); }
+    finally {
+      setBookingToCancel(null);
+    }
   };
 
   const handleCrudSubmit = async (e) => {
@@ -1692,6 +1698,17 @@ function App() {
         loggedInUser={loggedInUser}
         numPassengers={selectedFlightForTransaction?.numPassengers || 1}
         onConfirmBooking={handleProcessPayment}
+      />
+
+      {/* Cancel Confirmation Modal */}
+      <CancelConfirmationModal
+        isOpen={showCancelModal}
+        onClose={() => {
+          setShowCancelModal(false);
+          setBookingToCancel(null);
+        }}
+        onConfirm={confirmCancelBooking}
+        bookingId={bookingToCancel}
       />
 
 

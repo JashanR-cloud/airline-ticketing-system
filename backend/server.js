@@ -766,7 +766,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-    // POST /process-booking
+  // POST /process-booking
   if (req.url === "/process-booking" && req.method === "POST") {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
@@ -783,7 +783,8 @@ const server = http.createServer((req, res) => {
         card_number,
         card_expiration_date,
         card_security_code,
-        passenger_id
+        passenger_id,
+        num_passengers = 1
       } = body;
 
       // 1. Create Payment
@@ -800,11 +801,11 @@ const server = http.createServer((req, res) => {
         // 2. Create Booking
         const bookingSql = `
           INSERT INTO bookings 
-            (user_id, flight_id, booking_status, booking_date, payment_id, cabin_class)
-          VALUES (?, ?, 'Confirmed', NOW(), ?, ?)
+            (user_id, flight_id, booking_status, booking_date, payment_id, cabin_class, num_passengers)
+          VALUES (?, ?, 'Confirmed', NOW(), ?, ?, ?)
         `;
 
-        db.query(bookingSql, [requester.userId, flight_id, payment_id, cabin_class], (err2, bookingResult) => {
+        db.query(bookingSql, [requester.userId, flight_id, payment_id, cabin_class, num_passengers], (err2, bookingResult) => {
           if (err2) return sendJson(res, 500, { error: err2.message });
 
           const booking_id = bookingResult.insertId;
@@ -822,7 +823,7 @@ const server = http.createServer((req, res) => {
             // Decrease seats available
             const updateSeatsSql = `
               UPDATE flights
-              SET seats_availabel = seats_available - ?
+              SET seats_available = seats_available - ?
               WHERE flight_id = ?
             `;
 
@@ -1029,15 +1030,59 @@ const server = http.createServer((req, res) => {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
       const bookingId = body.bookingId;
-      db.query("SELECT user_id FROM bookings WHERE booking_id = ? LIMIT 1", [bookingId], (checkErr, rows) => {
+
+      db.query(`
+        SELECT b.user_id, b.flight_id, b.payment_id, b.num_passengers
+        FROM bookings b
+        WHERE booking_id = ? 
+        LIMIT 1
+      `, [bookingId], (checkErr, rows) => {
         if (checkErr) return sendJson(res, 500, { error: checkErr.message });
         if (rows.length === 0) return sendJson(res, 404, { error: "Booking not found." });
-        const bookingOwnerId = Number(rows[0].user_id);
+
+        const booking = rows[0];
+        const bookingOwnerId = Number(booking.user_id);
+        const flightId = booking.flight_id;
+        const paymentId = booking.payment_id;
+        const numPassengers = Number(booking.num_passengers) || 1;
+
         const canCancel = isStaff(requester.role) || (requester.role === "Passenger" && requester.userId === bookingOwnerId);
         if (!canCancel) return deny(res);
-        db.query("UPDATE bookings SET booking_status = 'Cancelled' WHERE booking_id = ?", [bookingId], (err) => {
+
+        db.beginTransaction((err) => {
           if (err) return sendJson(res, 500, { error: err.message });
-          sendJson(res, 200, { message: "Cancelled." });
+
+          // 1. Update booking status to Cancelled
+          db.query("UPDATE bookings SET booking_status = 'Cancelled' WHERE booking_id = ?", [bookingId], (err1) => {
+            if (err1) return db.rollback(() => sendJson(res, 500, { error: err1.message }));
+
+            // 2. Restore seats in flights table
+            db.query(`
+              UPDATE flights 
+              SET seats_available = seats_available + ? 
+              WHERE flight_id = ?
+            `, [numPassengers, flightId], (err2) => {
+              if (err2) return db.rollback(() => sendJson(res, 500, { error: err2.message }));
+
+              // 3. Mark payment as Refunded
+              if (paymentId) {
+                db.query("UPDATE payment SET payment_status = 'Refunded' WHERE payment_id = ?", [paymentId], (err3) => {
+                  if (err3) console.error("Failed to update payment status to Refunded:", err3.message);
+                });
+              }
+
+              // 4. Delete from booking_passengers
+              db.query("DELETE FROM booking_passengers WHERE booking_id = ?", [bookingId], (err4) => {
+                if (err4) return db.rollback(() => sendJson(res, 500, { error: err4.message }));
+
+                db.commit((commitErr) => {
+                  if (commitErr) return db.rollback(() => sendJson(res, 500, { error: commitErr.message }));
+
+                  sendJson(res, 200, { message: "Booking cancelled successfully." });
+                });
+              });
+            });
+          });
         });
       });
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
