@@ -1855,6 +1855,7 @@ function App() {
           {/* ── Employee Portal ── */}
           {activeTab === "employee" && (isEmployee || isSystemAdmin) && (
             <EmployeeDashboard
+              isSystemAdmin={isSystemAdmin}
               setActiveTab={setActiveTab}
               setIsEditingPrefs={setIsEditingPrefs}
               prefData={prefData}
