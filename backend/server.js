@@ -589,8 +589,6 @@ const server = http.createServer((req, res) => {
     parseBody(req).then((body) => {
       const email = body.email?.trim();
       const password = body.password?.trim();
-      const role = body.role?.trim();
-      if (!ROLE_OPTIONS.includes(role)) return sendJson(res, 400, { error: "Invalid role selected." });
       const sql = `
         SELECT ua.user_id, ua.email, ua.role, ua.passenger_id, ua.card_number, ua.card_expiration_date,
           ua.card_security_code, ua.card_name,
@@ -598,9 +596,9 @@ const server = http.createServer((req, res) => {
           p.passport_status, p.visa_status, p.country_of_origin, p.seat_preferences, p.meal_preferences, p.special_needs
         FROM user_account ua
         LEFT JOIN passenger p ON ua.passenger_id = p.passenger_id
-        WHERE ua.email = ? AND ua.password = ? AND ua.role = ? AND COALESCE(ua.is_deleted, 0) = 0 LIMIT 1
+        WHERE ua.email = ? AND ua.password = ? AND  COALESCE(ua.is_deleted, 0) = 0 LIMIT 1
       `;
-      db.query(sql, [email, password, role], (err, results) => {
+      db.query(sql, [email, password], (err, results) => {
         if (err) return sendJson(res, 500, { error: err.message });
         if (results.length === 0) return sendJson(res, 401, { error: "Invalid credentials." });
         sendJson(res, 200, { message: "Login successful.", user: results[0] });
