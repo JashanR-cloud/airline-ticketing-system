@@ -18,7 +18,8 @@ const TransactionModal = ({
   const [cardInfo, setCardInfo] = useState({
     card_name: "",
     card_number: "",
-    card_expiration_date: "",
+    card_exp_month: "",
+    card_exp_year: "",
     card_security_code: ""
   });
 
@@ -56,7 +57,7 @@ const TransactionModal = ({
 
   if (!isOpen || !flight) return null;
 
-  const baseFarePerTicket = Number(getPriceForClass(flight, selectedCabinClass)) || 0;
+const baseFarePerTicket = Number(getPriceForClass(flight, selectedCabinClass)) || 0;
   const baseFareTotal = Number((baseFarePerTicket * numPassengers).toFixed(2));
   const taxes = Number((baseFareTotal * 0.18).toFixed(2));
   const total = Number((baseFareTotal + taxes).toFixed(2));
@@ -84,6 +85,7 @@ const TransactionModal = ({
       taxes: taxes,
       total_amount: total,
       passenger_id: loggedInUser?.passenger_id,
+      num_passengers: numPassengers,
       save_card: saveCardForFuture && !useSavedCard,
       card_name: useSavedCard ? null : cardInfo.card_name,
       card_number: useSavedCard ? null : cardInfo.card_number,
