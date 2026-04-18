@@ -873,7 +873,7 @@ const server = http.createServer((req, res) => {
                   // Update loyalty
                   db.query(
                     "UPDATE loyalty_program SET miles_balance = ?, tier = ? WHERE passenger_id = ?",
-                    [newMiles, newTier, passenge],
+                    [newMiles, newTier, passenger_id],
                     (updErr) => { if (updErr) console.error("Loyalty update failed:", updErr); }
                   );
 
