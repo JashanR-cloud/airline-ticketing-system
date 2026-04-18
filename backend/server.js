@@ -378,7 +378,7 @@ const server = http.createServer((req, res) => {
         p.passenger_id, p.first_name, p.last_name, p.email,
         p.phone_number, p.seat_preferences, p.meal_preferences
       FROM bookings b
-      JOIN booking_passengers bp ON b.booking_id = bp.booking_id
+      LEFT JOIN booking_passengers bp ON b.booking_id = bp.booking_id
       JOIN passenger p ON bp.passenger_id = p.passenger_id
       JOIN flights f ON b.flight_id = f.flight_id
       JOIN routes r ON f.route_id = r.route_id
@@ -1242,21 +1242,41 @@ const server = http.createServer((req, res) => {
   }
  
   // PUT /update-preferences → passenger (own), Employee, System Admin
-  if (req.url === "/update-preferences" && req.method === "PUT") {
+  if (req.url === "/update-preferences" && req.method === "POST") {
     parseBody(req).then((body) => {
+      console.log("Received update-preferences request:", body);
+
       const requester = getRequestUser(req);
+      console.log("Requester:", requester);
+
+      if (!requester) {
+        console.log("No requester found");
+        return sendJson(res, 401, { error: "Unauthorized" });
+      }
+
       const passengerId = Number(body.passengerId);
+      console.log("Requested passengerId:", passengerId);
+
       db.query(
         "SELECT passenger_id FROM user_account WHERE user_id = ? LIMIT 1",
         [requester.userId], (ownerErr, ownerRows) => {
           if (ownerErr) return sendJson(res, 500, { error: ownerErr.message });
+
           const requesterPassengerId = ownerRows.length ? Number(ownerRows[0].passenger_id) : 0;
+          console.log("Requester's passenger_id:", requesterPassengerId);
+
           const canUpdate = isStaff(requester.role) || (requester.role === "Passenger" && requesterPassengerId === passengerId);
+          console.log("Can update?", canUpdate);
+
           if (!canUpdate) return deny(res);
           db.query(
             "UPDATE passenger SET seat_preferences = ?, meal_preferences = ? WHERE passenger_id = ?",
             [body.seatPreferences, body.mealPreferences, passengerId], (err) => {
-              if (err) return sendJson(res, 500, { error: err.message });
+              if (err) {
+                console.error("Update query error:", err);
+                return sendJson(res, 500, { error: err.message });
+              }
+              console.log("Update successful");
               sendJson(res, 200, { message: "Updated." });
             }
           );
@@ -1369,8 +1389,8 @@ const server = http.createServer((req, res) => {
     return;
   }
  
-  // PUT /update-booking-status → Employee, System Admin
-  if (req.url === "/update-booking-status" && req.method === "PUT") {
+  // POST /update-booking-status → Employee, System Admin
+  if (req.url === "/update-booking-status" && req.method === "POST") {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
       if (!isStaff(requester.role)) return deny(res);
