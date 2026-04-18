@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 
+const API = "https://airline-ticketing-system-gjnr.onrender.com";
+
 const AdminReports = () => {
     const [analyticsData, setAnalyticsData] = useState([]);
     const [activeReport, setActiveReport] = useState('airline-bookings');
@@ -17,7 +19,7 @@ const AdminReports = () => {
         else if (activeReport === 'airport-revenue') endpoint = 'airport-revenue';
         else endpoint = 'popular-routes';
 
-        fetch(`http://localhost:8000/api/reports/${endpoint}?start=${startDate}&end=${endDate}&sort=${sortOrder}`)
+        fetch(`${API}/api/reports/${endpoint}?start=${startDate}&end=${endDate}&sort=${sortOrder}`)
             .then(res => res.json())
             .then(results => {
                 let data = [];
