@@ -1104,10 +1104,10 @@ const server = http.createServer((req, res) => {
           db.query("UPDATE bookings SET booking_status = 'Cancelled' WHERE booking_id = ?", [bookingId], (err1) => {
             if (err1) return db.rollback(() => sendJson(res, 500, { error: err1.message }));
 
-            // 2. Restore seats in flights table
+            // 2. Restore seats in flights table (capped at total_seats)
             db.query(`
-              UPDATE flights 
-              SET seats_available = seats_available + ? 
+              UPDATE flights
+              SET seats_available = LEAST(seats_available + ?, total_seats)
               WHERE flight_id = ?
             `, [numPassengers, flightId], (err2) => {
               if (err2) return db.rollback(() => sendJson(res, 500, { error: err2.message }));
