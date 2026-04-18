@@ -10,52 +10,40 @@ const AdminReports = () => {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        if (activeReport === 'airline-bookings') {
-            setLoading(true);
-            fetch(`http://localhost:8000/api/reports/airline-bookings?start=${startDate}&end=${endDate}&sort=${sortOrder}`)
-                .then(res => res.json())
-                .then(results => {
-                    const data = results.map(row => ({
+        setLoading(true);
+
+        let endpoint = '';
+        if (activeReport === 'airline-bookings') endpoint = 'airline-bookings';
+        else if (activeReport === 'airport-revenue') endpoint = 'airport-revenue';
+        else endpoint = 'popular-routes';
+
+        fetch(`http://localhost:8000/api/reports/${endpoint}?start=${startDate}&end=${endDate}&sort=${sortOrder}`)
+            .then(res => res.json())
+            .then(results => {
+                let data = [];
+                if (activeReport === 'airline-bookings') {
+                    data = results.map(row => ({
                         name: `${row.airline_name} (${row.airline_code})`,
                         value: Number(row.total_bookings)
                     }));
-                    setAnalyticsData(data);
-                    setLoading(false);
-                })
-                .catch(() => {
-                    setAnalyticsData([]);
-                    setLoading(false);
-                });
-            return;
-        }
-
-        // Existing mock data for the other reports
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        const timeDiff = end - start;
-        const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)) || 1;
-        const multiplier = daysDiff > 0 ? daysDiff : 1;
-
-        let data = [];
-        if (activeReport === 'airport-revenue') {
-            data = [
-                { name: "Houston (IAH)", value: 2500 * multiplier },
-                { name: "London (LHR)", value: 2100 * multiplier },
-                { name: "Paris (CDG)", value: 1700 * multiplier },
-                { name: "Tokyo (NRT)", value: 1300 * multiplier },
-                { name: "New York (JFK)", value: 950 * multiplier }
-            ];
-        } else {
-            data = [
-                { name: "IAH → LHR", value: Math.floor(8 * multiplier) },
-                { name: "JFK → CDG", value: Math.floor(6 * multiplier) },
-                { name: "LHR → NRT", value: Math.floor(4 * multiplier) },
-                { name: "CDG → IAH", value: Math.floor(3 * multiplier) }
-            ];
-        }
-
-        data.sort((a, b) => sortOrder === 'DESC' ? b.value - a.value : a.value - b.value);
-        setAnalyticsData(data);
+                } else if (activeReport === 'airport-revenue') {
+                    data = results.map(row => ({
+                        name: row.airport_name,
+                        value: Number(row.total_revenue)
+                    }));
+                } else {
+                    data = results.map(row => ({
+                        name: row.route_name,
+                        value: Number(row.total_bookings)
+                    }));
+                }
+                setAnalyticsData(data);
+                setLoading(false);
+            })
+            .catch(() => {
+                setAnalyticsData([]);
+                setLoading(false);
+            });
     }, [activeReport, startDate, endDate, sortOrder]);
 
     const totalValue = analyticsData.reduce((sum, row) => sum + row.value, 0);

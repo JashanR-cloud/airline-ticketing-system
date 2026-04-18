@@ -1544,15 +1544,18 @@ if (req.url.startsWith("/api/reports/airport-revenue")) {
     const sort = urlParams.searchParams.get('sort') === 'ASC' ? 'ASC' : 'DESC';
 
     const sql = `
-        SELECT 
-            a.airport_name, 
-            SUM(b.total_amount) AS total_revenue
-        FROM airports a
-        JOIN flights f ON a.airport_id = f.arrival_airport_id
+        SELECT
+            CONCAT(a.airport_name, ' (', a.airport_code, ')') AS airport_name,
+            SUM(p.amount) AS total_revenue
+        FROM airport a
+        JOIN routes r ON a.airport_id = r.destination_airport_id
+        JOIN flights f ON r.route_id = f.route_id
         JOIN bookings b ON f.flight_id = b.flight_id
+        JOIN payment p ON b.payment_id = p.payment_id
         WHERE b.booking_status = 'Confirmed'
+        AND p.payment_status = 'Successful'
         AND b.booking_date BETWEEN ? AND ?
-        GROUP BY a.airport_id
+        GROUP BY a.airport_id, a.airport_name, a.airport_code
         ORDER BY total_revenue ${sort};
     `;
 
@@ -1606,14 +1609,16 @@ if (req.url.startsWith("/api/reports/popular-routes")) {
     const sort = urlParams.searchParams.get('sort') === 'ASC' ? 'ASC' : 'DESC';
 
     const sql = `
-        SELECT 
-            CONCAT(r.origin_airport_id, ' → ', r.destination_airport_id) AS route_name,
+        SELECT
+            CONCAT(dep.airport_code, ' → ', arr.airport_code) AS route_name,
             COUNT(b.booking_id) AS total_bookings
         FROM routes r
+        JOIN airport dep ON r.departure_airport_id = dep.airport_id
+        JOIN airport arr ON r.destination_airport_id = arr.airport_id
         JOIN flights f ON r.route_id = f.route_id
         JOIN bookings b ON f.flight_id = b.flight_id
         WHERE b.booking_date BETWEEN ? AND ?
-        GROUP BY r.route_id
+        GROUP BY r.route_id, dep.airport_code, arr.airport_code
         ORDER BY total_bookings ${sort};
     `;
 
