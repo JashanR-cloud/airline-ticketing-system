@@ -1567,7 +1567,38 @@ if (req.url.startsWith("/api/reports/airport-revenue")) {
     return;
 }
 
-// 2. POPULAR ROUTES 
+// 2. AIRLINE BOOKINGS
+if (req.url.startsWith("/api/reports/airline-bookings")) {
+    const urlParams = new URL(req.url, `http://${req.headers.host}`);
+    const start = urlParams.searchParams.get('start') || '2026-01-01';
+    const end = urlParams.searchParams.get('end') || '2026-12-31';
+    const sort = urlParams.searchParams.get('sort') === 'ASC' ? 'ASC' : 'DESC';
+
+    const sql = `
+        SELECT
+            a.airline_name,
+            a.airline_code,
+            COUNT(b.booking_id) AS total_bookings
+        FROM airline a
+        LEFT JOIN flights f ON a.airline_id = f.airline_id
+        LEFT JOIN bookings b ON f.flight_id = b.flight_id
+            AND b.booking_date BETWEEN ? AND ?
+        GROUP BY a.airline_id, a.airline_name, a.airline_code
+        ORDER BY total_bookings ${sort};
+    `;
+
+    db.query(sql, [start, end], (err, results) => {
+        if (err) {
+            res.writeHead(500); res.end(JSON.stringify({ error: err.message }));
+        } else {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(results));
+        }
+    });
+    return;
+}
+
+// 3. POPULAR ROUTES
 if (req.url.startsWith("/api/reports/popular-routes")) {
     const urlParams = new URL(req.url, `http://${req.headers.host}`);
     const start = urlParams.searchParams.get('start') || '2026-01-01';

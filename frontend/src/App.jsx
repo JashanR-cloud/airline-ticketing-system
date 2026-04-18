@@ -5,8 +5,8 @@ import MainTabs from './components/main_tabs/MainTabs';
 import LoggedInBanner from "./components/LoggedInBanner";
 import SearchFlightsPanel from "./components/main_tabs/SearchFlightsPanel"
 import ManageBookingsPanel from "./components/main_tabs/ManageBookingsPanel"
-import EmployeeDashboard from "./components/EmployeeDashboard";
 import FlightStatusPanel from "./components/main_tabs/FlightStatusPanel";
+import EmployeeDashboard from "./components/EmployeeDashboard";
 import SystemAdminDashboard from "./components/SystemAdminDashboard";
 import TransactionModal from "./components/TransactionModal";
 import CancelConfirmationModal from "./components/main_tabs/CancelConfirmationModal";
@@ -218,9 +218,6 @@ function App() {
   const [bookingStatusUpdate, setBookingStatusUpdate] = useState({ bookingId: "", status: "Confirmed" });
   const [bookingStatusMsg, setBookingStatusMsg] = useState("");
 
-  // Employee portal section accordion
-  const [empSection, setEmpSection] = useState("passengers");
-
   const [loginData, setLoginData] = useState({ email: "", password: "", role: "Passenger" });
   // Staff Portal login state — separate from passenger login
   const [staffLoginData, setStaffLoginData] = useState({ email: "", password: "" });
@@ -229,7 +226,6 @@ function App() {
 
   // Manage Staff (admin only) — list all staff and create/delete accounts
   const [allStaff, setAllStaff] = useState([]);
-  const [showReportRows, setShowReportRows] = useState(false);
   const [newStaffData, setNewStaffData] = useState({ email: "", password: "", first_name: "", last_name: "", department: "", position: "", role: "Employee" });
   const [staffManageMessage, setStaffManageMessage] = useState("");
   const [flightSearch, setFlightSearch] = useState({ departureCityId: "", arrivalCityId: "", departureDate: "", returnDate: "", passengers: 1 });
@@ -981,23 +977,6 @@ function App() {
     acc[d.departure].push(d);
     return acc;
   }, {});
-
-  // ── Section button helper ──
-  const SectionBtn = ({ id, label }) => (
-    <button
-      type="button"
-      onClick={() => setEmpSection(id)}
-      style={{
-        padding: "8px 18px", borderRadius: "20px", border: "none", cursor: "pointer",
-        fontWeight: "600", fontSize: "13px",
-        background: empSection === id ? "#cf102d" : "#f0f0f0",
-        color: empSection === id ? "#fff" : "#333",
-        transition: "all 0.2s"
-      }}
-    >
-      {label}
-    </button>
-  );
 
 
   return (
@@ -1847,7 +1826,6 @@ function App() {
             isSystemAdmin={isSystemAdmin}
             loggedInUser={loggedInUser}
             loadEmployeePortal={loadEmployeePortal}
-            fetchReports={fetchReports}
           />
         )}
 
@@ -1949,16 +1927,67 @@ function App() {
             />
           )}
 
-          {/* ── Employee Portal ── */}
-          {activeTab === "employee" && (isEmployee || isSystemAdmin) && (
+          {/* ── Employee Dashboard ── */}
+          {activeTab === "employee" && isEmployee && !isSystemAdmin && (
             <EmployeeDashboard
               setActiveTab={setActiveTab}
               setIsEditingPrefs={setIsEditingPrefs}
               prefData={prefData}
               setPrefData={setPrefData}
               handleUpdatePreferences={handleUpdatePreferences}
-              empSection={empSection}
-              setEmpSection={setEmpSection}
+
+              // Passengers
+              allPassengers={allPassengers}
+              loadingPassengers={loadingPassengers}
+              fetchAllPassengers={fetchAllPassengers}
+
+              // Bookings
+              allBookingsAdmin={allBookingsAdmin}
+              loadingAllBookings={loadingAllBookings}
+              fetchAllBookingsAdmin={fetchAllBookingsAdmin}
+              manageData={manageData}
+              handleManageChange={handleManageChange}
+              handleManageSubmit={handleManageSubmit}
+              loadingManage={loadingManage}
+              manageMessage={manageMessage}
+              manageResult={manageResult}
+              handleCancelBooking={handleCancelBooking}
+              handleUpdateBookingStatus={handleUpdateBookingStatus}
+              bookingStatusUpdate={bookingStatusUpdate}
+              setBookingStatusUpdate={setBookingStatusUpdate}
+              bookingStatusMsg={bookingStatusMsg}
+              actionMsg={actionMsg}
+
+              // Flight Status
+              statusData={statusData}
+              handleStatusChange={handleStatusChange}
+              handleStatusSubmit={handleStatusSubmit}
+              loadingStatus={loadingStatus}
+              statusMessage={statusMessage}
+              statusResult={statusResult}
+              allFlights={allFlights}
+              loadingAllFlights={loadingAllFlights}
+
+              // Routes
+              routesWithStatus={routesWithStatus}
+              loadingRoutesStatus={loadingRoutesStatus}
+              fetchRoutesWithStatus={fetchRoutesWithStatus}
+              routeMsg={routeMsg}
+              fetchRouteFlights={fetchRouteFlights}
+              fetchReports={fetchReports}
+              loadingReports={loadingReports}
+              reports={reports}
+            />
+          )}
+
+          {/* ── System Admin Dashboard ── */}
+          {activeTab === "systemAdmin" && isSystemAdmin && (
+            <SystemAdminDashboard
+              setActiveTab={setActiveTab}
+              setIsEditingPrefs={setIsEditingPrefs}
+              prefData={prefData}
+              setPrefData={setPrefData}
+              handleUpdatePreferences={handleUpdatePreferences}
 
               // Passengers
               allPassengers={allPassengers}
@@ -1984,9 +2013,6 @@ function App() {
               adminNewBooking={adminNewBooking}
               setAdminNewBooking={setAdminNewBooking}
               adminNewBookingMsg={adminNewBookingMsg}
-              loadingReports={loadingReports}
-              reports={reports}
-
 
               // Flight Status
               statusData={statusData}
@@ -1998,13 +2024,15 @@ function App() {
               allFlights={allFlights}
               loadingAllFlights={loadingAllFlights}
 
-              // Routes section
+              // Routes
               routesWithStatus={routesWithStatus}
               loadingRoutesStatus={loadingRoutesStatus}
               fetchRoutesWithStatus={fetchRoutesWithStatus}
               routeMsg={routeMsg}
               handleToggleRouteStatus={handleToggleRouteStatus}
               fetchRouteFlights={fetchRouteFlights}
+
+              // Aircraft
               allAircrafts={allAircrafts}
               loadingAircrafts={loadingAircrafts}
               fetchAllAircrafts={fetchAllAircrafts}
@@ -2012,6 +2040,7 @@ function App() {
               setInlineAircraftEdit={setInlineAircraftEdit}
               handleInlineAircraftUpdate={handleInlineAircraftUpdate}
               aircraftMsg={aircraftMsg}
+
               // Admin Actions (CRUD)
               crudAction={crudAction}
               setCrudAction={setCrudAction}
@@ -2022,21 +2051,8 @@ function App() {
               actionMsg={actionMsg}
               fetchReports={fetchReports}
               setCrudMsg={setCrudMsg}
-            />
-          )}
-
-          {/* ── System Admin Dashboard ── */}
-          {activeTab === "systemAdmin" && isSystemAdmin && (
-            <SystemAdminDashboard
-              setActiveTab={setActiveTab}
-              loadEmployeePortal={loadEmployeePortal}
-              // Reports
-              reports={reports}
               loadingReports={loadingReports}
-              fetchReports={fetchReports}
-              showReportRows={showReportRows}
-              setShowReportRows={setShowReportRows}
-              fetchRouteFlights={fetchRouteFlights}
+              reports={reports}
 
               // Staff Management
               allStaff={allStaff}
