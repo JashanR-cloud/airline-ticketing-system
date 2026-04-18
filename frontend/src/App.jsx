@@ -12,7 +12,7 @@ import TransactionModal from "./components/TransactionModal";
 import CancelConfirmationModal from "./components/main_tabs/CancelConfirmationModal";
 import "./components/AccountModal.css";
 
-const API = "https://airline-ticketing-system-gjnr.onrender.com";
+const API = "http://localhost:8000";
 
 const SEAT_OPTIONS = ["No Preference", "Window", "Aisle", "Middle"];
 const MEAL_OPTIONS = ["No Preference", "Standard", "Vegetarian", "Vegan", "Halal", "Kosher", "Gluten-Free", "No Meal"];
@@ -203,6 +203,12 @@ function App() {
   // Late cancellation fee warning
   const [showLateFeeModal, setShowLateFeeModal] = useState(false);
 
+  // Cancellation success popup
+  const [cancelSuccessInfo, setCancelSuccessInfo] = useState(null);
+
+  // Loyalty welcome popup
+  const [showLoyaltyWelcome, setShowLoyaltyWelcome] = useState(false);
+
   const [allAircrafts, setAllAircrafts] = useState([]);
   const [loadingAircrafts, setLoadingAircrafts] = useState(false);
   const [allFlights, setAllFlights] = useState([]);
@@ -283,7 +289,11 @@ function App() {
       const response = await fetch(`${API}/loyalty-balance/${loggedInUser.user_id}`, { headers: getAuthHeaders(false) });
       const data = await response.json();
       if (response.ok) {
-        setLoyaltyModal({ miles: data.miles, tier: data.tier || "Silver", firstName: loggedInUser.first_name });
+        if (data.enrolled) {
+          setLoyaltyModal({ miles: data.miles, tier: data.tier || "Silver", firstName: loggedInUser.first_name });
+        } else {
+          setLoyaltyModal({ notEnrolled: true, firstName: loggedInUser.first_name });
+        }
       }
     } catch { /* silent */ }
   };
@@ -869,7 +879,15 @@ function App() {
       const data = await response.json();
 
       if (response.ok) {
-        setActionMsg({ text: "✅ Booking cancelled successfully.", type: "success" });
+        const booking = userBookings.find(b => b.booking_id === bookingToCancel);
+        setCancelSuccessInfo(booking ? {
+          bookingId: booking.booking_id,
+          flightId: booking.flight_id,
+          departureCity: booking.departure_city,
+          arrivalCity: booking.arrival_city,
+          dateDeparture: booking.date_of_departure,
+          estimatedTime: booking.estimated_time_hours
+        } : { bookingId: bookingToCancel });
         setManageResult(null);
         if (isPassenger) { fetchUserBookings(); }
         if (isEmployee || isSystemAdmin) fetchAllBookingsAdmin();
@@ -1167,7 +1185,58 @@ function App() {
 
       {/* ── Loyalty Modal ── */}
       {loyaltyModal && (() => {
-        const { miles, tier, firstName } = loyaltyModal;
+        const { miles, tier, firstName, notEnrolled } = loyaltyModal;
+
+        if (notEnrolled) {
+          return (
+            <div style={{ position: "fixed", inset: 0, background: "rgba(10,10,20,0.75)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", backdropFilter: "blur(4px)" }}>
+              <div style={{ background: "#fff", borderRadius: "20px", maxWidth: "460px", width: "100%", boxShadow: "0 24px 80px rgba(0,0,0,0.4)", overflow: "hidden" }}>
+                <div style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #94a3b8 100%)", padding: "28px 32px", textAlign: "center" }}>
+                  <div style={{ fontSize: "44px", marginBottom: "6px" }}>🏆</div>
+                  <h2 style={{ margin: "0 0 4px", color: "#fff", fontSize: "20px", fontWeight: "800" }}>Royal Horizon Loyalty</h2>
+                  <p style={{ margin: 0, color: "rgba(255,255,255,0.8)", fontSize: "14px" }}>Welcome, {firstName}!</p>
+                </div>
+                <div style={{ padding: "24px 32px", textAlign: "center" }}>
+                  <div style={{ background: "linear-gradient(135deg, #fff8e1, #fff3cd)", border: "2px solid #ffcc00", borderRadius: "12px", padding: "24px 20px", marginBottom: "20px" }}>
+                    <p style={{ margin: "0 0 12px", fontSize: "18px", fontWeight: "700", color: "#8a6d00" }}>
+                      🎯 Earn Rewards with Every Flight
+                    </p>
+                    <p style={{ margin: "0 0 20px", fontSize: "15px", color: "#555", lineHeight: "1.5" }}>
+                      Join our Royal Horizon Loyalty Program to earn miles, unlock tier benefits, and enjoy free flights and upgrades.
+                    </p>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(`${API}/join-loyalty`, {
+                            method: "POST", headers: getAuthHeaders(true),
+                            body: JSON.stringify({ passengerId: loggedInUser.passenger_id })
+                          });
+                          const data = await response.json();
+                          if (response.ok) {
+                            setLoyaltyModal(null);
+                            setShowLoyaltyWelcome(true);
+                          } else {
+                            alert(data.error || "Failed to join loyalty program.");
+                          }
+                        } catch { alert("Could not connect to server."); }
+                      }}
+                      style={{ background: "#cf102d", color: "#fff", border: "none", borderRadius: "10px", padding: "14px 28px", fontSize: "15px", fontWeight: "700", cursor: "pointer" }}
+                    >
+                      Join Loyalty Program
+                    </button>
+                  </div>
+                </div>
+                <div style={{ padding: "0 28px 20px" }}>
+                  <button onClick={() => setLoyaltyModal(null)}
+                    style={{ width: "100%", padding: "12px", background: "#f0f0f0", border: "none", borderRadius: "10px", fontWeight: "600", fontSize: "14px", cursor: "pointer", color: "#555" }}>
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
         const TIERS = [
           { name: "Silver", threshold: 0,     color: "#94a3b8", next: 1000  },
           { name: "Gold",   threshold: 1000,  color: "#f59e0b", next: 5000  },
@@ -1828,6 +1897,99 @@ function App() {
                 style={{ flex: 1, padding: "14px", background: "#b00020", color: "white",
                   border: "none", borderRadius: "10px", fontWeight: "700", fontSize: "15px", cursor: "pointer" }}>
                 Yes, Cancel Booking
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancellation Success Popup */}
+      {cancelSuccessInfo && (() => {
+        const dep = cancelSuccessInfo.dateDeparture ? new Date(cancelSuccessInfo.dateDeparture) : null;
+        const estHours = cancelSuccessInfo.estimatedTime || 0;
+        const arr = dep && estHours ? new Date(dep.getTime() + estHours * 60 * 60 * 1000) : null;
+        const estH = Math.floor(estHours);
+        const estM = Math.round((estHours - estH) * 60);
+        return (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(10, 10, 20, 0.85)", zIndex: 11000,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "20px", backdropFilter: "blur(6px)"
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: "20px", width: "100%", maxWidth: "420px",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.35)", overflow: "hidden"
+          }}>
+            <div style={{
+              background: "linear-gradient(135deg, #b00020, #cf102d)",
+              padding: "28px 32px", textAlign: "center", color: "#fff"
+            }}>
+              <div style={{ fontSize: "42px", marginBottom: "8px" }}>&#9989;</div>
+              <h2 style={{ margin: 0, fontSize: "22px", fontWeight: "800" }}>Booking Cancelled</h2>
+            </div>
+            <div style={{ padding: "28px 32px", textAlign: "center" }}>
+              <p style={{ fontSize: "16px", color: "#333", marginBottom: "16px" }}>
+                <strong>Booking #{cancelSuccessInfo.bookingId}</strong> has been successfully cancelled.
+              </p>
+              {cancelSuccessInfo.flightId && (
+                <div style={{ textAlign: "left", background: "#f9f9f9", borderRadius: "10px", padding: "14px 18px", fontSize: "14px", color: "#444", lineHeight: "1.8" }}>
+                  <div><strong>Flight ID:</strong> {cancelSuccessInfo.flightId}</div>
+                  <div><strong>Route:</strong> {cancelSuccessInfo.departureCity} &#8594; {cancelSuccessInfo.arrivalCity}</div>
+                  {dep && <div><strong>Departure:</strong> {dep.toLocaleString()}</div>}
+                  {arr && <div><strong>Arrival:</strong> {arr.toLocaleString()}</div>}
+                  {estHours > 0 && <div><strong>Estimated Time:</strong> {estH}h {estM}m</div>}
+                </div>
+              )}
+            </div>
+            <div style={{
+              padding: "20px 28px", borderTop: "1px solid #eee", background: "#fff"
+            }}>
+              <button onClick={() => setCancelSuccessInfo(null)}
+                style={{ width: "100%", padding: "14px", background: "#b00020", color: "white",
+                  border: "none", borderRadius: "10px", fontWeight: "700", fontSize: "15px", cursor: "pointer" }}>
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+        );
+      })()}
+
+      {/* Loyalty Welcome Popup */}
+      {showLoyaltyWelcome && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(10, 10, 20, 0.85)", zIndex: 11000,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "20px", backdropFilter: "blur(6px)"
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: "20px", width: "100%", maxWidth: "420px",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.35)", overflow: "hidden"
+          }}>
+            <div style={{
+              background: "linear-gradient(135deg, #1a1a2e, #cf102d)",
+              padding: "28px 32px", textAlign: "center", color: "#fff"
+            }}>
+              <div style={{ fontSize: "44px", marginBottom: "8px" }}>&#9992;&#65039;</div>
+              <h2 style={{ margin: 0, fontSize: "22px", fontWeight: "800" }}>Welcome to the Royal Horizon Airways Family!</h2>
+            </div>
+            <div style={{ padding: "28px 32px", textAlign: "center" }}>
+              <p style={{ fontSize: "16px", color: "#333", marginBottom: "16px", lineHeight: "1.6" }}>
+                Thank you for choosing us.
+              </p>
+              <div style={{ background: "#fff8e1", border: "2px solid #ffcc00", borderRadius: "12px", padding: "16px 20px" }}>
+                <p style={{ margin: 0, fontSize: "15px", color: "#8a6d00", fontWeight: "600", lineHeight: "1.6" }}>
+                  As a first time gift, users that enroll in the loyalty program get a free <strong>500+ miles!</strong>
+                </p>
+              </div>
+            </div>
+            <div style={{ padding: "20px 28px", borderTop: "1px solid #eee", background: "#fff" }}>
+              <button onClick={() => setShowLoyaltyWelcome(false)}
+                style={{ width: "100%", padding: "14px", background: "#cf102d", color: "white",
+                  border: "none", borderRadius: "10px", fontWeight: "700", fontSize: "15px", cursor: "pointer" }}>
+                OK
               </button>
             </div>
           </div>

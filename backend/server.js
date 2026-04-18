@@ -844,7 +844,9 @@ const server = http.createServer((req, res) => {
               ]);
             }
             
-            // 5. Loyalty Program Logic
+            // 5. Loyalty Program — award miles based on ticket price * 1.5
+            const milesEarned = Math.floor(total_amount * 1.5);
+
             db.query(
               "SELECT miles_balance, tier FROM loyalty_program WHERE passenger_id = ?",
               [passenger_id],
@@ -863,32 +865,29 @@ const server = http.createServer((req, res) => {
                   const oldMiles = loyRows[0].miles_balance || 0;
                   const oldTier = loyRows[0].tier;
 
-                  newMiles = oldMiles + 500;   // 500 miles per booking
+                  newMiles = oldMiles + milesEarned;
 
                   if (newMiles >= 10000) newTier = "Diamond";
                   else if (newMiles >= 5000) newTier = "Platinum";
                   else if (newMiles >= 1000) newTier = "Gold";
                   else newTier = oldTier;
 
-                  // Update loyalty
                   db.query(
                     "UPDATE loyalty_program SET miles_balance = ?, tier = ? WHERE passenger_id = ?",
                     [newMiles, newTier, passenger_id],
                     (updErr) => { if (updErr) console.error("Loyalty update failed:", updErr); }
                   );
 
-                  // Detect milestone
                   if (oldTier === "Silver" && newTier === "Gold") milestone = { tier: "Gold", miles: newMiles };
                   if (oldTier === "Gold" && newTier === "Platinum") milestone = { tier: "Platinum", miles: newMiles };
                   if (oldTier === "Platinum" && newTier === "Diamond") milestone = { tier: "Diamond", miles: newMiles };
                 }
 
-                // Final response
                 sendJson(res, 200, {
                   success: true,
                   booking_id,
                   payment_id,
-                  miles_earned: isEnrolled ? 500 : 0,
+                  miles_earned: isEnrolled ? milesEarned : 0,
                   new_miles: newMiles,
                   new_tier: newTier,
                   milestone,
@@ -960,58 +959,19 @@ const server = http.createServer((req, res) => {
  
                 console.log("[5] Passenger linked");
  
-                // Check loyalty enrollment — only enrolled members earn miles
-                db.query(
-                  "SELECT miles_balance, tier FROM loyalty_program WHERE passenger_id = ?",
-                  [passengerId],
-                  (loyErr, loyRows) => {
-                    if (loyErr) {
-                      console.error("=== LOYALTY SELECT FAILED ===", loyErr);
-                      return sendJson(res, 500, { error: loyErr.message });
-                    }
- 
-                    const isEnrolled = loyRows.length > 0;
-                    let newMiles = 0;
-                    let newTier = null;
-                    let milestone = null;
- 
-                    if (isEnrolled) {
-                      // Loyalty member — award 500 miles per booking
-                      const oldMiles = loyRows[0].miles_balance || 0;
-                      const oldTier  = loyRows[0].tier;
-                      newMiles = oldMiles + 500;
- 
-                      if (newMiles >= 10000)     newTier = "Diamond";
-                      else if (newMiles >= 5000) newTier = "Platinum";
-                      else if (newMiles >= 1000) newTier = "Gold";
-                      else                       newTier = oldTier;
- 
-                      db.query(
-                        "UPDATE loyalty_program SET miles_balance = ?, tier = ? WHERE passenger_id = ?",
-                        [newMiles, newTier, passengerId],
-                        (updErr) => { if (updErr) console.error("LOYALTY UPDATE FAILED:", updErr); }
-                      );
- 
-                      // Detect tier crossing for the milestone celebration banner
-                      if (oldTier === "Silver"   && newTier === "Gold")     milestone = { tier: "Gold",     miles: newMiles };
-                      if (oldTier === "Gold"     && newTier === "Platinum") milestone = { tier: "Platinum", miles: newMiles };
-                      if (oldTier === "Platinum" && newTier === "Diamond")  milestone = { tier: "Diamond",  miles: newMiles };
-                    }
-                    // Non-members: booking succeeds, 0 miles awarded
- 
-                    console.log("[6] SUCCESS — enrolled:", isEnrolled, "| miles awarded:", isEnrolled ? 500 : 0);
- 
-                    return sendJson(res, 201, {
-                      message: "Booked!",
-                      booking_id: bookingId,
-                      miles_earned: isEnrolled ? 500 : 0,
-                      new_miles: newMiles,
-                      new_tier: newTier,
-                      milestone,
-                      not_enrolled: !isEnrolled, // frontend uses this to show "join loyalty" nudge
-                    });
-                  }
-                );
+                // Check loyalty enrollment — award miles based on route distance
+                // No miles awarded for free/staff bookings
+                console.log("[6] SUCCESS — no miles awarded (free/staff booking)");
+
+                return sendJson(res, 201, {
+                  message: "Booked!",
+                  booking_id: bookingId,
+                  miles_earned: 0,
+                  new_miles: 0,
+                  new_tier: null,
+                  milestone: null,
+                  not_enrolled: false,
+                });
               }
             );
           }
@@ -1080,9 +1040,12 @@ const server = http.createServer((req, res) => {
       const bookingId = body.bookingId;
 
       db.query(`
-        SELECT b.user_id, b.flight_id, b.payment_id, b.num_passengers
+        SELECT b.user_id, b.flight_id, b.payment_id, b.num_passengers,
+               bp.passenger_id, p.amount AS payment_amount
         FROM bookings b
-        WHERE booking_id = ? 
+        LEFT JOIN booking_passengers bp ON b.booking_id = bp.booking_id
+        LEFT JOIN payment p ON b.payment_id = p.payment_id
+        WHERE b.booking_id = ?
         LIMIT 1
       `, [bookingId], (checkErr, rows) => {
         if (checkErr) return sendJson(res, 500, { error: checkErr.message });
@@ -1093,6 +1056,8 @@ const server = http.createServer((req, res) => {
         const flightId = booking.flight_id;
         const paymentId = booking.payment_id;
         const numPassengers = Number(booking.num_passengers) || 1;
+        const passengerId = booking.passenger_id;
+        const milesToDeduct = Math.floor((booking.payment_amount || 0) * 1.5);
 
         const canCancel = isStaff(requester.role) || (requester.role === "Passenger" && requester.userId === bookingOwnerId);
         if (!canCancel) return deny(res);
@@ -1119,7 +1084,20 @@ const server = http.createServer((req, res) => {
                 });
               }
 
-              // 4. Delete from booking_passengers
+              // 4. Deduct loyalty miles if passenger is enrolled
+              if (passengerId && milesToDeduct > 0) {
+                db.query(
+                  `UPDATE loyalty_program
+                   SET miles_balance = GREATEST(miles_balance - ?, 0)
+                   WHERE passenger_id = ?`,
+                  [milesToDeduct, passengerId],
+                  (milesErr) => {
+                    if (milesErr) console.error("Failed to deduct loyalty miles:", milesErr.message);
+                  }
+                );
+              }
+
+              // 5. Delete from booking_passengers
               db.query("DELETE FROM booking_passengers WHERE booking_id = ?", [bookingId], (err4) => {
                 if (err4) return db.rollback(() => sendJson(res, 500, { error: err4.message }));
 

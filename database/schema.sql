@@ -309,6 +309,13 @@ BEGIN
   END IF;
 END//
 
+CREATE TRIGGER first_time_loyalty
+BEFORE INSERT ON loyalty_program
+FOR EACH ROW
+BEGIN
+  SET NEW.miles_balance = NEW.miles_balance + 500;
+END//
+
 DELIMITER ;
 
 
