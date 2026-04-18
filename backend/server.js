@@ -436,7 +436,7 @@ const server = http.createServer((req, res) => {
  
     // Try with membership_number; fall back if that column doesn't exist in this DB
     const tryQuery = (withMembership) => {
-      const cols = withMembership ? 'lp.miles_balance, lp.tier, lp.membership_number' : 'lp.miles_balance, lp.tier';
+      const cols = withMembership ? 'lp.miles_balance, lp.tier, lp.membership_number, lp.discount' : 'lp.miles_balance, lp.tier, lp.discount';
       const sql = `SELECT ${cols} FROM loyalty_program lp JOIN user_account ua ON ua.passenger_id = lp.passenger_id WHERE ua.user_id = ? LIMIT 1`;
       db.query(sql, [requestedUserId], (err, results) => {
         if (err && withMembership) return tryQuery(false); // retry without membership_number
@@ -447,6 +447,7 @@ const server = http.createServer((req, res) => {
             miles: results[0].miles_balance,
             tier: results[0].tier,
             membership_number: results[0].membership_number || null,
+            discount: parseFloat(results[0].discount) || 0,
           });
         } else {
           sendJson(res, 200, { enrolled: false });
@@ -787,13 +788,21 @@ const server = http.createServer((req, res) => {
         num_passengers
       } = body;
 
-      //  Create Payment
+      // Check for loyalty tier discount
+      db.query(
+        `SELECT discount FROM loyalty_program WHERE passenger_id = ?`,
+        [passenger_id],
+        (discErr, discRows) => {
+          const discount = (!discErr && discRows.length > 0 && discRows[0].discount) ? parseFloat(discRows[0].discount) : 0;
+          const discounted_amount = Math.round((total_amount * (1 - discount)) * 100) / 100;
+          const discounted_base = Math.round((base_fare * (1 - discount)) * 100) / 100;
+
       const paymentSql = `
         INSERT INTO payment (amount, base_fare, taxes, payment_status, transaction_date)
         VALUES (?, ?, ?, 'Successful', CURDATE())
       `;
 
-      db.query(paymentSql, [total_amount, base_fare, taxes], (err, paymentResult) => {
+      db.query(paymentSql, [discounted_amount, discounted_base, taxes], (err, paymentResult) => {
         if (err) return sendJson(res, 500, { error: err.message });
 
         const payment_id = paymentResult.insertId;
@@ -845,7 +854,7 @@ const server = http.createServer((req, res) => {
             }
             
             // 5. Loyalty Program — award miles based on ticket price * 1.5
-            const milesEarned = Math.floor(total_amount * 1.5);
+            const milesEarned = Math.floor(discounted_amount * 1.5);
 
             db.query(
               "SELECT miles_balance, tier FROM loyalty_program WHERE passenger_id = ?",
@@ -891,17 +900,20 @@ const server = http.createServer((req, res) => {
                   new_miles: newMiles,
                   new_tier: newTier,
                   milestone,
-                  not_enrolled: !isEnrolled
+                  not_enrolled: !isEnrolled,
+                  discount,
+                  discounted_amount
                 });
               }
             );
           });
         });
       });
+      }); // end discount lookup
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body" }));
     return;
   }
- 
+
   // ─────────────────────────────────────────────────────────────────────────
   // POST /book-flight
   // CHANGED: Miles are now only awarded to passengers who have enrolled in

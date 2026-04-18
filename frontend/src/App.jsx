@@ -209,6 +209,9 @@ function App() {
   // Loyalty welcome popup
   const [showLoyaltyWelcome, setShowLoyaltyWelcome] = useState(false);
 
+  // Loyalty tier discount
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
+
   const [allAircrafts, setAllAircrafts] = useState([]);
   const [loadingAircrafts, setLoadingAircrafts] = useState(false);
   const [allFlights, setAllFlights] = useState([]);
@@ -261,6 +264,18 @@ function App() {
   };
 
   useEffect(() => { fetchAirports(); fetchCities(); }, []);
+
+  // Fetch loyalty discount when user logs in
+  useEffect(() => {
+    if (loggedInUser && loggedInUser.role === "Passenger") {
+      fetch(`${API}/loyalty-balance/${loggedInUser.user_id}`, { headers: getAuthHeaders(false) })
+        .then(r => r.json())
+        .then(data => { if (data.enrolled) setLoyaltyDiscount(data.discount || 0); else setLoyaltyDiscount(0); })
+        .catch(() => setLoyaltyDiscount(0));
+    } else {
+      setLoyaltyDiscount(0);
+    }
+  }, [loggedInUser]);
 
   useEffect(() => {
     if (loggedInUser && activeTab === "manage") {
@@ -1844,6 +1859,7 @@ function App() {
         loggedInUser={loggedInUser}
         numPassengers={selectedFlightForTransaction?.numPassengers || 1}
         onConfirmBooking={handleProcessPayment}
+        loyaltyDiscount={loyaltyDiscount}
       />
 
       {/* Cancel Confirmation Modal */}
@@ -2107,6 +2123,7 @@ function App() {
               loggedInUser={loggedInUser}
               isPassenger={isPassenger}
               canBook={canBook}
+              loyaltyDiscount={loyaltyDiscount}
             />
           )}
 

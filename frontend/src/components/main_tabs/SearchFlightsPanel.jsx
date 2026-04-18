@@ -58,6 +58,7 @@ const SearchFlightsPanel = ({
   loggedInUser,
   isPassenger,
   canBook,
+  loyaltyDiscount = 0,
 }) => {
   return (
     <>
@@ -555,8 +556,22 @@ const SearchFlightsPanel = ({
                             style={{ marginTop: "12px", width: "auto", minWidth: "280px" }} 
                             onClick={() => handleBookFlight(flight, selectedClass[flight.flight_id] || "economy", Number(flightSearch.passengers) || 1)}
                             >
-                            Book This Flight — ${getPriceForClass(flight, selectedClass[flight.flight_id] || "economy")}
-                            {selectedPackage && VACATION_PACKAGES.some((p) => p.id === selectedPackage.id && p.arrival === flight.arrival_airport) ? ` + ${selectedPackage.name}` : ""}
+                            {(() => {
+                              const pricePerPerson = getPriceForClass(flight, selectedClass[flight.flight_id] || "economy");
+                              const numPax = Number(flightSearch.passengers) || 1;
+                              const originalTotal = (pricePerPerson * numPax).toFixed(2);
+                              const discountedTotal = loyaltyDiscount > 0 ? (pricePerPerson * numPax * (1 - loyaltyDiscount)).toFixed(2) : null;
+                              return (
+                                <>
+                                  Book This Flight — {discountedTotal ? (
+                                    <><span style={{ textDecoration: "line-through", opacity: 0.7 }}>${originalTotal}</span> ${discountedTotal}</>
+                                  ) : (
+                                    <>${originalTotal}</>
+                                  )}
+                                  {selectedPackage && VACATION_PACKAGES.some((p) => p.id === selectedPackage.id && p.arrival === flight.arrival_airport) ? ` + ${selectedPackage.name}` : ""}
+                                </>
+                              );
+                            })()}
                             </button>
                         </>
                         ) : null

@@ -9,7 +9,8 @@ const TransactionModal = ({
   getPriceForClass,
   loggedInUser,
   onConfirmBooking,
-  numPassengers = 1
+  numPassengers = 1,
+  loyaltyDiscount = 0
 }) => {
   const [activeTab, setActiveTab] = useState("summary");
   const [useSavedCard, setUseSavedCard] = useState(true);
@@ -57,10 +58,13 @@ const TransactionModal = ({
 
   if (!isOpen || !flight) return null;
 
-const baseFarePerTicket = Number(getPriceForClass(flight, selectedCabinClass)) || 0;
+  const baseFarePerTicket = Number(getPriceForClass(flight, selectedCabinClass)) || 0;
   const baseFareTotal = Number((baseFarePerTicket * numPassengers).toFixed(2));
-  const taxes = Number((baseFareTotal * 0.18).toFixed(2));
-  const total = Number((baseFareTotal + taxes).toFixed(2));
+  const discountAmount = loyaltyDiscount > 0 ? Number((baseFareTotal * loyaltyDiscount).toFixed(2)) : 0;
+  const discountedBase = Number((baseFareTotal - discountAmount).toFixed(2));
+  const taxes = Number((discountedBase * 0.18).toFixed(2));
+  const total = Number((discountedBase + taxes).toFixed(2));
+  const tierName = loyaltyDiscount >= 0.15 ? "Diamond" : loyaltyDiscount >= 0.10 ? "Platinum" : loyaltyDiscount >= 0.05 ? "Gold" : null;
 
   const handlePayNow = () => {
     if (!useSavedCard) {
@@ -190,6 +194,11 @@ const baseFarePerTicket = Number(getPriceForClass(flight, selectedCabinClass)) |
               <div style={{ background: "#f8f9fa", padding: "20px", borderRadius: "12px", marginBottom: "24px" }}>
                 <p style={{marginBottom: "25px"}}><strong>PRICE DETAILS</strong></p>
                 <p><strong>Base Fare ({selectedCabinClass}) × {numPassengers} passenger{numPassengers > 1 ? 's' : ''}:</strong> ${baseFareTotal.toFixed(2)}</p>
+                {loyaltyDiscount > 0 && (
+                  <p style={{ color: "#1a6e3c", fontWeight: "600" }}>
+                    <strong>{tierName} Discount ({(loyaltyDiscount * 100).toFixed(0)}%):</strong> -${discountAmount.toFixed(2)}
+                  </p>
+                )}
                 <p><strong>Taxes & Fees (18%):</strong> ${taxes.toFixed(2)}</p>
                 <hr style={{ margin: "12px 0" }} />
                 <p style={{ fontSize: "22px", fontWeight: "700", margin: 0 }}>

@@ -309,6 +309,17 @@ BEGIN
   END IF;
 END//
 
+CREATE TRIGGER tier_discount
+BEFORE UPDATE ON loyalty_program
+FOR EACH ROW
+BEGIN
+  IF NEW.tier = 'Gold' THEN SET NEW.discount = 0.05;
+  ELSEIF NEW.tier = 'Platinum' THEN SET NEW.discount = 0.10;
+  ELSEIF NEW.tier = 'Diamond' THEN SET NEW.discount = 0.15;
+  ELSE SET NEW.discount = 0.00;
+  END IF;
+END//
+
 CREATE TRIGGER first_time_loyalty
 BEFORE INSERT ON loyalty_program
 FOR EACH ROW
