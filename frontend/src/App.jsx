@@ -2435,6 +2435,21 @@ const handleOpenLoyaltySignup = () => {
               loadingPassengers={loadingPassengers}
               fetchAllPassengers={fetchAllPassengers}
 
+              // Bookings
+              searchByUserId={searchByUserId}
+              searchByName={searchByName}
+              setSearchByUserId={setSearchByUserId}
+              setSearchByName={setSearchByName}
+              searchResults={searchResults}
+              handleSearchBookings={handleSearchBookings}
+              isEditingPrefs={isEditingPrefs}
+              setSelectedPassenger={setSelectedPassenger}
+              handlePassengerSearch={handlePassengerSearch}
+              passengerSuggestions={passengerSuggestions}
+              setPassengerSuggestions={setPassengerSuggestions}
+              selectedPassenger={selectedPassenger}
+              handleCancelBooking={handleCancelBooking}
+
               // Flight Status
               statusData={statusData}
               handleStatusChange={handleStatusChange}
