@@ -598,10 +598,13 @@ function App() {
           departure: selectedFlightForTransaction?.flight?.departure_city || "Departure",
           destination: selectedFlightForTransaction?.flight?.arrival_city || "Destination",
           passengerName: `${loggedInUser?.first_name || ''} ${loggedInUser?.last_name || ''}`.trim() || loggedInUser?.email || "Passenger",
+          cabinClass: selectedFlightForTransaction?.cabinClass || "economy",
           isFree: false,            
           milesUsed: 0,
           milesEarned: Math.floor(paymentData.total_amount * 1.5),
-          totalMiles: 10000,     
+          totalMiles: result.new_miles || 10000, 
+          milestone: result.milestone || null,
+          not_enrolled: result.not_enrolled || false,  
         });
 
       } else {
@@ -999,86 +1002,105 @@ function App() {
                 </div>
               </div>
 
-              {/* Miles earned / used banner */}
-              <div style={{
-                background: bookingConfirm.isFree ? "linear-gradient(135deg, #e8f5e9, #f1fff5)" : "linear-gradient(135deg, #fff8e1, #fff3cd)",
-                border: `2px solid ${bookingConfirm.isFree ? "#1a6e3c" : "#ffcc00"}`, borderRadius: "12px",
-                padding: "18px 20px", marginBottom: "16px", textAlign: "center"
-              }}>
-                <p style={{ margin: "0 0 6px", fontSize: "13px", color: bookingConfirm.isFree ? "#1a4d2e" : "#8a6d00", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.8px" }}>
-                  {bookingConfirm.isFree ? "🎟️ Free Flight Redeemed" : "🏆 Royal Horizon Loyalty Points"}
-                </p>
-                <div style={{ display: "flex", justifyContent: "center", gap: "32px", marginTop: "8px" }}>
-                  {bookingConfirm.isFree ? (
-                    <>
-                      <div>
-                        <p style={{ margin: "0 0 2px", fontSize: "26px", fontWeight: "800", color: "#b00020" }}>-{bookingConfirm.milesUsed}</p>
-                        <p style={{ margin: 0, fontSize: "12px", color: "#888" }}>Miles Used</p>
-                      </div>
-                      <div style={{ width: "1px", background: "#1a6e3c", opacity: 0.3 }} />
-                      <div>
-                        <p style={{ margin: "0 0 2px", fontSize: "26px", fontWeight: "800", color: "#1a6e3c" }}>{bookingConfirm.totalMiles.toLocaleString()}</p>
-                        <p style={{ margin: 0, fontSize: "12px", color: "#888" }}>Miles Remaining</p>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <p style={{ margin: "0 0 2px", fontSize: "26px", fontWeight: "800", color: "#cf102d" }}>+{bookingConfirm.milesEarned}</p>
-                        <p style={{ margin: 0, fontSize: "12px", color: "#888" }}>Miles Earned</p>
-                      </div>
-                      <div style={{ width: "1px", background: "#e0c800", opacity: 0.5 }} />
-                      <div>
-                        <p style={{ margin: "0 0 2px", fontSize: "26px", fontWeight: "800", color: "#1a6e3c" }}>{bookingConfirm.totalMiles.toLocaleString()}</p>
-                        <p style={{ margin: 0, fontSize: "12px", color: "#888" }}>Total Miles</p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Milestone badge if tier crossed */}
-              {bookingConfirm.milestone && (
-                <div style={{ background: "#fce4ec", border: "1px solid #f48fb1", borderRadius: "10px", padding: "12px 16px", marginBottom: "16px", textAlign: "center" }}>
-                  <p style={{ margin: 0, fontSize: "14px", fontWeight: "700", color: "#b00020" }}>
-                    🎉 You've reached <strong>{bookingConfirm.milestone.tier} Tier</strong>! Welcome to exclusive benefits.
+              {/* Cabin Class */}
+              {bookingConfirm.cabinClass && (
+                <div style={{ 
+                  background: "#f0f9ff", 
+                  border: "1px solid #7dd3fc", 
+                  borderRadius: "10px", 
+                  padding: "12px 16px", 
+                  marginBottom: "20px" 
+                }}>
+                  <p style={{ margin: 0, fontSize: "14px", color: "#0369a1", fontWeight: "600" }}>
+                    Cabin Class: <span style={{ textTransform: "capitalize" }}>{bookingConfirm.cabinClass}</span>
                   </p>
                 </div>
               )}
 
-              {/* Package added summary */}
-              {bookingConfirm.packageAdded && (
-                <div style={{ background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)", border: "1.5px solid #7dd3fc", borderRadius: "12px", padding: "14px 16px", marginBottom: "16px" }}>
-                  <p style={{ margin: "0 0 8px", fontSize: "12px", fontWeight: "700", color: "#0369a1", textTransform: "uppercase", letterSpacing: "0.5px" }}>📦 Vacation Package Included</p>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+              {/* Loyalty / Miles Section */}
+              {bookingConfirm.not_enrolled ? (
+                /* ── NOT ENROLLED ── */
+                <div style={{
+                  background: "linear-gradient(135deg, #fff8e1, #fff3cd)",
+                  border: "2px solid #ffcc00",
+                  borderRadius: "12px",
+                  padding: "24px 20px",
+                  marginBottom: "24px",
+                  textAlign: "center"
+                }}>
+                  <p style={{ margin: "0 0 12px", fontSize: "18px", fontWeight: "700", color: "#8a6d00" }}>
+                    🎯 Earn Rewards with Every Flight
+                  </p>
+                  <p style={{ margin: "0 0 20px", fontSize: "15px", color: "#555", lineHeight: "1.5" }}>
+                    Join our Royal Horizon Loyalty Program to earn miles, unlock tier benefits, and enjoy free flights and upgrades.
+                  </p>
+                  <button 
+                    onClick={() => {
+                      setBookingConfirm(null);
+                      // TODO: Open loyalty enrollment modal or navigate to loyalty page
+                      alert("Loyalty Program enrollment coming soon! (Placeholder)");
+                    }}
+                    style={{
+                      background: "#cf102d",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "10px",
+                      padding: "14px 28px",
+                      fontSize: "15px",
+                      fontWeight: "700",
+                      cursor: "pointer"
+                    }}
+                  >
+                    Join Loyalty Program
+                  </button>
+                </div>
+              ) : (
+                /* ── ENROLLED MEMBER ── */
+                <div style={{
+                  background: "linear-gradient(135deg, #e8f5e9, #f1fff5)",
+                  border: "2px solid #1a6e3c",
+                  borderRadius: "12px",
+                  padding: "18px 20px",
+                  marginBottom: "16px",
+                  textAlign: "center"
+                }}>
+                  <p style={{ margin: "0 0 6px", fontSize: "13px", color: "#1a4d2e", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.8px" }}>
+                    🏆 Royal Horizon Loyalty Points
+                  </p>
+                  <div style={{ display: "flex", justifyContent: "center", gap: "32px", marginTop: "8px" }}>
                     <div>
-                      <p style={{ margin: "0 0 2px", fontWeight: "800", fontSize: "14px", color: "#1a1a2e" }}>{bookingConfirm.packageAdded.emoji} {bookingConfirm.packageAdded.name}</p>
-                      <p style={{ margin: 0, fontSize: "12px", color: "#555" }}>{bookingConfirm.packageAdded.city} · {bookingConfirm.packageAdded.duration} nights · {bookingConfirm.packageAdded.meals}</p>
+                      <p style={{ margin: "0 0 2px", fontSize: "26px", fontWeight: "800", color: "#cf102d" }}>
+                        +{bookingConfirm.milesEarned}
+                      </p>
+                      <p style={{ margin: 0, fontSize: "12px", color: "#888" }}>Miles Earned</p>
                     </div>
-                    <div style={{ textAlign: "right" }}>
-                      <p style={{ margin: 0, fontSize: "18px", fontWeight: "800", color: "#0369a1" }}>${bookingConfirm.packageAdded.price}<span style={{ fontSize: "11px", color: "#888", fontWeight: "400" }}>/person</span></p>
+                    <div style={{ width: "1px", background: "#e0c800", opacity: 0.5 }} />
+                    <div>
+                      <p style={{ margin: "0 0 2px", fontSize: "26px", fontWeight: "800", color: "#1a6e3c" }}>
+                        {bookingConfirm.totalMiles.toLocaleString()}
+                      </p>
+                      <p style={{ margin: 0, fontSize: "12px", color: "#888" }}>Total Miles</p>
                     </div>
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "8px" }}>
-                    {bookingConfirm.packageAdded.activities?.slice(0,3).map((a) => (
-                      <span key={a} style={{ background: "rgba(3,105,161,0.08)", color: "#0369a1", fontSize: "10px", fontWeight: "600", padding: "2px 8px", borderRadius: "999px" }}>✓ {a}</span>
-                    ))}
                   </div>
                 </div>
               )}
 
-              {/* Congratulations message */}
-              <div style={{ background: "#f0faf4", border: "1px solid #a8d5b5", borderRadius: "10px", padding: "14px 16px", marginBottom: "24px" }}>
-                {bookingConfirm.isFree ? (
-                  <p style={{ margin: 0, fontSize: "14px", color: "#1a4d2e", lineHeight: "1.6" }}>
-                    🎟️ <strong>Enjoy your free flight, {bookingConfirm.passengerName.split(" ")[0]}!</strong> You redeemed <strong>1,000 miles</strong> for this booking. You have <strong>{bookingConfirm.totalMiles.toLocaleString()} miles</strong> remaining — keep flying to earn more rewards!
+              {/* Milestone Badge (only for enrolled members) */}
+              {!bookingConfirm.not_enrolled && bookingConfirm.milestone && (
+                <div style={{ 
+                  background: "#fce4ec", 
+                  border: "1px solid #f48fb1", 
+                  borderRadius: "10px", 
+                  padding: "12px 16px", 
+                  marginBottom: "20px", 
+                  textAlign: "center" 
+                }}>
+                  <p style={{ margin: 0, fontSize: "14px", fontWeight: "700", color: "#b00020" }}>
+                    🎉 You've reached <strong>{bookingConfirm.milestone.tier} Tier</strong>! 
+                    Welcome to exclusive benefits.
                   </p>
-                ) : (
-                  <p style={{ margin: 0, fontSize: "14px", color: "#1a4d2e", lineHeight: "1.6" }}>
-                    🎊 <strong>Congratulations, {bookingConfirm.passengerName.split(" ")[0]}!</strong> With <strong>{bookingConfirm.totalMiles.toLocaleString()} miles</strong> in your account, you're on your way to free flights, seat upgrades, and exclusive Royal Horizon rewards. {bookingConfirm.totalMiles >= 1000 ? "You already have enough miles to redeem a free flight!" : `Earn ${(1000 - bookingConfirm.totalMiles).toLocaleString()} more miles to unlock a free flight!`}
-                  </p>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Actions */}
               <div style={{ display: "flex", gap: "12px" }}>

@@ -186,6 +186,7 @@ const TransactionModal = ({
           {activeTab === "payment" && (
             <div>
               <div style={{ background: "#f8f9fa", padding: "20px", borderRadius: "12px", marginBottom: "24px" }}>
+                <p style={{marginBottom: "25px"}}><strong>PRICE DETAILS</strong></p>
                 <p><strong>Base Fare ({selectedCabinClass}) × {numPassengers} passenger{numPassengers > 1 ? 's' : ''}:</strong> ${baseFareTotal.toFixed(2)}</p>
                 <p><strong>Taxes & Fees (18%):</strong> ${taxes.toFixed(2)}</p>
                 <hr style={{ margin: "12px 0" }} />

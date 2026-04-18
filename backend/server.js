@@ -784,10 +784,10 @@ const server = http.createServer((req, res) => {
         card_expiration_date,
         card_security_code,
         passenger_id,
-        num_passengers = 1
+        num_passengers
       } = body;
 
-      // 1. Create Payment
+      //  Create Payment
       const paymentSql = `
         INSERT INTO payment (amount, base_fare, taxes, payment_status, transaction_date)
         VALUES (?, ?, ?, 'Successful', CURDATE())
@@ -798,7 +798,7 @@ const server = http.createServer((req, res) => {
 
         const payment_id = paymentResult.insertId;
 
-        // 2. Create Booking
+        // Create Booking
         const bookingSql = `
           INSERT INTO bookings 
             (user_id, flight_id, booking_status, booking_date, payment_id, cabin_class, num_passengers)
@@ -810,6 +810,7 @@ const server = http.createServer((req, res) => {
 
           const booking_id = bookingResult.insertId;
 
+          // Link passenger
           const bpSql = `
             INSERT INTO booking_passengers (booking_id, passenger_id)
             VALUES (?, ?)
@@ -842,12 +843,59 @@ const server = http.createServer((req, res) => {
                 card_name, card_number, card_expiration_date, card_security_code, requester.userId
               ]);
             }
+            
+            // 5. Loyalty Program Logic
+            db.query(
+              "SELECT miles_balance, tier FROM loyalty_program WHERE passenger_id = ?",
+              [passenger_id],
+              (loyErr, loyRows) => {
+                if (loyErr) {
+                  console.error("Loyalty check failed:", loyErr);
+                  return sendJson(res, 200, { success: true, booking_id, payment_id, not_enrolled: true });
+                }
 
-            sendJson(res, 200, { 
-              success: true, 
-              booking_id,
-              payment_id 
-            });
+                const isEnrolled = loyRows.length > 0;
+                let newMiles = 0;
+                let newTier = null;
+                let milestone = null;
+
+                if (isEnrolled) {
+                  const oldMiles = loyRows[0].miles_balance || 0;
+                  const oldTier = loyRows[0].tier;
+
+                  newMiles = oldMiles + 500;   // 500 miles per booking
+
+                  if (newMiles >= 10000) newTier = "Diamond";
+                  else if (newMiles >= 5000) newTier = "Platinum";
+                  else if (newMiles >= 1000) newTier = "Gold";
+                  else newTier = oldTier;
+
+                  // Update loyalty
+                  db.query(
+                    "UPDATE loyalty_program SET miles_balance = ?, tier = ? WHERE passenger_id = ?",
+                    [newMiles, newTier, passenge],
+                    (updErr) => { if (updErr) console.error("Loyalty update failed:", updErr); }
+                  );
+
+                  // Detect milestone
+                  if (oldTier === "Silver" && newTier === "Gold") milestone = { tier: "Gold", miles: newMiles };
+                  if (oldTier === "Gold" && newTier === "Platinum") milestone = { tier: "Platinum", miles: newMiles };
+                  if (oldTier === "Platinum" && newTier === "Diamond") milestone = { tier: "Diamond", miles: newMiles };
+                }
+
+                // Final response
+                sendJson(res, 200, {
+                  success: true,
+                  booking_id,
+                  payment_id,
+                  miles_earned: isEnrolled ? 500 : 0,
+                  new_miles: newMiles,
+                  new_tier: newTier,
+                  milestone,
+                  not_enrolled: !isEnrolled
+                });
+              }
+            );
           });
         });
       });
