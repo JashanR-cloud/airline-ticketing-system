@@ -22,16 +22,6 @@ const ManageBookingsPanel = ({
   handleUpdatePreferences,
   actionMsg,
   setActiveTab,
-
-  // Admin-specific (dropdown + search)
-  manageData,
-  handleManageChange,
-  handleManageSubmit,
-  loadingAllBookings,
-  allBookingsAdmin,
-  manageMessage,
-  manageResult,
-  loadingManage,
 }) => {
   return (
     <div className="login-form">
@@ -64,53 +54,7 @@ const ManageBookingsPanel = ({
         />
       ) : (
         /* EMPLOYEE / SYSTEM ADMIN: Dropdown view */
-        <form onSubmit={handleManageSubmit}>
-          <div className="form-group">
-            <label>Select Booking</label>
-            <select 
-              name="bookingId" 
-              value={manageData.bookingId} 
-              onChange={handleManageChange} 
-              required 
-              disabled={loadingAllBookings}
-            >
-              <option value="">
-                {loadingAllBookings ? "Loading bookings..." : "-- Select a Booking --"}
-              </option>
-              {allBookingsAdmin.map((b) => (
-                <option key={b.booking_id} value={b.booking_id}>
-                  #{b.booking_id} — {b.first_name} {b.last_name} ({b.booking_status})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button 
-            type="submit" 
-            className="primary-btn" 
-            disabled={!manageData.bookingId}
-          >
-            {loadingManage ? "Searching..." : "View Details"}
-          </button>
-
-          {manageMessage && (
-            <p style={{ marginTop: "14px", fontSize: "18px" }}>{manageMessage}</p>
-          )}
-
-          {manageResult && (
-            <BookingResultCard
-              result={manageResult}
-              onCancel={onCancelBooking}
-              showPrefs={true}
-              isEditingPrefs={isEditingPrefs}
-              setIsEditingPrefs={setIsEditingPrefs}
-              prefData={prefData}
-              setPrefData={setPrefData}
-              handleUpdatePreferences={handleUpdatePreferences}
-              actionMsg={actionMsg}
-            />
-          )}
-        </form>
+        <p><strong>USE THE DASHBOARD TO MANAGE BOOKINGS</strong></p>
       )}
     </div>
   );

@@ -144,7 +144,6 @@ function App() {
   const [loadingAirports, setLoadingAirports] = useState(true);
   const [loadingFlights, setLoadingFlights] = useState(false);
   const [loadingLogin, setLoadingLogin] = useState(false);
-  const [loadingManage, setLoadingManage] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [loadingUserBookings, setLoadingUserBookings] = useState(false);
 
@@ -232,11 +231,6 @@ function App() {
   const [loadingPassengers, setLoadingPassengers] = useState(false);
   const [allBookingsAdmin, setAllBookingsAdmin] = useState([]);
   const [loadingAllBookings, setLoadingAllBookings] = useState(false);
-
-  const [adminNewBooking, setAdminNewBooking] = useState({ userId: "", passengerId: "" });
-  const [adminNewBookingMsg, setAdminNewBookingMsg] = useState("");
-  const [bookingStatusUpdate, setBookingStatusUpdate] = useState({ bookingId: "", status: "Confirmed" });
-  const [bookingStatusMsg, setBookingStatusMsg] = useState("");
 
   const [loginData, setLoginData] = useState({ email: "", password: "", role: "Passenger" });
   // Staff Portal login state — separate from passenger login
@@ -625,26 +619,6 @@ function App() {
     } catch { setAircraftMsg({ text: "❌ Error connecting to server.", type: "error" }); }
   };
 
-  const handleAddBookingAdmin = async (e) => {
-    e.preventDefault(); setAdminNewBookingMsg("");
-    try {
-      const res = await fetch(`${API}/add-booking-admin`, { method: "POST", headers: getAuthHeaders(true), body: JSON.stringify({ userId: adminNewBooking.userId, passengerId: adminNewBooking.passengerId }) });
-      const data = await res.json();
-      if (res.ok) { setAdminNewBookingMsg(`✅ Booking #${data.booking_id} created successfully!`); setAdminNewBooking({ userId: "", passengerId: "" }); fetchAllBookingsAdmin(); }
-      else setAdminNewBookingMsg("❌ " + (data.error || "Failed to create booking."));
-    } catch { setAdminNewBookingMsg("❌ Error connecting to server."); }
-  };
-
-  const handleUpdateBookingStatus = async (e) => {
-    e.preventDefault(); setBookingStatusMsg("");
-    try {
-      const res = await fetch(`${API}/update-booking-status`, { method: "PUT", headers: getAuthHeaders(true), body: JSON.stringify({ bookingId: bookingStatusUpdate.bookingId, status: bookingStatusUpdate.status }) });
-      const data = await res.json();
-      if (res.ok) { setBookingStatusMsg("✅ " + data.message); setBookingStatusUpdate({ bookingId: "", status: "Confirmed" }); fetchAllBookingsAdmin(); }
-      else setBookingStatusMsg("❌ " + (data.error || "Failed."));
-    } catch { setBookingStatusMsg("❌ Error connecting to server."); }
-  };
-
   const handleProcessPayment = async (paymentData) => {
     try {
       const response = await fetch(`${API}/process-booking`, {
@@ -742,7 +716,6 @@ function App() {
     } catch { setStaffManageMessage("Could not connect to backend."); }
   };
   const handleFlightChange = (e) => setFlightSearch({ ...flightSearch, [e.target.name]: e.target.value });
-  const handleManageChange = (e) => setManageData({ ...manageData, [e.target.name]: e.target.value });
   const handleStatusChange = (e) => setStatusData({ ...statusData, [e.target.name]: e.target.value });
 
   const handleLoginSubmit = async (e) => {
@@ -786,17 +759,6 @@ function App() {
       setFlightResults(data);
     } catch { setSearchMessage("Could not connect to backend."); }
     finally { setLoadingFlights(false); }
-  };
-
-  const handleManageSubmit = async (e) => {
-    e.preventDefault(); setLoadingManage(true); setManageMessage(""); setManageResult(null); setIsEditingPrefs(false);
-    try {
-      const response = await fetch(`${API}/manage-booking`, { method: "POST", headers: getAuthHeaders(true), body: JSON.stringify({ bookingId: manageData.bookingId }) });
-      const data = await response.json();
-      if (!response.ok) { setManageMessage(data.error || "Booking not found."); return; }
-      setManageResult(data); setManageMessage("Booking found.");
-    } catch { setManageMessage("Could not connect to backend."); }
-    finally { setLoadingManage(false); }
   };
 
   const handleStatusSubmit = async (e) => {
@@ -2191,16 +2153,6 @@ function App() {
               handleUpdatePreferences={handleUpdatePreferences}
               actionMsg={actionMsg}
               setActiveTab={setActiveTab}
-
-              // Admin props
-              manageData={manageData}
-              handleManageChange={handleManageChange}
-              handleManageSubmit={handleManageSubmit}
-              loadingAllBookings={loadingAllBookings}
-              allBookingsAdmin={allBookingsAdmin}
-              manageMessage={manageMessage}
-              manageResult={manageResult}
-              loadingManage={loadingManage}
             />
           )}
 
@@ -2243,21 +2195,6 @@ function App() {
               passengerSuggestions={passengerSuggestions}
               setPassengerSuggestions={setPassengerSuggestions}
               selectedPassenger={selectedPassenger}
-              allBookingsAdmin={allBookingsAdmin}
-              loadingAllBookings={loadingAllBookings}
-              fetchAllBookingsAdmin={fetchAllBookingsAdmin}
-              manageData={manageData}
-              handleManageChange={handleManageChange}
-              handleManageSubmit={handleManageSubmit}
-              loadingManage={loadingManage}
-              manageMessage={manageMessage}
-              manageResult={manageResult}
-              handleCancelBooking={handleCancelBooking}
-              handleUpdateBookingStatus={handleUpdateBookingStatus}
-              bookingStatusUpdate={bookingStatusUpdate}
-              setBookingStatusUpdate={setBookingStatusUpdate}
-              bookingStatusMsg={bookingStatusMsg}
-              actionMsg={actionMsg}
 
               // Flight Status
               statusData={statusData}
@@ -2295,26 +2232,6 @@ function App() {
               allPassengers={allPassengers}
               loadingPassengers={loadingPassengers}
               fetchAllPassengers={fetchAllPassengers}
-
-              // Bookings
-              allBookingsAdmin={allBookingsAdmin}
-              loadingAllBookings={loadingAllBookings}
-              fetchAllBookingsAdmin={fetchAllBookingsAdmin}
-              manageData={manageData}
-              handleManageChange={handleManageChange}
-              handleManageSubmit={handleManageSubmit}
-              loadingManage={loadingManage}
-              manageMessage={manageMessage}
-              manageResult={manageResult}
-              handleCancelBooking={handleCancelBooking}
-              handleUpdateBookingStatus={handleUpdateBookingStatus}
-              bookingStatusUpdate={bookingStatusUpdate}
-              setBookingStatusUpdate={setBookingStatusUpdate}
-              bookingStatusMsg={bookingStatusMsg}
-              handleAddBookingAdmin={handleAddBookingAdmin}
-              adminNewBooking={adminNewBooking}
-              setAdminNewBooking={setAdminNewBooking}
-              adminNewBookingMsg={adminNewBookingMsg}
 
               // Flight Status
               statusData={statusData}

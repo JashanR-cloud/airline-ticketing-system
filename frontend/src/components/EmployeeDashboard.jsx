@@ -26,20 +26,7 @@ const EmployeeDashboard = ({
   passengerSuggestions,
   setPassengerSuggestions,
   selectedPassenger,
-  allBookingsAdmin,
-  loadingAllBookings,
-  fetchAllBookingsAdmin,
-  manageData,
-  handleManageChange,
-  handleManageSubmit,
-  loadingManage,
-  manageMessage,
-  manageResult,
   handleCancelBooking,
-  handleUpdateBookingStatus,
-  bookingStatusUpdate,
-  setBookingStatusUpdate,
-  bookingStatusMsg,
   actionMsg,
 
   // Flight Status
@@ -57,6 +44,7 @@ const EmployeeDashboard = ({
   loadingRoutesStatus,
   fetchRoutesWithStatus,
   routeMsg,
+  handleToggleRouteStatus,
   fetchRouteFlights,
   fetchReports,
   loadingReports,
@@ -247,7 +235,7 @@ const EmployeeDashboard = ({
               </div>
             </div>
 
-            <button 
+            <button
               onClick={() => handleSearchBookings()}
               className="primary-btn"
               disabled={!searchByUserId && !selectedPassenger}
@@ -377,50 +365,50 @@ const EmployeeDashboard = ({
                 </thead>
                 <tbody>
                   {routesWithStatus.map((r) => (
-  <tr key={r.route_id} style={{ borderBottom: "1px solid #ddd", cursor: "pointer", height: "44px" }} onClick={() => fetchRouteFlights(r.route_id, `${r.departure} → ${r.arrival}`)}>
-    <td style={{ padding: "10px" }}>{r.route_id}</td>
-    <td style={{ padding: "10px" }}>{r.departure}</td>
-    <td style={{ padding: "10px" }}>{r.arrival}</td>
-    <td style={{ padding: "10px", textAlign: "center" }}>{r.total_flights}</td>
-    <td style={{ padding: "10px", textAlign: "center" }}>
-      <span style={{ background: r.is_active ? "#e8f5e9" : "#fce4ec", color: r.is_active ? "#1a6e3c" : "#b00020", padding: "3px 10px", borderRadius: "10px", fontSize: "12px", fontWeight: "700" }}>{r.is_active ? "Active" : "Inactive"}</span>
-    </td>
-    <td style={{ padding: "10px", textAlign: "center" }}>
-      
-    
-      <button 
-        type="button"
-        style={{
-          backgroundColor: r.is_active ? "#cf102d" : "#1a6e3c",
-          color: "white",
-          border: "none",
-          padding: "6px 12px",
-          borderRadius: "4px",
-          cursor: "pointer",
-          fontSize: "12px",
-          fontWeight: "bold"
-        }}
-        onClick={(e) => {
-          e.stopPropagation(); // Prevents the "fetchRouteFlights" row click from firing
-          
-          if (r.is_active) {
-            // Confirm before a negative action
-            const confirmed = window.confirm("Are you sure you want to deactivate this route?");
-            if (confirmed) {
-              handleToggleRouteStatus(r.route_id);
-            }
-          } else {
-            // Positive action: Activate immediately
-            handleToggleRouteStatus(r.route_id);
-          }
-        }}
-      >
-        {r.is_active ? "Deactivate" : "Activate"}
-      </button>
+                    <tr key={r.route_id} style={{ borderBottom: "1px solid #ddd", cursor: "pointer", height: "44px" }} onClick={() => fetchRouteFlights(r.route_id, `${r.departure} → ${r.arrival}`)}>
+                      <td style={{ padding: "10px" }}>{r.route_id}</td>
+                      <td style={{ padding: "10px" }}>{r.departure}</td>
+                      <td style={{ padding: "10px" }}>{r.arrival}</td>
+                      <td style={{ padding: "10px", textAlign: "center" }}>{r.total_flights}</td>
+                      <td style={{ padding: "10px", textAlign: "center" }}>
+                        <span style={{ background: r.is_active ? "#e8f5e9" : "#fce4ec", color: r.is_active ? "#1a6e3c" : "#b00020", padding: "3px 10px", borderRadius: "10px", fontSize: "12px", fontWeight: "700" }}>{r.is_active ? "Active" : "Inactive"}</span>
+                      </td>
+                      <td style={{ padding: "10px", textAlign: "center" }}>
 
-    </td>
-  </tr>
-))}
+
+                        <button
+                          type="button"
+                          style={{
+                            backgroundColor: r.is_active ? "#cf102d" : "#1a6e3c",
+                            color: "white",
+                            border: "none",
+                            padding: "6px 12px",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                            fontSize: "12px",
+                            fontWeight: "bold"
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevents the "fetchRouteFlights" row click from firing
+
+                            if (r.is_active) {
+                              // Confirm before a negative action
+                              const confirmed = window.confirm("Are you sure you want to deactivate this route?");
+                              if (confirmed) {
+                                handleToggleRouteStatus(r.route_id);
+                              }
+                            } else {
+                              // Positive action: Activate immediately
+                              handleToggleRouteStatus(r.route_id);
+                            }
+                          }}
+                        >
+                          {r.is_active ? "Deactivate" : "Activate"}
+                        </button>
+
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             )}
