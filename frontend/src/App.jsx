@@ -200,6 +200,9 @@ function App() {
 
   const [loyaltyMilestone, setLoyaltyMilestone] = useState(null);
 
+  // Late cancellation fee warning
+  const [showLateFeeModal, setShowLateFeeModal] = useState(false);
+
   const [allAircrafts, setAllAircrafts] = useState([]);
   const [loadingAircrafts, setLoadingAircrafts] = useState(false);
   const [allFlights, setAllFlights] = useState([]);
@@ -828,16 +831,33 @@ function App() {
 
   const [actionMsg, setActionMsg] = useState({ text: "", type: "" }); // type: "success" | "error"
 
+  const isWithin48Hours = (bookingId) => {
+    const booking = userBookings.find(b => b.booking_id === bookingId);
+    if (!booking || !booking.date_of_departure) return false;
+    const departure = new Date(booking.date_of_departure);
+    const now = new Date();
+    const hoursUntilDeparture = (departure - now) / (1000 * 60 * 60);
+    return hoursUntilDeparture <= 48;
+  };
+
   const handleCancelBooking = async (bookingId) => {
     setBookingToCancel(bookingId);
     setShowCancelModal(true);
-  }
+  };
 
   const confirmCancelBooking = async () => {
     if (!bookingToCancel) return;
 
+    // If within 48 hours, show late fee warning first
+    if (isWithin48Hours(bookingToCancel) && !showLateFeeModal) {
+      setShowCancelModal(false);
+      setShowLateFeeModal(true);
+      return;
+    }
+
     setActionMsg({ text: "", type: "" });
     setShowCancelModal(false);
+    setShowLateFeeModal(false);
 
     try {
       const response = await fetch(`${API}/cancel-booking`, {
@@ -851,7 +871,7 @@ function App() {
       if (response.ok) {
         setActionMsg({ text: "✅ Booking cancelled successfully.", type: "success" });
         setManageResult(null);
-        if (isPassenger) fetchUserBookings();
+        if (isPassenger) { fetchUserBookings(); }
         if (isEmployee || isSystemAdmin) fetchAllBookingsAdmin();
       } else {
         setActionMsg({ text: "❌ " + (data.error || "Failed to cancel booking."), type: "error" });
@@ -859,6 +879,7 @@ function App() {
     } catch { setActionMsg({ text: "❌ Error connecting to server.", type: "error" }); }
     finally {
       setBookingToCancel(null);
+      setShowLateFeeModal(false);
     }
   };
 
@@ -1767,6 +1788,51 @@ function App() {
         bookingId={bookingToCancel}
       />
 
+      {/* Late Cancellation Fee Warning Modal */}
+      {showLateFeeModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(10, 10, 20, 0.85)", zIndex: 11000,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "20px", backdropFilter: "blur(6px)"
+        }}>
+          <div style={{
+            background: "#fff", borderRadius: "20px", width: "100%", maxWidth: "420px",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.35)", overflow: "hidden"
+          }}>
+            <div style={{
+              background: "linear-gradient(135deg, #7a0014, #9a0f19)",
+              padding: "28px 32px", textAlign: "center", color: "#fff"
+            }}>
+              <div style={{ fontSize: "42px", marginBottom: "8px" }}>&#9888;&#65039;</div>
+              <h2 style={{ margin: 0, fontSize: "22px", fontWeight: "800" }}>Late Cancellation Fee</h2>
+            </div>
+            <div style={{ padding: "28px 32px", textAlign: "center" }}>
+              <p style={{ fontSize: "15px", color: "#333", lineHeight: "1.6" }}>
+                Cancellations made within <strong>48 hours</strong> of the scheduled departure time will incur a <strong>$50 late cancellation fee</strong>.
+              </p>
+              <p style={{ fontSize: "15px", color: "#333", marginTop: "16px", fontWeight: "600" }}>
+                Would you still like to proceed with your cancellation?
+              </p>
+            </div>
+            <div style={{
+              padding: "20px 28px", borderTop: "1px solid #eee",
+              display: "flex", gap: "12px", background: "#fff"
+            }}>
+              <button onClick={() => { setShowLateFeeModal(false); setBookingToCancel(null); }}
+                style={{ flex: 1, padding: "14px", borderRadius: "10px", border: "1px solid #ddd",
+                  background: "#fff", fontWeight: "600", fontSize: "15px", cursor: "pointer" }}>
+                No, Keep Booking
+              </button>
+              <button onClick={confirmCancelBooking}
+                style={{ flex: 1, padding: "14px", background: "#b00020", color: "white",
+                  border: "none", borderRadius: "10px", fontWeight: "700", fontSize: "15px", cursor: "pointer" }}>
+                Yes, Cancel Booking
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showCreateModal && <CreateAccountModal onClose={() => setShowCreateModal(false)} onSuccess={handleRegisterSuccess} />}
       {showEditModal && loggedInUser && <EditAccountModal user={loggedInUser} onClose={() => setShowEditModal(false)} onSaved={handleEditSaved} onAccountDeleted={handleAccountDeleted} />}

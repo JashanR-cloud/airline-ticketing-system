@@ -144,7 +144,7 @@ CREATE TABLE Bookings (
     FOREIGN KEY (flight_id) REFERENCES Flights(flight_id)
 );
 
-CREATE TABLE Payment (
+CREATE TABLE payment (
     payment_id INT PRIMARY KEY,
     booking_id INT NOT NULL,
     payment_method VARCHAR(30),
@@ -249,30 +249,64 @@ GROUP BY flight_id;
 
 DELIMITER //
 
-CREATE TRIGGER update_seats_after_booking
-AFTER INSERT ON Booking_Passengers
+CREATE TRIGGER award_loyalty_points
+AFTER INSERT ON booking_passengers
 FOR EACH ROW
 BEGIN
-    UPDATE Flights
-    SET seats_available = seats_available - 1
-    WHERE flight_id = (
-        SELECT flight_id
-        FROM bookings
-        WHERE booking_id = NEW.booking_id
-    );
+  UPDATE loyalty_program
+  SET miles_balance = miles_balance + 500
+  WHERE passenger_id = NEW.passenger_id;
+
+  IF (SELECT miles_balance FROM loyalty_program WHERE passenger_id = NEW.passenger_id) >= 1000 THEN
+    INSERT INTO notifications (passenger_id, message, created_at)
+    VALUES (NEW.passenger_id, 'You qualify for a free flight! Redeem 1,000 miles to book any flight for free.', NOW());
+  END IF;
 END//
 
-CREATE TRIGGER update_seats_after_cancellation
-AFTER DELETE ON Booking_Passengers
+CREATE TRIGGER late_cancellation_fee
+BEFORE UPDATE ON bookings
 FOR EACH ROW
 BEGIN
-    UPDATE Flights
-    SET seats_available = seats_available + 1
-    WHERE flight_id = (
-	SELECT flight_id
-	FROM bookings
-	WHERE booking_id = OLD.booking_id
-    );
+  DECLARE dep_time DATETIME;
+  DECLARE p_id INT;
+
+  IF NEW.booking_status = 'Cancelled' AND OLD.booking_status != 'Cancelled' THEN
+    SELECT date_of_departure INTO dep_time
+    FROM flights
+    WHERE flight_id = OLD.flight_id;
+
+    IF dep_time <= DATE_ADD(NOW(), INTERVAL 2 DAY) THEN
+      INSERT INTO payment (booking_id, amount, transaction_date, payment_status)
+      VALUES (OLD.booking_id, 50.00, CURDATE(), 'Successful');
+
+      SELECT passenger_id INTO p_id
+      FROM booking_passengers
+      WHERE booking_id = OLD.booking_id
+      LIMIT 1;
+
+      INSERT INTO notifications (passenger_id, message, created_at)
+      VALUES (p_id, 'A $50 late cancellation fee has been charged because your flight was cancelled within 2 days of departure.', NOW());
+    END IF;
+  END IF;
+END//
+
+CREATE TRIGGER before_flight_delete_cancel_bookings
+BEFORE DELETE ON flights
+FOR EACH ROW
+BEGIN
+    UPDATE bookings
+    SET booking_status = 'Cancelled - Flight Deleted'
+    WHERE flight_id = OLD.flight_id;
+END//
+
+CREATE TRIGGER after_miles_update
+AFTER UPDATE ON loyalty_program
+FOR EACH ROW
+BEGIN
+  IF OLD.miles_balance < 1000 AND NEW.miles_balance >= 1000 THEN
+    INSERT INTO notifications (passenger_id, message, created_at)
+    VALUES (NEW.passenger_id, 'You qualify for a free flight! Redeem 1,000 miles to book any flight for free.', NOW());
+  END IF;
 END//
 
 DELIMITER ;

@@ -1633,6 +1633,48 @@ if (req.url.startsWith("/api/reports/popular-routes")) {
     return;
 }
  
+  // GET /notifications/:userId
+  const notifMatch = req.url.match(/^\/notifications\/(\d+)$/);
+  if (notifMatch && req.method === "GET") {
+    const userId = parseInt(notifMatch[1], 10);
+    const requester = getRequestUser(req);
+    if (requester.role === "Passenger" && requester.userId !== userId) return deny(res);
+
+    db.query(`
+      SELECT n.id, n.message, n.is_read, n.created_at
+      FROM notifications n
+      JOIN passenger p ON n.passenger_id = p.passenger_id
+      JOIN user_account ua ON ua.passenger_id = p.passenger_id
+      WHERE ua.user_id = ?
+      ORDER BY n.created_at DESC
+      LIMIT 50
+    `, [userId], (err, results) => {
+      if (err) return sendJson(res, 500, { error: err.message });
+      sendJson(res, 200, results);
+    });
+    return;
+  }
+
+  // POST /notifications/mark-read
+  if (req.url === "/notifications/mark-read" && req.method === "POST") {
+    parseBody(req).then((body) => {
+      const requester = getRequestUser(req);
+      if (!requester.userId) return deny(res);
+
+      db.query(`
+        UPDATE notifications n
+        JOIN passenger p ON n.passenger_id = p.passenger_id
+        JOIN user_account ua ON ua.passenger_id = p.passenger_id
+        SET n.is_read = 1
+        WHERE ua.user_id = ? AND n.is_read = 0
+      `, [requester.userId], (err) => {
+        if (err) return sendJson(res, 500, { error: err.message });
+        sendJson(res, 200, { message: "Notifications marked as read." });
+      });
+    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
+    return;
+  }
+
   sendJson(res, 404, { message: "Route not found" });
 });
  
