@@ -300,20 +300,94 @@ function App() {
 
   // ── Fetch helpers ──
   const handleCheckLoyalty = async (e) => {
-    if (e) e.preventDefault();
-    if (!loggedInUser) { setActiveTab("login"); return; }
-    try {
-      const response = await fetch(`${API}/loyalty-balance/${loggedInUser.user_id}`, { headers: getAuthHeaders(false) });
-      const data = await response.json();
-      if (response.ok) {
-        if (data.enrolled) {
-          setLoyaltyModal({ miles: data.miles, tier: data.tier || "Silver", firstName: loggedInUser.first_name });
-        } else {
-          setLoyaltyModal({ notEnrolled: true, firstName: loggedInUser.first_name });
-        }
-      }
-    } catch { /* silent */ }
-  };
+  if (e) e.preventDefault();
+
+  // Show loyalty popup even if user is not logged in yet
+  if (!loggedInUser) {
+    setLoyaltyModal({
+      mode: "guest",
+      firstName: "",
+      miles: 0,
+      tier: "Silver",
+      membershipNumber: null,
+    });
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `${API}/loyalty-balance/${loggedInUser.user_id}`,
+      { headers: getAuthHeaders(false) }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.error || "Could not load loyalty account.");
+      return;
+    }
+
+    if (data.enrolled) {
+      setLoyaltyModal({
+        mode: "member",
+        miles: data.miles || 0,
+        tier: data.tier || "Silver",
+        membershipNumber: data.membership_number || null,
+        firstName: loggedInUser.first_name || "",
+      });
+    } else {
+      setLoyaltyModal({
+        mode: "not-enrolled",
+        miles: 0,
+        tier: "Silver",
+        membershipNumber: null,
+        firstName: loggedInUser.first_name || "",
+      });
+    }
+  } catch {
+    alert("Could not connect to server.");
+  }
+};
+  const handleJoinLoyalty = async () => {
+  if (!loggedInUser) {
+    setLoyaltyModal(null);
+    setShowCreateModal(true);
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API}/join-loyalty`, {
+      method: "POST",
+      headers: getAuthHeaders(true),
+      body: JSON.stringify({
+        passengerId: loggedInUser.passenger_id,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.error || "Could not join loyalty program.");
+      return;
+    }
+
+    setLoyaltyModal({
+      mode: "member",
+      miles: data.miles || 0,
+      tier: data.tier || "Silver",
+      membershipNumber: data.membership_number || null,
+      firstName: loggedInUser.first_name || "",
+      justJoined: true,
+    });
+  } catch {
+    alert("Could not connect to server.");
+  }
+};
+
+const handleOpenLoyaltySignup = () => {
+  setLoyaltyModal(null);
+  setShowCreateModal(true);
+};
 
   const handleStartFreeFlightMode = () => {
     setLoyaltyModal(null);
@@ -1205,150 +1279,278 @@ function App() {
       )}
 
       {/* ── Loyalty Modal ── */}
-      {loyaltyModal && (() => {
-        const { miles, tier, firstName, notEnrolled } = loyaltyModal;
+{loyaltyModal && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(10,10,20,0.75)",
+      zIndex: 9999,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "20px",
+      backdropFilter: "blur(4px)",
+    }}
+  >
+    <div
+      style={{
+        background: "#f5f5f5",
+        borderRadius: "28px",
+        maxWidth: "760px",
+        width: "100%",
+        boxShadow: "0 24px 80px rgba(0,0,0,0.4)",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          background: "linear-gradient(180deg, #27235c 0%, #2f2a6c 100%)",
+          color: "white",
+          padding: "42px 28px 34px",
+          textAlign: "center",
+        }}
+      >
+        <div style={{ fontSize: "72px", marginBottom: "10px" }}>🏆</div>
+        <h2 style={{ fontSize: "44px", margin: "0 0 8px 0", fontWeight: 800 }}>
+          Royal Horizon Loyalty
+        </h2>
+        <p style={{ fontSize: "18px", margin: 0, opacity: 0.9 }}>
+          Earn miles on every flight. Redeem for free travel.
+        </p>
 
-        if (notEnrolled) {
-          return (
-            <div style={{ position: "fixed", inset: 0, background: "rgba(10,10,20,0.75)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", backdropFilter: "blur(4px)" }}>
-              <div style={{ background: "#fff", borderRadius: "20px", maxWidth: "460px", width: "100%", boxShadow: "0 24px 80px rgba(0,0,0,0.4)", overflow: "hidden" }}>
-                <div style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #94a3b8 100%)", padding: "28px 32px", textAlign: "center" }}>
-                  <div style={{ fontSize: "44px", marginBottom: "6px" }}>🏆</div>
-                  <h2 style={{ margin: "0 0 4px", color: "#fff", fontSize: "20px", fontWeight: "800" }}>Royal Horizon Loyalty</h2>
-                  <p style={{ margin: 0, color: "rgba(255,255,255,0.8)", fontSize: "14px" }}>Welcome, {firstName}!</p>
-                </div>
-                <div style={{ padding: "24px 32px", textAlign: "center" }}>
-                  <div style={{ background: "linear-gradient(135deg, #fff8e1, #fff3cd)", border: "2px solid #ffcc00", borderRadius: "12px", padding: "24px 20px", marginBottom: "20px" }}>
-                    <p style={{ margin: "0 0 12px", fontSize: "18px", fontWeight: "700", color: "#8a6d00" }}>
-                      🎯 Earn Rewards with Every Flight
-                    </p>
-                    <p style={{ margin: "0 0 20px", fontSize: "15px", color: "#555", lineHeight: "1.5" }}>
-                      Join our Royal Horizon Loyalty Program to earn miles, unlock tier benefits, and enjoy free flights and upgrades.
-                    </p>
-                    <button
-                      onClick={async () => {
-                        try {
-                          const response = await fetch(`${API}/join-loyalty`, {
-                            method: "POST", headers: getAuthHeaders(true),
-                            body: JSON.stringify({ passengerId: loggedInUser.passenger_id })
-                          });
-                          const data = await response.json();
-                          if (response.ok) {
-                            setLoyaltyModal(null);
-                            setShowLoyaltyWelcome(true);
-                          } else {
-                            alert(data.error || "Failed to join loyalty program.");
-                          }
-                        } catch { alert("Could not connect to server."); }
-                      }}
-                      style={{ background: "#cf102d", color: "#fff", border: "none", borderRadius: "10px", padding: "14px 28px", fontSize: "15px", fontWeight: "700", cursor: "pointer" }}
-                    >
-                      Join Loyalty Program
-                    </button>
-                  </div>
-                </div>
-                <div style={{ padding: "0 28px 20px" }}>
-                  <button onClick={() => setLoyaltyModal(null)}
-                    style={{ width: "100%", padding: "12px", background: "#f0f0f0", border: "none", borderRadius: "10px", fontWeight: "600", fontSize: "14px", cursor: "pointer", color: "#555" }}>
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        }
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: "12px",
+            flexWrap: "wrap",
+            marginTop: "24px",
+          }}
+        >
+          <span style={{ padding: "8px 18px", borderRadius: "999px", border: "1px solid #7c83b7", color: "#b8bfdc", fontWeight: 700 }}>Silver</span>
+          <span style={{ padding: "8px 18px", borderRadius: "999px", border: "1px solid #d69d39", color: "#ffb11a", fontWeight: 700 }}>Gold</span>
+          <span style={{ padding: "8px 18px", borderRadius: "999px", border: "1px solid #7e57ff", color: "#9b79ff", fontWeight: 700 }}>Platinum</span>
+          <span style={{ padding: "8px 18px", borderRadius: "999px", border: "1px solid #00a8d8", color: "#11c5ff", fontWeight: 700 }}>Diamond</span>
+        </div>
+      </div>
 
-        const TIERS = [
-          { name: "Silver", threshold: 0,     color: "#94a3b8", next: 1000  },
-          { name: "Gold",   threshold: 1000,  color: "#f59e0b", next: 5000  },
-          { name: "Platinum", threshold: 5000, color: "#8b5cf6", next: 10000 },
-          { name: "Diamond", threshold: 10000, color: "#06b6d4", next: null  },
-        ];
-        const currentTier = TIERS.find((t) => t.name === tier) || TIERS[0];
-        const nextTier = currentTier.next ? TIERS.find((t) => t.threshold === currentTier.next) : null;
-        const progress = nextTier ? Math.min(100, ((miles - currentTier.threshold) / (currentTier.next - currentTier.threshold)) * 100) : 100;
-        const canRedeem = miles >= 1000 && isPassenger;
+      <div style={{ padding: "34px 34px 24px" }}>
+        <div style={{ fontSize: "18px", lineHeight: 1.9, color: "#333", marginBottom: "28px" }}>
+          <div>✈️&nbsp; Earn 500 miles per flight</div>
+          <div>🎟️&nbsp; Redeem flights from 1,000 miles</div>
+          <div>⬆️&nbsp; Seat upgrades & lounge access</div>
+          <div>🎁&nbsp; Exclusive member-only deals</div>
+        </div>
 
-        return (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(10,10,20,0.75)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", backdropFilter: "blur(4px)" }}>
-            <div style={{ background: "#fff", borderRadius: "20px", maxWidth: "460px", width: "100%", boxShadow: "0 24px 80px rgba(0,0,0,0.4)", overflow: "hidden" }}>
-
-              {/* Header */}
-              <div style={{ background: `linear-gradient(135deg, #1a1a2e 0%, ${currentTier.color} 100%)`, padding: "28px 32px", textAlign: "center" }}>
-                <div style={{ fontSize: "44px", marginBottom: "6px" }}>🏆</div>
-                <h2 style={{ margin: "0 0 4px", color: "#fff", fontSize: "20px", fontWeight: "800" }}>Royal Horizon Loyalty</h2>
-                <p style={{ margin: 0, color: "rgba(255,255,255,0.8)", fontSize: "14px" }}>Welcome back, {firstName}!</p>
-              </div>
-
-              <div style={{ padding: "24px 32px" }}>
-                {/* Tier badge + miles */}
-                <div style={{ display: "flex", gap: "12px", marginBottom: "20px" }}>
-                  <div style={{ flex: 1, background: "#f8f8f8", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
-                    <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#999", textTransform: "uppercase", letterSpacing: "1px" }}>Current Tier</p>
-                    <p style={{ margin: 0, fontSize: "20px", fontWeight: "800", color: currentTier.color }}>{tier}</p>
-                  </div>
-                  <div style={{ flex: 1, background: "#f8f8f8", borderRadius: "10px", padding: "14px", textAlign: "center" }}>
-                    <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#999", textTransform: "uppercase", letterSpacing: "1px" }}>Miles Balance</p>
-                    <p style={{ margin: 0, fontSize: "20px", fontWeight: "800", color: "#1a1a2e" }}>{miles.toLocaleString()}</p>
-                  </div>
-                </div>
-
-                {/* Progress to next tier */}
-                {nextTier ? (
-                  <div style={{ marginBottom: "20px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                      <span style={{ fontSize: "12px", color: "#666", fontWeight: "600" }}>{tier}</span>
-                      <span style={{ fontSize: "12px", color: "#666", fontWeight: "600" }}>{nextTier.name} at {nextTier.threshold.toLocaleString()} miles</span>
-                    </div>
-                    <div style={{ background: "#f0f0f0", borderRadius: "999px", height: "10px", overflow: "hidden" }}>
-                      <div style={{ width: `${progress}%`, background: `linear-gradient(90deg, ${currentTier.color}, ${nextTier.color})`, height: "100%", borderRadius: "999px", transition: "width 0.4s" }} />
-                    </div>
-                    <p style={{ margin: "6px 0 0", fontSize: "12px", color: "#888", textAlign: "center" }}>
-                      {(currentTier.next - miles).toLocaleString()} miles to {nextTier.name}
-                    </p>
-                  </div>
-                ) : (
-                  <div style={{ background: "#e8f5e9", borderRadius: "10px", padding: "10px 14px", marginBottom: "20px", textAlign: "center" }}>
-                    <p style={{ margin: 0, fontSize: "13px", color: "#1a6e3c", fontWeight: "700" }}>💎 You've reached Diamond — the highest tier!</p>
-                  </div>
+        {loyaltyModal.mode === "member" ? (
+          <>
+            <div
+              style={{
+                background: "#f1f1f3",
+                borderRadius: "22px",
+                padding: "24px",
+                marginBottom: "22px",
+              }}
+            >
+              <h3 style={{ margin: "0 0 8px 0", fontSize: "22px", color: "#1f2140" }}>
+                Welcome back{loyaltyModal.firstName ? `, ${loyaltyModal.firstName}` : ""}!
+              </h3>
+              <p style={{ margin: "0 0 8px 0", color: "#666" }}>
+                Here is your current Royal Horizon Loyalty account.
+              </p>
+              <div style={{ marginTop: "14px", color: "#222", lineHeight: 1.9, fontWeight: 600 }}>
+                <div>Tier: {loyaltyModal.tier || "Silver"}</div>
+                <div>Miles: {loyaltyModal.miles || 0}</div>
+                {loyaltyModal.membershipNumber && (
+                  <div>Membership Number: {loyaltyModal.membershipNumber}</div>
                 )}
-
-                {/* Tiers reference */}
-                <div style={{ display: "flex", gap: "6px", marginBottom: "20px" }}>
-                  {TIERS.map((t) => (
-                    <div key={t.name} style={{ flex: 1, textAlign: "center", padding: "6px 4px", borderRadius: "8px", background: t.name === tier ? t.color + "22" : "#f8f8f8", border: `1px solid ${t.name === tier ? t.color : "#eee"}` }}>
-                      <p style={{ margin: "0 0 2px", fontSize: "10px", fontWeight: "800", color: t.color }}>{t.name.toUpperCase()}</p>
-                      <p style={{ margin: 0, fontSize: "9px", color: "#999" }}>{t.threshold.toLocaleString()}+</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Free flight redemption */}
-                {canRedeem ? (
-                  <div style={{ background: "linear-gradient(135deg, #e8f5e9, #f1fff5)", border: "2px solid #1a6e3c", borderRadius: "12px", padding: "16px 18px", marginBottom: "16px" }}>
-                    <p style={{ margin: "0 0 4px", fontWeight: "800", color: "#1a4d2e", fontSize: "15px" }}>🎟️ You qualify for a free flight!</p>
-                    <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#555" }}>Redeem <strong>1,000 miles</strong> to book any flight for free. You have <strong>{miles.toLocaleString()} miles</strong>.</p>
-                    <button
-                      onClick={handleStartFreeFlightMode}
-                      style={{ width: "100%", background: "#1a6e3c", color: "#fff", border: "none", borderRadius: "10px", padding: "13px", fontSize: "15px", fontWeight: "800", cursor: "pointer", letterSpacing: "0.3px" }}
-                    >
-                      ✈️ Book a Free Flight
-                    </button>
-                  </div>
-                ) : isPassenger ? (
-                  <div style={{ background: "#f8f8f8", borderRadius: "10px", padding: "12px 14px", marginBottom: "16px", textAlign: "center" }}>
-                    <p style={{ margin: 0, fontSize: "13px", color: "#888" }}>Earn <strong>{(1000 - miles).toLocaleString()} more miles</strong> to unlock your first free flight!</p>
-                  </div>
-                ) : null}
-
-                <button onClick={() => setLoyaltyModal(null)} style={{ width: "100%", background: "#f0f0f0", color: "#333", border: "none", borderRadius: "10px", padding: "12px", fontSize: "14px", fontWeight: "600", cursor: "pointer" }}>
-                  Close
-                </button>
               </div>
             </div>
-          </div>
-        );
-      })()}
+
+            {(loyaltyModal.justJoined || (loyaltyModal.miles || 0) >= 1000) && (
+              <button
+                onClick={handleStartFreeFlightMode}
+                style={{
+                  width: "100%",
+                  background: "#171936",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "18px",
+                  padding: "20px",
+                  fontSize: "18px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  marginBottom: "12px",
+                }}
+              >
+                {(loyaltyModal.miles || 0) >= 1000 ? "Redeem Free Flight" : "Search Flights"}
+              </button>
+            )}
+
+            <button
+              onClick={() => setLoyaltyModal(null)}
+              style={{
+                width: "100%",
+                background: "#e9e9ee",
+                color: "#333",
+                border: "none",
+                borderRadius: "18px",
+                padding: "16px",
+                fontSize: "17px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Close
+            </button>
+          </>
+        ) : loyaltyModal.mode === "guest" ? (
+          <>
+            <div
+              style={{
+                background: "#f1f1f3",
+                borderRadius: "22px",
+                padding: "24px",
+                marginBottom: "22px",
+              }}
+            >
+              <h3 style={{ margin: "0 0 8px 0", fontSize: "22px", color: "#1f2140" }}>
+                Already a member?
+              </h3>
+              <p style={{ margin: 0, color: "#777" }}>
+                Log in to view your miles, tier, and redeem rewards.
+              </p>
+
+              <button
+                onClick={() => {
+                  setLoyaltyModal(null);
+                  setActiveTab("login");
+                }}
+                style={{
+                  width: "100%",
+                  marginTop: "22px",
+                  background: "#171936",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "18px",
+                  padding: "20px",
+                  fontSize: "18px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                Log In to My Account
+              </button>
+            </div>
+
+            <div
+              style={{
+                background: "#fff5f6",
+                border: "3px solid #cf102d",
+                borderRadius: "22px",
+                padding: "24px",
+                marginBottom: "20px",
+              }}
+            >
+              <h3 style={{ margin: "0 0 8px 0", fontSize: "22px", color: "#cf102d" }}>
+                Not a member yet?
+              </h3>
+              <p style={{ margin: "0 0 20px 0", color: "#777" }}>
+                Create a free account and join the loyalty program to start earning miles today.
+              </p>
+
+              <button
+                onClick={handleOpenLoyaltySignup}
+                style={{
+                  width: "100%",
+                  background: "linear-gradient(180deg, #e51635 0%, #bf0620 100%)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "18px",
+                  padding: "20px",
+                  fontSize: "18px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                🏆 Create Account & Join Loyalty
+              </button>
+            </div>
+
+            <button
+              onClick={() => setLoyaltyModal(null)}
+              style={{
+                width: "100%",
+                background: "transparent",
+                color: "#999",
+                border: "none",
+                padding: "14px",
+                fontSize: "17px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Maybe Later
+            </button>
+          </>
+        ) : (
+          <>
+            <div
+              style={{
+                background: "#fff5f6",
+                border: "3px solid #cf102d",
+                borderRadius: "22px",
+                padding: "24px",
+                marginBottom: "20px",
+              }}
+            >
+              <h3 style={{ margin: "0 0 8px 0", fontSize: "22px", color: "#cf102d" }}>
+                Not enrolled yet?
+              </h3>
+              <p style={{ margin: "0 0 20px 0", color: "#777" }}>
+                Join Royal Horizon Loyalty to start earning miles on eligible flights and unlock rewards.
+              </p>
+
+              <button
+                onClick={handleJoinLoyalty}
+                style={{
+                  width: "100%",
+                  background: "linear-gradient(180deg, #e51635 0%, #bf0620 100%)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "18px",
+                  padding: "20px",
+                  fontSize: "18px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                🏆 Join Loyalty Program
+              </button>
+            </div>
+
+            <button
+              onClick={() => setLoyaltyModal(null)}
+              style={{
+                width: "100%",
+                background: "transparent",
+                color: "#999",
+                border: "none",
+                padding: "14px",
+                fontSize: "17px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Maybe Later
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  </div>
+)}
 
       {/* ── Where We Fly — Destination Explorer ── */}
       {showDestinationsModal && (() => {
