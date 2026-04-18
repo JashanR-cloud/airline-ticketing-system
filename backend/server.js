@@ -1353,6 +1353,84 @@ const server = http.createServer((req, res) => {
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
     return;
   }
+
+    // GET /search-bookings for employee booking search using user ID
+  if (req.url.startsWith("/search-bookings") && req.method === "GET") {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const userId = url.searchParams.get("userId");
+    const passengerId = url.searchParams.get("passengerId");
+
+    const requester = getRequestUser(req);
+    if (!isStaff(requester.role)) return deny(res);
+
+    let sql = `
+      SELECT 
+        b.booking_id, b.user_id, b.booking_date, b.booking_status, b.cabin_class,
+        f.date_of_departure, f.estimated_time_hours,
+        al.airline_name,
+        dep.airport_name AS departure_name, dep_city.city_name AS departure_city,
+        arr.airport_name AS arrival_name, arr_city.city_name AS arrival_city,
+        p.passenger_id, p.first_name, p.last_name
+      FROM bookings b
+      LEFT JOIN booking_passengers bp ON b.booking_id = bp.booking_id
+      LEFT JOIN passenger p ON bp.passenger_id = p.passenger_id
+      LEFT JOIN flights f ON b.flight_id = f.flight_id
+      LEFT JOIN routes r ON f.route_id = r.route_id
+      LEFT JOIN airport dep ON r.departure_airport_id = dep.airport_id
+      LEFT JOIN city dep_city ON dep.city_id = dep_city.city_id
+      LEFT JOIN airport arr ON r.destination_airport_id = arr.airport_id
+      LEFT JOIN city arr_city ON arr.city_id = arr_city.city_id
+      LEFT JOIN airline al ON f.airline_id = al.airline_id
+      WHERE 1=1
+    `;
+
+    const params = [];
+
+    if (userId) {
+      sql += " AND b.user_id = ?";
+      params.push(Number(userId));
+    }
+    if (passengerId) {
+      sql += " AND p.passenger_id = ?";
+      params.push(Number(passengerId));
+    }
+
+    sql += " ORDER BY b.booking_date DESC LIMIT 100";
+
+    db.query(sql, params, (err, results) => {
+      if (err) return sendJson(res, 500, { error: err.message });
+      sendJson(res, 200, results);
+    });
+    return;
+  }
+
+  // GET /search-passengers for employee booking search using name
+  if (req.url.startsWith("/search-passengers") && req.method === "GET") {
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const name = url.searchParams.get("name");
+
+    const requester = getRequestUser(req);
+    if (!isStaff(requester.role)) return deny(res);
+
+    if (!name || name.length < 2) {
+      return sendJson(res, 200, []);
+    }
+
+    const searchTerm = `%${name}%`;
+    const sql = `
+      SELECT passenger_id, first_name, last_name, email
+      FROM passenger
+      WHERE first_name LIKE ? OR last_name LIKE ?
+      ORDER BY first_name, last_name
+      LIMIT 15
+    `;
+
+    db.query(sql, [searchTerm, searchTerm], (err, results) => {
+      if (err) return sendJson(res, 500, { error: err.message });
+      sendJson(res, 200, results);
+    });
+    return;
+  }
  
   // POST /add-booking-admin → Employee, System Admin
   if (req.url === "/add-booking-admin" && req.method === "POST") {

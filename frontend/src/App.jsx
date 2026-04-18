@@ -155,6 +155,14 @@ function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
+  // Employee Booking Search
+  const [searchByUserId, setSearchByUserId] = useState("");
+  const [searchByName, setSearchByName] = useState("");
+  const [selectedPassenger, setSelectedPassenger] = useState(null);
+  const [passengerSuggestions, setPassengerSuggestions] = useState([]);
+  const [searchResults, setSearchResults] = useState([]);
+
+
   // Staff "book for passenger" modal
   const [bookForModal, setBookForModal] = useState({ show: false, flight: null, passengerId: "", bookingMsg: "" });
 
@@ -396,6 +404,42 @@ function App() {
       else { setUserBookings([]); setManageMessage(data.error || "Failed to load bookings."); }
     } catch { setUserBookings([]); setManageMessage("Failed to load your bookings."); }
     finally { setLoadingUserBookings(false); }
+  };
+
+  // Employee Seaching for Bookings using ID
+  const handleSearchBookings = async (passengerId = null) => {
+    let url = `${API}/search-bookings?`;
+    if (searchByUserId) url += `userId=${searchByUserId}`;
+    else if (passengerId || selectedPassenger) {
+      const id = passengerId || selectedPassenger.passenger_id;
+      url += `passengerId=${id}`;
+    }
+
+    try {
+      const res = await fetch(url, { headers: getAuthHeaders(true) });
+      const data = await res.json();
+      setSearchResults(data || []);
+    } catch (err) {
+      console.error(err);
+      setSearchResults([]);
+    }
+  };
+
+  // Employee Search bookings using name
+  const handlePassengerSearch = async (name) => {
+    if (!name || name.length < 2) {
+      setPassengerSuggestions([]);
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/search-passengers?name=${encodeURIComponent(name)}`, {
+        headers: getAuthHeaders(true)
+      });
+      const data = await res.json();
+      setPassengerSuggestions(data);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const fetchReports = async () => {
@@ -2187,6 +2231,18 @@ function App() {
               fetchAllPassengers={fetchAllPassengers}
 
               // Bookings
+              searchByUserId={searchByUserId}
+              searchByName={searchByName}
+              setSearchByUserId={setSearchByUserId}
+              setSearchByName={setSearchByName}
+              searchResults={searchResults}
+              handleSearchBookings={handleSearchBookings}
+              isEditingPrefs={isEditingPrefs}
+              setSelectedPassenger={setSelectedPassenger}
+              handlePassengerSearch={handlePassengerSearch}
+              passengerSuggestions={passengerSuggestions}
+              setPassengerSuggestions={setPassengerSuggestions}
+              selectedPassenger={selectedPassenger}
               allBookingsAdmin={allBookingsAdmin}
               loadingAllBookings={loadingAllBookings}
               fetchAllBookingsAdmin={fetchAllBookingsAdmin}

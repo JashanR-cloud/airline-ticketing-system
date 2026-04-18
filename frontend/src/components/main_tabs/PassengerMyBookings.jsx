@@ -1,4 +1,5 @@
-import React, {useState} from 'react';
+// src/components/PassengerMyBookings.jsx
+import React, { useState, useEffect } from 'react';
 import BookingResultCard from './BookingResultCard';
 
 const PassengerMyBookings = ({
@@ -15,10 +16,6 @@ const PassengerMyBookings = ({
 }) => {
   const [activeCategory, setActiveCategory] = useState("Booked");
 
-  console.log("=== PassengerMyBookings Debug ===");
-  console.log("Total bookings received:", bookings.length);
-  console.log("Bookings data:", bookings);
-
   const now = new Date();
 
   const categorized = {
@@ -26,34 +23,25 @@ const PassengerMyBookings = ({
       const flightDate = new Date(b.date_of_departure);
       const isConfirmed = b.booking_status === "Confirmed" || b.booking_status === "Booked";
       const isFuture = flightDate >= now;
-      console.log(`Booking ${b.booking_id}: status="${b.booking_status}", date=${b.date_of_departure}, isFuture=${isFuture}`);
       return isConfirmed && isFuture;
     }),
-    Saved: bookings.filter(b => b.booking_status === "Saved"),
     Past: bookings.filter(b => 
       b.booking_status === "Past" || new Date(b.date_of_departure) < now
     )
   };
 
-  console.log("Categorized counts:", {
-    Booked: categorized.Booked.length,
-    Saved: categorized.Saved.length,
-    Past: categorized.Past.length
-  });
-
   const currentBookings = categorized[activeCategory] || [];
 
   return (
     <div>
-
-      {/* Category Tabs */}
+      {/* Category Tabs - Only Booked and Past */}
       <div style={{ 
         display: "flex", 
         gap: "10px", 
         marginBottom: "24px", 
         flexWrap: "wrap" 
       }}>
-        {["Booked", "Saved", "Past"].map((category) => (
+        {["Booked", "Past"].map((category) => (
           <button
             key={category}
             onClick={() => setActiveCategory(category)}

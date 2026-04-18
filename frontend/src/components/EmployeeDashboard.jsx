@@ -14,6 +14,18 @@ const EmployeeDashboard = ({
   fetchAllPassengers,
 
   // Bookings section
+  searchByUserId,
+  searchByName,
+  setSearchByUserId,
+  setSearchByName,
+  searchResults,
+  handleSearchBookings,
+  isEditingPrefs,
+  setSelectedPassenger,
+  handlePassengerSearch,
+  passengerSuggestions,
+  setPassengerSuggestions,
+  selectedPassenger,
   allBookingsAdmin,
   loadingAllBookings,
   fetchAllBookingsAdmin,
@@ -143,108 +155,158 @@ const EmployeeDashboard = ({
       {/* ── BOOKINGS SECTION ── */}
       {section === "bookings" && (
         <div>
-          {/* Find & Modify Booking */}
-          <div className="result-card" style={{ marginBottom: "20px" }}>
-            <h3>Find Booking</h3>
-            <form onSubmit={handleManageSubmit}>
-              <div className="form-group">
-                <label>Select Booking</label>
-                <select name="bookingId" value={manageData.bookingId} onChange={handleManageChange} required disabled={loadingAllBookings}>
-                  <option value="">{loadingAllBookings ? "Loading bookings..." : "-- Select a booking --"}</option>
-                  {allBookingsAdmin.map((b) => (
-                    <option key={b.booking_id} value={b.booking_id}>
-                      #{b.booking_id} — {b.first_name} {b.last_name} ({b.booking_status})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button type="submit" className="primary-btn" disabled={!manageData.bookingId}>
-                {loadingManage ? "Searching..." : "View Details"}
-              </button>
-              {manageMessage && <p style={{ marginTop: "14px", fontSize: "18px" }}>{manageMessage}</p>}
-              {manageResult && (
-                <BookingResultCard
-                  result={manageResult}
-                  onCancel={handleCancelBooking}
-                  showPrefs={true}
-                  isEditingPrefs={setIsEditingPrefs}
-                  setIsEditingPrefs={setIsEditingPrefs}
-                  prefData={prefData}
-                  setPrefData={setPrefData}
-                  handleUpdatePreferences={handleUpdatePreferences}
-                  actionMsg={actionMsg}
+          <h3>Find and Manage Bookings</h3>
+          <p style={{ color: "#666", marginBottom: "20px" }}>
+            Search by User ID or by Passenger Name. Select a passenger to view their bookings.
+          </p>
+
+          {/* Search Controls */}
+          <div className="result-card" style={{ marginBottom: "24px" }}>
+            <div style={{ display: "flex", gap: "16px", marginBottom: "16px" }}>
+              {/* User ID Search */}
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", marginBottom: "6px", fontWeight: "600" }}>Search by User ID</label>
+                <input
+                  type="number"
+                  placeholder="Enter User ID"
+                  value={searchByUserId}
+                  onChange={(e) => {
+                    setSearchByUserId(e.target.value);
+                    setSearchByName("");           // clear the other field
+                    setSelectedPassenger(null);
+                  }}
+                  style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #ddd" }}
                 />
-              )}
-            </form>
-          </div>
-
-          {/* Modify Booking Status */}
-          <div className="result-card" style={{ marginBottom: "20px" }}>
-            <h3>Modify Booking Status</h3>
-            <form onSubmit={handleUpdateBookingStatus}>
-              <div className="form-row" style={{ alignItems: "flex-end" }}>
-                <div className="form-group">
-                  <label>Select Booking</label>
-                  <select value={bookingStatusUpdate.bookingId} onChange={(e) => setBookingStatusUpdate({ ...bookingStatusUpdate, bookingId: e.target.value })} required disabled={loadingAllBookings}>
-                    <option value="">{loadingAllBookings ? "Loading..." : "-- Select a booking --"}</option>
-                    {allBookingsAdmin.map((b) => (
-                      <option key={b.booking_id} value={b.booking_id}>
-                        #{b.booking_id} — {b.first_name} {b.last_name} ({b.booking_status})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>New Status</label>
-                  <select value={bookingStatusUpdate.status} onChange={(e) => setBookingStatusUpdate({ ...bookingStatusUpdate, status: e.target.value })}>
-                    <option value="Confirmed">Confirmed</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Cancelled">Cancelled</option>
-                  </select>
-                </div>
-                <button type="submit" className="primary-btn" style={{ padding: "16px 20px", backgroundColor: "#333" }}>Update Status</button>
               </div>
-              {bookingStatusMsg && <p style={{ marginTop: "12px", fontWeight: "600", color: bookingStatusMsg.startsWith("✅") ? "#1a6e3c" : "#b00020" }}>{bookingStatusMsg}</p>}
-            </form>
-          </div>
 
-          {/* All Bookings Table */}
-          <div className="result-card">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-              <h3 style={{ margin: 0 }}>All Bookings</h3>
-              <RefreshBtn fetchFn={fetchAllBookingsAdmin} loading={loadingAllBookings} />
+              {/* Name Search with predictive dropdown */}
+              <div style={{ flex: 1, position: "relative" }}>
+                <label style={{ display: "block", marginBottom: "6px", fontWeight: "600" }}>Search by Passenger Name</label>
+                <input
+                  type="text"
+                  placeholder="Type passenger name..."
+                  value={searchByName}
+                  onChange={(e) => {
+                    setSearchByName(e.target.value);
+                    setSearchByUserId("");         // clear the other field
+                    handlePassengerSearch(e.target.value);
+                  }}
+                  style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #ddd" }}
+                />
+
+                {/* Predictive dropdown */}
+                {passengerSuggestions.length > 0 && (
+                  <div style={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    background: "#fff",
+                    border: "1px solid #ddd",
+                    borderRadius: "8px",
+                    marginTop: "4px",
+                    maxHeight: "240px",
+                    overflowY: "auto",
+                    zIndex: 1000,
+                    boxShadow: "0 10px 20px rgba(0,0,0,0.1)"
+                  }}>
+                    {passengerSuggestions.map(p => (
+                      <div
+                        key={p.passenger_id}
+                        onClick={() => {
+                          setSelectedPassenger(p);
+                          setSearchByName(`${p.first_name} ${p.last_name}`);
+                          setPassengerSuggestions([]);
+                          handleSearchBookings(p.passenger_id);
+                        }}
+                        style={{
+                          padding: "12px 16px",
+                          cursor: "pointer",
+                          borderBottom: "1px solid #eee"
+                        }}
+                      >
+                        <strong>{p.first_name} {p.last_name}</strong>
+                        <span style={{ marginLeft: "12px", color: "#666", fontSize: "13px" }}>
+                          {p.email}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            {allBookingsAdmin.length === 0 ? <p style={{ color: "#888" }}>No bookings loaded. Click Refresh.</p> : (
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                  <thead>
-                    <tr style={{ background: "#1a1a2e", color: "#fff" }}>
-                      {["Booking ID", "Passenger", "Email", "Phone", "Seat Pref", "Meal Pref", "Status", "Date"].map((h) => (
-                        <th key={h} style={{ padding: "10px", textAlign: "left" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allBookingsAdmin.map((b) => (
-                      <tr key={b.booking_id} style={{ borderBottom: "1px solid #eee" }}>
-                        <td style={{ padding: "10px" }}>#{b.booking_id}</td>
-                        <td style={{ padding: "10px", fontWeight: "600" }}>{b.first_name} {b.last_name}</td>
-                        <td style={{ padding: "10px" }}>{b.email}</td>
-                        <td style={{ padding: "10px" }}>{b.phone_number || "—"}</td>
-                        <td style={{ padding: "10px" }}>{b.seat_preferences || "—"}</td>
-                        <td style={{ padding: "10px" }}>{b.meal_preferences || "—"}</td>
-                        <td style={{ padding: "10px" }}>
-                          <span style={{ background: b.booking_status === "Confirmed" ? "#e8f5e9" : b.booking_status === "Cancelled" ? "#fce4ec" : "#fff8e1", color: b.booking_status === "Confirmed" ? "#1a6e3c" : b.booking_status === "Cancelled" ? "#b00020" : "#f57c00", padding: "3px 8px", borderRadius: "10px", fontSize: "12px", fontWeight: "600" }}>{b.booking_status}</span>
-                        </td>
-                        <td style={{ padding: "10px" }}>{new Date(b.booking_date).toLocaleDateString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+
+            <button 
+              onClick={() => handleSearchBookings()}
+              className="primary-btn"
+              disabled={!searchByUserId && !selectedPassenger}
+            >
+              Search Bookings
+            </button>
           </div>
+
+          {/* Results */}
+          {searchResults.length > 0 && (
+            <div>
+              {/* Active Bookings */}
+              <div className="result-card" style={{ marginBottom: "24px" }}>
+                <h4>Active Bookings ({activeBookings.length})</h4>
+                {activeBookings.length === 0 ? (
+                  <p style={{ color: "#888", padding: "20px", textAlign: "center" }}>No active bookings</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    {activeBookings.map(booking => (
+                      <BookingResultCard
+                        key={booking.booking_id}
+                        result={booking}
+                        onCancel={handleCancelBooking}
+                        showPrefs={true}
+                        isEditingPrefs={isEditingPrefs}
+                        setIsEditingPrefs={setIsEditingPrefs}
+                        prefData={prefData}
+                        setPrefData={setPrefData}
+                        handleUpdatePreferences={handleUpdatePreferences}
+                        actionMsg={actionMsg}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Past Bookings */}
+              <div className="result-card">
+                <h4>Past Bookings ({pastBookings.length})</h4>
+                {pastBookings.length === 0 ? (
+                  <p style={{ color: "#888", padding: "20px", textAlign: "center" }}>No past bookings</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    {pastBookings.map(booking => (
+                      <BookingResultCard
+                        key={booking.booking_id}
+                        result={booking}
+                        onCancel={handleCancelBooking}
+                        showPrefs={true}
+                        isEditingPrefs={isEditingPrefs}
+                        setIsEditingPrefs={setIsEditingPrefs}
+                        prefData={prefData}
+                        setPrefData={setPrefData}
+                        handleUpdatePreferences={handleUpdatePreferences}
+                        actionMsg={actionMsg}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {searchResults.length === 0 && (searchByUserId || selectedPassenger) && (
+            <div className="result-card">
+              <p style={{ color: "#888", textAlign: "center", padding: "40px" }}>
+                No bookings found for the selected criteria.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
