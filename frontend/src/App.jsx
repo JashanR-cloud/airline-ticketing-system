@@ -12,7 +12,7 @@ import TransactionModal from "./components/TransactionModal";
 import CancelConfirmationModal from "./components/main_tabs/CancelConfirmationModal";
 import "./components/AccountModal.css";
 
-const API = "http://localhost:8000";
+const API = "https://airline-ticketing-system-gjnr.onrender.com";
 
 const SEAT_OPTIONS = ["No Preference", "Window", "Aisle", "Middle"];
 const MEAL_OPTIONS = ["No Preference", "Standard", "Vegetarian", "Vegan", "Halal", "Kosher", "Gluten-Free", "No Meal"];
