@@ -866,21 +866,59 @@ function App() {
     }
   };
 
-  const handleUpdatePreferences = async () => {
+  const handleUpdatePreferences = async (passengerId) => {
+
+    if (!passengerId) {
+      setActionMsg({ text: "❌ Could not determine passenger ID for update.", type: "error" });
+      return;
+    }
+
     try {
       const response = await fetch(`${API}/update-preferences`, {
-        method: "PUT", headers: getAuthHeaders(true),
-        body: JSON.stringify({ passengerId: manageResult.passenger_id, seatPreferences: prefData.seat_preferences, mealPreferences: prefData.meal_preferences }),
+        method: "POST",
+        headers: getAuthHeaders(true),
+        body: JSON.stringify({
+          passengerId: passengerId,
+          seatPreferences: prefData.seat_preferences,
+          mealPreferences: prefData.meal_preferences
+        })
       });
+
       const data = await response.json();
+
       if (response.ok) {
         setActionMsg({ text: "✅ Preferences updated successfully!", type: "success" });
         setIsEditingPrefs(false);
-        setManageResult({ ...manageResult, seat_preferences: prefData.seat_preferences, meal_preferences: prefData.meal_preferences });
+
+        if (isPassenger) {
+          // Update bookings cards
+          setUserBookings(prevBookings => 
+            prevBookings.map(booking => 
+              booking.passenger_id === passengerId 
+                ? {
+                    ...booking,
+                    seat_preferences: prefData.seat_preferences,
+                    meal_preferences: prefData.meal_preferences
+                  }
+                : booking
+            )
+          );
+        } else {
+          // Update manageResult for employee/admin view
+          setManageResult(prev => prev ? {
+            ...prev,
+            seat_preferences: prefData.seat_preferences,
+            meal_preferences: prefData.meal_preferences
+          } : null);
+        }
+      
       } else {
         setActionMsg({ text: "❌ " + (data.error || "Failed to update preferences."), type: "error" });
       }
-    } catch { setActionMsg({ text: "❌ Error connecting to server.", type: "error" }); }
+    } catch (err) {
+      console.error(err);
+      setActionMsg({ text: "❌ Error connecting to server.", type: "error" });
+    }
   };
 
   const handleCrudSubmit = async (e) => {

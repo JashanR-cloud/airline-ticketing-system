@@ -114,10 +114,16 @@ const BookingResultCard = ({
                   value={prefData.meal_preferences || ""} 
                   onChange={(e) => setPrefData({ ...prefData, meal_preferences: e.target.value })}
                 >
-                  <option value="">No Preference</option>
+                  <option value="No Preference">No Preference</option>
                   <option value="Vegetarian">Vegetarian</option>
-                  <option value="Non-Vegetarian">Non-Vegetarian</option>
+                  <option value="Kosher">Non-Vegetarian</option>
                   <option value="Vegan">Vegan</option>
+                  <option value="Low-Sodium">Low-Sodium</option>
+                  <option value="Halal">Halal</option>
+                  <option value="Gluten-Free">Gluten-Free</option>
+                  <option value="Diabetic">Diabetic</option>
+                  <option value="Nut-Free">Nut-Free</option>
+                  <option value="Child Meal">Child Meal</option>
                 </select>
               </div>
 
@@ -126,7 +132,7 @@ const BookingResultCard = ({
                   type="button" 
                   className="primary-btn" 
                   style={{ backgroundColor: "#1a6e3c" }}
-                  onClick={handleUpdatePreferences}
+                  onClick={()=>handleUpdatePreferences(result.passenger_id)}
                 >
                   Save Changes
                 </button>
