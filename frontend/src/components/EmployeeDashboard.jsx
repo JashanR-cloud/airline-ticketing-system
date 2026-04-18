@@ -64,6 +64,17 @@ const EmployeeDashboard = ({
 }) => {
   const [section, setSection] = useState("passengers");
 
+  const now = new Date();
+  const activeBookings = searchResults.filter(b => {
+    const flightDate = new Date(b.date_of_departure);
+    return (b.booking_status === "Confirmed" || b.booking_status === "Booked") && flightDate >= now;
+  });
+
+  const pastBookings = searchResults.filter(b => {
+    const flightDate = new Date(b.date_of_departure);
+    return b.booking_status === "Past" || flightDate < now;
+  });
+
   return (
     <div>
       <h2>Employee Dashboard</h2>
