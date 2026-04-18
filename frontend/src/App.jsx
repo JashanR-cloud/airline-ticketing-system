@@ -2274,6 +2274,7 @@ function App() {
               loadingRoutesStatus={loadingRoutesStatus}
               fetchRoutesWithStatus={fetchRoutesWithStatus}
               routeMsg={routeMsg}
+              handleToggleRouteStatus={handleToggleRouteStatus}
               fetchRouteFlights={fetchRouteFlights}
               fetchReports={fetchReports}
               loadingReports={loadingReports}
