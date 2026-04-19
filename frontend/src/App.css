@@ -38,8 +38,9 @@ body {
   background: #0a1422;
 }
 
-
 .top-alert {
+  position: relative;
+  z-index: 60;
   background: rgba(255, 191, 84, 0.12);
   color: #fff1cf;
   padding: 14px 24px;
@@ -56,16 +57,13 @@ body {
 
 /* this is the navbar */
 .navbar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  z-index: 30;
+  position: relative;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 18px 34px;
-  background: linear-gradient(180deg, rgba(4, 9, 18, 0.72), rgba(4, 9, 18, 0.2));
+  background: linear-gradient(180deg, rgba(4, 9, 18, 0.88), rgba(4, 9, 18, 0.58));
   border-bottom: 1px solid rgba(255, 255, 255, 0.18);
   gap: 18px;
 }
@@ -206,7 +204,7 @@ body {
   align-items: flex-start;
   position: relative;
   z-index: 2;
-  padding-top: 140px;
+  padding-top: 70px;
 }
 
 .hero-content {
@@ -641,7 +639,7 @@ body {
   }
 
   .hero-overlay {
-    padding-top: 170px;
+    padding-top: 90px;
   }
 
   .hero-content {
@@ -662,13 +660,29 @@ body {
 }
 
 @media (max-width: 700px) {
+  .top-alert {
+    padding: 12px 16px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .navbar {
+    padding: 16px 16px 12px;
+    gap: 12px;
+  }
+
+  .nav-links {
+    gap: 14px;
+    font-size: 13px;
+  }
+
   .hero {
     min-height: 760px;
   }
 
   .hero-overlay {
     min-height: 760px;
-    padding-top: 150px;
+    padding-top: 110px;
   }
 
   .hero-content {
