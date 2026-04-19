@@ -17,9 +17,12 @@ const SystemAdminDashboard = ({
   getAuthHeaders,
 
   // Passengers section
-  allPassengers,
-  loadingPassengers,
-  fetchAllPassengers,
+  flightManifestSearch,
+  setFlightManifestSearch,
+  flightManifest,
+  loadingFlightManifest,
+  flightManifestMsg,
+  handleFlightManifestSearch,
 
   // Bookings section
   searchByUserId,
@@ -35,16 +38,6 @@ const SystemAdminDashboard = ({
   setPassengerSuggestions,
   selectedPassenger,
   handleCancelBooking,
-
-  // Flight Status
-  statusData,
-  handleStatusChange,
-  handleStatusSubmit,
-  loadingStatus,
-  statusMessage,
-  statusResult,
-  allFlights,
-  loadingAllFlights,
 
   // Routes section
   routesWithStatus,
@@ -164,9 +157,8 @@ const SystemAdminDashboard = ({
 
       {/* Section Navigation */}
       <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "24px" }}>
-        <SectionBtn label="👤 Passengers" active={section === "passengers"} onClick={() => setSection("passengers")} />
+        <SectionBtn label="🧾 Flight Passengers" active={section === "flightManifest"} onClick={() => setSection("flightManifest")} />
         <SectionBtn label="📋 Bookings" active={section === "bookings"} onClick={() => setSection("bookings")} />
-        <SectionBtn label="🛫 Flight Status" active={section === "flightStatus"} onClick={() => setSection("flightStatus")} />
         <SectionBtn label="🗺️ Routes" active={section === "routes"} onClick={() => setSection("routes")} />
         <SectionBtn label="✈️ Aircraft" active={section === "aircraft"} onClick={() => setSection("aircraft")} />
         <SectionBtn label="⚙️ Admin Actions" active={section === "actions"} onClick={() => setSection("actions")} />
@@ -189,58 +181,121 @@ const SystemAdminDashboard = ({
         </button>
       </div>
 
-      {/* ── PASSENGERS SECTION ── */}
-      {section === "passengers" && (
-        <div className="result-card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-            <h3 style={{ margin: 0 }}>Passenger Directory</h3>
-            <RefreshBtn fetchFn={fetchAllPassengers} loading={loadingPassengers} />
+      {/* Flight Passengers SEction */}
+      {section === "flightManifest" && (
+        <div>
+          <div className="result-card" style={{ marginBottom: "24px" }}>
+            <h3>Flight Manifest Lookup</h3>
+            <p style={{ color: "#dfe2ff", marginBottom: "18px" }}>
+              Enter a flight ID to view the passengers booked on that flight, along with the number of seats booked.
+            </p>
+
+            <div style={{ display: "flex", gap: "12px", alignItems: "flex-end", flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: "220px" }}>
+                <label style={{ display: "block", marginBottom: "6px", fontWeight: "600" }}>
+                  Flight ID
+                </label>
+                <input
+                  type="number"
+                  placeholder="Enter flight ID"
+                  value={flightManifestSearch}
+                  onChange={(e) => setFlightManifestSearch(e.target.value)}
+                  style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #ddd" }}
+                />
+              </div>
+
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={handleFlightManifestSearch}
+                disabled={!flightManifestSearch}
+              >
+                {loadingFlightManifest ? "Searching..." : "Search Flight"}
+              </button>
+            </div>
+
+            {flightManifestMsg && (
+              <p style={{ marginTop: "14px", color: "#d9dcff" }}>
+                {flightManifestMsg}
+              </p>
+            )}
           </div>
 
-          {allPassengers.length === 0 ? (
-            <p style={{ color: "#888" }}>No passenger data. Click Refresh to load.</p>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <p style={{ margin: "0 0 10px", fontSize: "13px", color: "#888" }}>
-                Showing <strong>{allPassengers.length}</strong> registered passenger{allPassengers.length !== 1 ? "s" : ""}
+          {flightManifest?.flight && (
+            <div className="result-card" style={{ marginBottom: "24px" }}>
+              <h4 style={{ marginBottom: "12px" }}>Flight Information</h4>
+              <p><strong>Flight ID:</strong> {flightManifest.flight.flight_id}</p>
+              <p>
+                <strong>Route:</strong> {flightManifest.flight.departure_airport} ({flightManifest.flight.departure_code}) → {flightManifest.flight.arrival_airport} ({flightManifest.flight.arrival_code})
               </p>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                <thead>
-                  <tr style={{ background: "#1a1a2e", color: "#fff" }}>
-                    {["ID", "Name", "Role", "Email", "Phone", "Seat Pref", "Meal Pref", "Country", "Passport", "Visa"].map((h) => (
-                      <th key={h} style={{ padding: "10px", textAlign: "left" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {allPassengers.map((p) => (
-                    <tr key={p.passenger_id} style={{ borderBottom: "1px solid #eee" }}>
-                      <td style={{ padding: "10px" }}>{p.passenger_id}</td>
-                      <td style={{ padding: "10px", fontWeight: "600" }}>{p.first_name} {p.last_name}</td>
-                      <td style={{ padding: "10px" }}>
-                        <span style={{ background: p.user_role === "Passenger" ? "#e3f2fd" : "#e8f5e9", color: p.user_role === "Passenger" ? "#1565c0" : "#1a6e3c", fontSize: "11px", fontWeight: "700", padding: "2px 10px", borderRadius: "999px" }}>
-                          {p.user_role}
-                        </span>
-                      </td>
-                      <td style={{ padding: "10px" }}>{p.email}</td>
-                      <td style={{ padding: "10px" }}>{p.phone_number || "—"}</td>
-                      <td style={{ padding: "10px" }}>{p.seat_preferences || "—"}</td>
-                      <td style={{ padding: "10px" }}>{p.meal_preferences || "—"}</td>
-                      <td style={{ padding: "10px" }}>{p.country_of_origin || "—"}</td>
-                      <td style={{ padding: "10px" }}>
-                        <span style={{ color: Number(p.passport_status) === 1 ? "#1a6e3c" : "#b00020", fontWeight: "600" }}>
-                          {Number(p.passport_status) === 1 ? "✓ Valid" : "✗ Invalid"}
-                        </span>
-                      </td>
-                      <td style={{ padding: "10px" }}>
-                        <span style={{ color: Number(p.visa_status) === 1 ? "#1a6e3c" : "#b00020", fontWeight: "600" }}>
-                          {Number(p.visa_status) === 1 ? "✓ Valid" : "✗ Invalid"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <p><strong>Departure Time:</strong> {new Date(flightManifest.flight.date_of_departure).toLocaleString()}</p>
+              <p><strong>Seats Available:</strong> {flightManifest.flight.seats_available}</p>
+              {flightManifest.flight.total_seats != null && (
+                <p><strong>Total Seats:</strong> {flightManifest.flight.total_seats}</p>
+              )}
+            </div>
+          )}
+
+          {flightManifest && (
+            <div className="result-card">
+              <h4 style={{ marginBottom: "12px" }}>
+                Passenger List ({flightManifest.passengers.length})
+              </h4>
+
+              {flightManifest.passengers.length === 0 ? (
+                <p style={{ color: "#d9dcff" }}>No passengers found for this flight.</p>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                    <thead>
+                      <tr style={{ background: "#1a1a2e", color: "#fff" }}>
+                        {[
+                          "Passenger ID",
+                          "Name",
+                          "Email",
+                          "Phone",
+                          "Seats Booked",
+                          "Booking Status",
+                          "Cabin Class",
+                          "Seat Pref",
+                          "Meal Pref",
+                          "Passport",
+                          "Visa"
+                        ].map((h) => (
+                          <th key={h} style={{ padding: "10px", textAlign: "left" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {flightManifest.passengers.map((p) => (
+                        <tr key={`${p.booking_id}-${p.passenger_id}`} style={{ borderBottom: "1px solid #eee" }}>
+                          <td style={{ padding: "10px" }}>{p.passenger_id}</td>
+                          <td style={{ padding: "10px", fontWeight: "600" }}>
+                            {p.first_name} {p.last_name}
+                          </td>
+                          <td style={{ padding: "10px" }}>{p.email || "—"}</td>
+                          <td style={{ padding: "10px" }}>{p.phone_number || "—"}</td>
+                          <td style={{ padding: "10px", fontWeight: "700" }}>{p.seats_booked ?? "—"}</td>
+                          <td style={{ padding: "10px" }}>{p.booking_status || "—"}</td>
+                          <td style={{ padding: "10px" }}>{p.cabin_class || "—"}</td>
+                          <td style={{ padding: "10px" }}>{p.seat_preferences || "—"}</td>
+                          <td style={{ padding: "10px" }}>{p.meal_preferences || "—"}</td>
+                          <td style={{ padding: "10px" }}>
+                            <span style={{ color: Number(p.passport_status) === 1 ? "#7dffb1" : "#b00020", fontWeight: "600" }}>
+                              {Number(p.passport_status) === 1 ? "✓ Valid" : "✗ Invalid"}
+                            </span>
+                          </td>
+                          <td style={{ padding: "10px" }}>
+                            <span style={{ color: Number(p.visa_status) === 1 ? "#5fff9f" : "#b00020", fontWeight: "600" }}>
+                              {Number(p.visa_status) === 1 ? "✓ Valid" : "✗ Invalid"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -401,37 +456,6 @@ const SystemAdminDashboard = ({
               </p>
             </div>
           )}
-        </div>
-      )}
-
-      {/* ── FLIGHT STATUS SECTION ── */}
-      {section === "flightStatus" && (
-        <div className="result-card">
-          <h3>Check Flight Status</h3>
-          <form onSubmit={handleStatusSubmit}>
-            <div className="form-group">
-              <label>Select Flight</label>
-              <select name="flightId" value={statusData.flightId} onChange={handleStatusChange} required disabled={loadingAllFlights}>
-                <option value="">{loadingAllFlights ? "Loading flights..." : "-- Select a Flight --"}</option>
-                {allFlights.map((f) => (
-                  <option key={f.flight_id} value={f.flight_id}>
-                    #{f.flight_id} — {f.departure_airport} → {f.arrival_airport} ({new Date(f.date_of_departure).toLocaleDateString()}, {f.seats_available} seats)
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button type="submit" className="primary-btn" disabled={!statusData.flightId}>{loadingStatus ? "Searching..." : "Check Status"}</button>
-            {statusMessage && <p style={{ marginTop: "14px", fontSize: "18px" }}>{statusMessage}</p>}
-            {statusResult && (
-              <div className="result-card" style={{ marginTop: "14px" }}>
-                <p><strong>Flight ID:</strong> {statusResult.flight_id}</p>
-                <p><strong>Departure Airport:</strong> {statusResult.departure_airport}</p>
-                <p><strong>Arrival Airport:</strong> {statusResult.arrival_airport}</p>
-                <p><strong>Departure Time:</strong> {new Date(statusResult.date_of_departure).toLocaleString()}</p>
-                <p><strong>Seats Available:</strong> {statusResult.seats_available}</p>
-              </div>
-            )}
-          </form>
         </div>
       )}
 

@@ -154,6 +154,12 @@ function App() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
+  // Employee/Admin - View passengers in Flight
+  const [flightManifestSearch, setFlightManifestSearch] = useState("");
+  const [flightManifest, setFlightManifest] = useState(null);
+  const [loadingFlightManifest, setLoadingFlightManifest] = useState(false);
+  const [flightManifestMsg, setFlightManifestMsg] = useState("");
+
   // Employee Booking Search
   const [searchByUserId, setSearchByUserId] = useState("");
   const [searchByName, setSearchByName] = useState("");
@@ -237,7 +243,6 @@ function App() {
   // Staff Portal login state — separate from passenger login
   const [staffLoginData, setStaffLoginData] = useState({ email: "", password: "" });
   const [staffLoginMessage, setStaffLoginMessage] = useState("");
-  const [loadingStaffLogin, setLoadingStaffLogin] = useState(false);
 
   // Manage Staff (admin only) — list all staff and create/delete accounts
   const [allStaff, setAllStaff] = useState([]);
@@ -394,6 +399,46 @@ const handleOpenLoyaltySignup = () => {
     setLoyaltyModal(null);
     setFreeFlightMode(true);
     setActiveTab("search");
+  };
+
+  const handleFlightManifestSearch = async () => {
+    if (!flightManifestSearch.trim()) {
+      setFlightManifest(null);
+      setFlightManifestMsg("Please enter a flight ID.");
+      return;
+    }
+
+    try {
+      setLoadingFlightManifest(true);
+      setFlightManifestMsg("");
+      setFlightManifest(null);
+
+      const res = await fetch(`${API}/flight-manifest/${flightManifestSearch}`, {
+        headers: {
+          "x-user-id": String(loggedInUser.user_id),
+          "x-user-role": loggedInUser.role,
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setFlightManifest(null);
+        setFlightManifestMsg(data.error || "Could not load flight manifest.");
+        return;
+      }
+
+      setFlightManifest(data);
+      setFlightManifestMsg(
+        `Loaded ${data.passengers.length} passenger${data.passengers.length !== 1 ? "s" : ""} for flight #${data.flight.flight_id}.`
+      );
+    } catch (err) {
+      console.error("Flight manifest search failed:", err);
+      setFlightManifest(null);
+      setFlightManifestMsg("Could not load flight manifest.");
+    } finally {
+      setLoadingFlightManifest(false);
+    }
   };
 
   const handleRedeemFlight = async (flight) => {
@@ -745,23 +790,6 @@ const handleOpenLoyaltySignup = () => {
 
   // ── Event handlers ──
   const handleLoginChange = (e) => setLoginData({ ...loginData, [e.target.name]: e.target.value });
-  // Staff Portal login handler — uses /staff-login endpoint, role is determined from the database
-  const handleStaffLoginChange = (e) => setStaffLoginData({ ...staffLoginData, [e.target.name]: e.target.value });
-  const handleStaffLoginSubmit = async (e) => {
-    e.preventDefault(); setLoadingStaffLogin(true); setStaffLoginMessage("");
-    try {
-      const response = await fetch(`${API}/staff-login`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: staffLoginData.email, password: staffLoginData.password }),
-      });
-      const data = await response.json();
-      if (!response.ok) { setStaffLoginMessage(data.error || "Login failed."); return; }
-      setLoggedInUser(data.user);
-      setStaffLoginMessage(`Login successful. Logged in as ${data.user.role}.`);
-      setActiveTab(data.user.role === "System Admin" ? "systemAdmin" : "employee");
-    } catch { setStaffLoginMessage("Could not connect to backend."); }
-    finally { setLoadingStaffLogin(false); }
-  };
 
   // Manage Staff handlers — admin creates/deletes employee and admin accounts
   const fetchAllStaff = async () => {
@@ -2440,9 +2468,12 @@ const handleOpenLoyaltySignup = () => {
               handleUpdatePreferences={handleUpdatePreferences}
 
               // Passengers
-              allPassengers={allPassengers}
-              loadingPassengers={loadingPassengers}
-              fetchAllPassengers={fetchAllPassengers}
+              flightManifestSearch={flightManifestSearch}
+              setFlightManifestSearch={setFlightManifestSearch}
+              flightManifest={flightManifest}
+              loadingFlightManifest={loadingFlightManifest}
+              flightManifestMsg={flightManifestMsg}
+              handleFlightManifestSearch={handleFlightManifestSearch}
 
               // Bookings
               searchByUserId={searchByUserId}
@@ -2457,16 +2488,6 @@ const handleOpenLoyaltySignup = () => {
               passengerSuggestions={passengerSuggestions}
               setPassengerSuggestions={setPassengerSuggestions}
               selectedPassenger={selectedPassenger}
-
-              // Flight Status
-              statusData={statusData}
-              handleStatusChange={handleStatusChange}
-              handleStatusSubmit={handleStatusSubmit}
-              loadingStatus={loadingStatus}
-              statusMessage={statusMessage}
-              statusResult={statusResult}
-              allFlights={allFlights}
-              loadingAllFlights={loadingAllFlights}
 
               // Routes
               routesWithStatus={routesWithStatus}
@@ -2496,9 +2517,12 @@ const handleOpenLoyaltySignup = () => {
               getAuthHeaders={getAuthHeaders}
 
               // Passengers
-              allPassengers={allPassengers}
-              loadingPassengers={loadingPassengers}
-              fetchAllPassengers={fetchAllPassengers}
+              flightManifestSearch={flightManifestSearch}
+              setFlightManifestSearch={setFlightManifestSearch}
+              flightManifest={flightManifest}
+              loadingFlightManifest={loadingFlightManifest}
+              flightManifestMsg={flightManifestMsg}
+              handleFlightManifestSearch={handleFlightManifestSearch}
 
               // Bookings
               searchByUserId={searchByUserId}
@@ -2514,16 +2538,6 @@ const handleOpenLoyaltySignup = () => {
               setPassengerSuggestions={setPassengerSuggestions}
               selectedPassenger={selectedPassenger}
               handleCancelBooking={handleCancelBooking}
-
-              // Flight Status
-              statusData={statusData}
-              handleStatusChange={handleStatusChange}
-              handleStatusSubmit={handleStatusSubmit}
-              loadingStatus={loadingStatus}
-              statusMessage={statusMessage}
-              statusResult={statusResult}
-              allFlights={allFlights}
-              loadingAllFlights={loadingAllFlights}
 
               // Routes
               routesWithStatus={routesWithStatus}

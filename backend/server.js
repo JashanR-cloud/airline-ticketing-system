@@ -702,27 +702,6 @@ const server = http.createServer((req, res) => {
     return;
   }
  
-  // POST /staff-login — Employee and System Admin login
-  if (req.url === "/staff-login" && req.method === "POST") {
-    parseBody(req).then((body) => {
-      const email = body.email?.trim();
-      const password = body.password?.trim();
-      const sql = `
-        SELECT ua.user_id, ua.email, ua.role, ua.passenger_id, ua.employee_id,
-          e.first_name, e.last_name
-        FROM user_account ua
-        LEFT JOIN employee e ON ua.employee_id = e.id_number
-        WHERE ua.email = ? AND ua.password = ? AND ua.role IN ('Employee', 'System Admin') AND COALESCE(ua.is_deleted, 0) = 0 LIMIT 1
-      `;
-      db.query(sql, [email, password], (err, results) => {
-        if (err) return sendJson(res, 500, { error: err.message });
-        if (results.length === 0) return sendJson(res, 401, { error: "Invalid credentials or not a staff account." });
-        sendJson(res, 200, { message: "Login successful.", user: results[0] });
-      });
-    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
-    return;
-  }
- 
   // POST /search-flights → public
   if (req.url === "/search-flights" && req.method === "POST") {
     parseBody(req).then((body) => {
@@ -1462,6 +1441,89 @@ const server = http.createServer((req, res) => {
       }
       sendJson(res, 200, results);
     });
+    return;
+  }
+
+  // GET /flight-manifest/:flightId → Employee, System Admin
+  const manifestMatch = req.url.match(/^\/flight-manifest\/(\d+)$/);
+  if (manifestMatch && req.method === "GET") {
+    const requester = getRequestUser(req);
+    if (!isStaff(requester.role)) return deny(res);
+
+    const flightId = Number(manifestMatch[1]);
+
+    const flightSql = `
+      SELECT
+        f.flight_id,
+        f.date_of_departure,
+        f.total_seats,
+        GREATEST(
+          f.total_seats - COALESCE(booked.total_booked_seats, 0),
+          0
+        ) AS seats_available,
+        COALESCE(booked.total_booked_seats, 0) AS seats_booked,
+        dep.airport_name AS departure_airport,
+        dep.airport_code AS departure_code,
+        arr.airport_name AS arrival_airport,
+        arr.airport_code AS arrival_code
+      FROM flights f
+      JOIN routes r ON f.route_id = r.route_id
+      JOIN airport dep ON r.departure_airport_id = dep.airport_id
+      JOIN airport arr ON r.destination_airport_id = arr.airport_id
+      LEFT JOIN (
+        SELECT
+          flight_id,
+          SUM(COALESCE(num_passengers, 1)) AS total_booked_seats
+        FROM bookings
+        WHERE booking_status <> 'Cancelled'
+        GROUP BY flight_id
+      ) booked ON booked.flight_id = f.flight_id
+      WHERE f.flight_id = ?
+      LIMIT 1
+    `;
+
+    const passengersSql = `
+      SELECT
+        p.passenger_id,
+        p.first_name,
+        p.last_name,
+        p.email,
+        p.phone_number,
+        p.seat_preferences,
+        p.meal_preferences,
+        p.country_of_origin,
+        p.passport_status,
+        p.visa_status,
+        ua.user_id,
+        ua.role AS user_role,
+        b.booking_id,
+        b.booking_status,
+        b.cabin_class,
+        b.num_passengers AS seats_booked
+      FROM bookings b
+      JOIN booking_passengers bp ON b.booking_id = bp.booking_id
+      JOIN passenger p ON bp.passenger_id = p.passenger_id
+      LEFT JOIN user_account ua ON ua.passenger_id = p.passenger_id
+      WHERE b.flight_id = ?
+      ORDER BY p.last_name ASC, p.first_name ASC
+    `;
+
+    db.query(flightSql, [flightId], (flightErr, flightRows) => {
+      if (flightErr) return sendJson(res, 500, { error: flightErr.message });
+      if (flightRows.length === 0) {
+        return sendJson(res, 404, { error: "Flight not found." });
+      }
+
+      db.query(passengersSql, [flightId], (passErr, passengerRows) => {
+        if (passErr) return sendJson(res, 500, { error: passErr.message });
+
+        sendJson(res, 200, {
+          flight: flightRows[0],
+          passengers: passengerRows
+        });
+      });
+    });
+
     return;
   }
  
