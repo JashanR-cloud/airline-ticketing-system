@@ -540,7 +540,7 @@ const server = http.createServer((req, res) => {
       const {
         email, password, first_name, last_name, date_of_birth, phone_number,
         address, id_number, passport_status, visa_status, country_of_origin,
-        seat_preferences, meal_preferences, special_needs,
+        seat_preferences, meal_preferences, special_needs, card_number, card_expiration_date, card_security_code, card_name,
       } = body;
       const role = "Passenger";
       db.query("SELECT user_id FROM user_account WHERE email = ?", [email], (err, rows) => {
@@ -564,8 +564,8 @@ const server = http.createServer((req, res) => {
           db.query(pSql, pVals, (pErr) => {
             if (pErr) return sendJson(res, 500, { error: pErr.message });
             db.query(
-              "INSERT INTO user_account (passenger_id, email, password, role) VALUES (?, ?, ?, ?)",
-              [newPassengerId, email?.trim(), password, role],
+              "INSERT INTO user_account (passenger_id, email, password, role, card_number, card_expiration_date, card_security_code, card_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+              [newPassengerId, email?.trim(), password, role, card_number?.trim() || null, card_expiration_date || null, card_security_code?.trim() || null, card_name?.trim() || null],
               (uErr, result) => {
                 if (uErr) return sendJson(res, 500, { error: uErr.message });
                 // NOTE: Loyalty enrollment intentionally NOT done here.
@@ -1138,7 +1138,7 @@ const server = http.createServer((req, res) => {
  
       const {
         first_name, last_name, date_of_birth, phone_number, address, id_number,
-        passport_status, visa_status, seat_preferences, meal_preferences, special_needs, password,
+        passport_status, visa_status, seat_preferences, meal_preferences, special_needs, password, card_number, card_expiration_date, card_security_code, card_name,
       } = body;
  
       if (!first_name?.trim() || !last_name?.trim()) {
@@ -1178,6 +1178,8 @@ const server = http.createServer((req, res) => {
                employee_id], cb
             ));
           }
+ 
+          tasks.push((cb) => db.query(`UPDATE user_account SET card_number=?, card_expiration_date=?, card_security_code=?, card_name=? WHERE user_id=?`, [card_number || null, card_expiration_date || null, card_security_code || null, card_name || null, targetUserId], cb));
  
           if (password?.trim()) {
             tasks.push((cb) => db.query(
