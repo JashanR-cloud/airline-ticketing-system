@@ -68,6 +68,7 @@ export function CreateAccountModal({ onClose, onSuccess }) {
     passport_status: false, visa_status: false,
     country_of_origin: "",
     seat_preferences: "", meal_preferences: "", special_needs: "",
+    card_name: "", card_number: "", card_expiration_date: "", card_security_code: "",
   });
 
   const set = (e) =>
@@ -162,6 +163,23 @@ export function CreateAccountModal({ onClose, onSuccess }) {
 
             <Field label="Confirm Password" required>
               <input className="acct-input" type="password" name="confirmPassword" value={form.confirmPassword} onChange={set} placeholder="Repeat your password" />
+            </Field>
+
+            
+            <h3 className="acct-subsection">Payment Information</h3>
+            <Field label="Name on Card">
+              <input className="acct-input" type="text" name="card_name" value={form.card_name} onChange={set} placeholder="Name as shown on card" />
+            </Field>
+            <div className="acct-row">
+              <Field label="Card Number">
+                <input className="acct-input" type="text" name="card_number" value={form.card_number} onChange={set} placeholder="1234 5678 9012 3456" />
+              </Field>
+              <Field label="Expiration Date">
+                <input className="acct-input" type="month" name="card_expiration_date" value={form.card_expiration_date} onChange={set} />
+              </Field>
+            </div>
+            <Field label="Security Code">
+              <input className="acct-input" type="text" name="card_security_code" value={form.card_security_code} onChange={set} placeholder="CVV" />
             </Field>
 
             {error && <p className="acct-error">{error}</p>}
@@ -278,6 +296,10 @@ export function EditAccountModal({ user, onClose, onSaved, onAccountDeleted }) {
     special_needs: user.special_needs || "",
     password: "",
     confirmPassword: "",
+    card_number: user.card_number || "",
+    card_expiration_date: user.card_expiration_date || "",
+    card_security_code: user.card_security_code || "",
+    card_name: user.card_name || "",
   });
 
   const set = (e) =>
@@ -419,6 +441,27 @@ export function EditAccountModal({ user, onClose, onSaved, onAccountDeleted }) {
             </label>
           </div>
 
+
+          <div className="acct-divider">
+            <span>Saved Payment Information</span>
+          </div>
+
+          <div className="acct-row">
+            <Field label="Name on Card">
+              <input className="acct-input" type="text" name="card_name" value={form.card_name} onChange={set} />
+            </Field>
+            <Field label="Card Number">
+              <input className="acct-input" type="text" name="card_number" value={form.card_number} onChange={set} maxLength="19" />
+            </Field>
+          </div>
+          <div className="acct-row">
+            <Field label="Expiration Date">
+              <input className="acct-input" type="month" name="card_expiration_date" value={form.card_expiration_date} onChange={set} />
+            </Field>
+            <Field label="Security Code">
+              <input className="acct-input" type="password" name="card_security_code" value={form.card_security_code} onChange={set} maxLength="4" />
+            </Field>
+          </div>
           <div className="acct-divider">
             <span>Change Password <em>(leave blank to keep current)</em></span>
           </div>
