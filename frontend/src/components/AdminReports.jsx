@@ -8,6 +8,10 @@ import {
     YAxis,
     Tooltip,
     ResponsiveContainer,
+    PieChart,
+    Pie,
+    Cell,
+    Legend,
 } from "recharts";
 
 
@@ -37,6 +41,19 @@ const AdminReports = ({API}) => {
 
     // Controls whether to show the highest or lowest values
     const [resultMode, setResultMode] = useState("top");
+
+    const pieColors = [
+        "#fe0c0c",
+        "#ffb347",
+        "#5900ff",
+        "#479400",
+        "#90008c",
+        "#5bd3ff",
+        "#fcf805",
+        "#bffff3",
+        "#ffffff",
+        "#000000",
+    ];
 
     // Create the subset of data the user wants to view
     const visibleData =
@@ -186,7 +203,7 @@ const AdminReports = ({API}) => {
                         <option value="ASC">Lowest First</option>
                     </select>
 
-                    
+
                     <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
 
                         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -228,53 +245,134 @@ const AdminReports = ({API}) => {
                 </div>
             ) : (
 
-                // MAIN CONTENT GRID
-                <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: "24px" }}>
-
-                    {/*SUMMARY PANEL*/}
+                <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                    {/* Top row: Total info + Pie chart */}
                     <div
                         style={{
-                            padding: "20px",
-                            borderRadius: "20px",
-                            background: "rgba(255,255,255,0.07)",
-                            border: "1px solid rgba(255,255,255,0.14)",
+                            display: "grid",
+                            gridTemplateColumns: "300px 1fr",
+                            gap: "24px",
                         }}
                     >
-                        <h3>Total</h3>
-                        <h2 style={{ marginBottom: "16px" }}>
-                            {activeReport === "airport-revenue"
-                                ? formatValue(totalValue)
-                                : `${totalValue} ${getLabel()}`}
-                        </h2>
+                        {/* SUMMARY PANEL */}
+                        <div
+                            style={{
+                                padding: "20px",
+                                borderRadius: "20px",
+                                background: "rgba(0, 0, 0, 0.07)",
+                                border: "1px solid rgba(255,255,255,0.14)",
+                            }}
+                        >
+                            <h3>Total</h3>
+                            <h2 style={{ marginBottom: "16px" }}>
+                                {activeReport === "airport-revenue"
+                                    ? formatValue(totalValue)
+                                    : `${totalValue} ${getLabel()}`}
+                            </h2>
 
-                        {/* LIST OF VALUES */}
-                        {visibleData.map((row, i) => (
-                            <div key={i} style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                                <span>{row.name}</span>
-                                <strong>{formatValue(row.value)}</strong>
-                            </div>
-                        ))}
+                            {visibleData.map((row, i) => (
+                                <div
+                                    key={i}
+                                    style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        marginBottom: "8px",
+                                        gap: "10px",
+                                    }}
+                                >
+                                    <span style={{ color: "rgba(255,255,255,0.78)" }}>{row.name}</span>
+                                    <strong>{formatValue(row.value)}</strong>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* PIE CHART PANEL */}
+                        <div
+                            style={{
+                                padding: "20px",
+                                borderRadius: "20px",
+                                background: "rgba(0, 0, 0, 0.07)",
+                                border: "1px solid rgba(255,255,255,0.14)",
+                                height: "380px",
+                            }}
+                        >
+
+                            <h3
+                                style={{
+                                    color: "white",
+                                    marginBottom: "14px",
+                                    fontSize: "20px",
+                                    fontWeight: "600",
+                                }}
+                            >
+                                Distribution Breakdown
+                            </h3>
+
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={visibleData}
+                                        dataKey="value"
+                                        nameKey="name"
+                                        cx="50%"
+                                        cy="50%"
+                                        outerRadius={120}
+                                        innerRadius={55}
+                                        paddingAngle={3}
+                                        label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                                    >
+                                        {visibleData.map((entry, index) => (
+                                            <Cell
+                                                key={`cell-${index}`}
+                                                fill={pieColors[index % pieColors.length]}
+                                            />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        contentStyle={{
+                                            background: "#1a2332",
+                                            border: "1px solid rgba(255,255,255,0.2)",
+                                            borderRadius: "10px",
+                                            color: "white",
+                                        }}
+                                        formatter={(value) =>
+                                            activeReport === "airport-revenue"
+                                                ? `$${value.toLocaleString()}`
+                                                : value.toLocaleString()
+                                        }
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
 
-
-                    {/*CHART SECTION (RECHARTS)*/}
+                    {/* Bar chart panel */}
                     <div
                         style={{
                             padding: "20px",
                             borderRadius: "20px",
-                            background: "rgba(255,255,255,0.07)",
+                            background: "rgba(0, 0, 0, 0.07)",
                             border: "1px solid rgba(255,255,255,0.14)",
                             height: "420px",
                         }}
                     >
 
-                        {/* Responsive wrapper ensures chart scales properly */}
+                        <h3
+                            style={{
+                                color: "white",
+                                marginBottom: "14px",
+                                fontSize: "20px",
+                                fontWeight: "600",
+                            }}
+                        >
+                            Performance Comparison
+                        </h3>
+                        
                         <ResponsiveContainer width="100%" height="100%">
-                            
-                            {/* Bar chart*/}
-                            <BarChart data={visibleData}>
-
-                                {/* X axis = names */}
+                            <BarChart
+                                data={visibleData}
+                                margin={{ top: 10, right: 10, left: 0, bottom: 70 }}
+                            >
                                 <XAxis
                                     dataKey="name"
                                     stroke="rgba(255,255,255,0.7)"
@@ -284,11 +382,7 @@ const AdminReports = ({API}) => {
                                     textAnchor="end"
                                     height={80}
                                 />
-
-                                {/* Y axis = values */}
                                 <YAxis stroke="rgba(255,255,255,0.7)" />
-
-                                {/* Tooltip on hover */}
                                 <Tooltip
                                     contentStyle={{
                                         background: "#1a2332",
@@ -299,21 +393,17 @@ const AdminReports = ({API}) => {
                                     formatter={(value) =>
                                         activeReport === "airport-revenue"
                                             ? `$${value.toLocaleString()}`
-                                            : value
+                                            : value.toLocaleString()
                                     }
                                 />
-
-                                {/* Bars */}
                                 <Bar
                                     dataKey="value"
                                     fill="#ff8a3d"
                                     radius={[8, 8, 0, 0]}
                                 />
-
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-
                 </div>
             )}
         </div>
