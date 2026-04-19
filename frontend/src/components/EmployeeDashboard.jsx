@@ -66,7 +66,7 @@ const EmployeeDashboard = ({
   return (
     <div>
       <h2>Employee Dashboard</h2>
-      <p style={{ color: "#666", marginBottom: "18px" }}>
+      <p style={{ color: "#d9dcff", marginBottom: "18px" }}>
         Passenger management, booking operations, and flight information.
       </p>
 
@@ -103,10 +103,10 @@ const EmployeeDashboard = ({
           </div>
 
           {allPassengers.length === 0 ? (
-            <p style={{ color: "#888" }}>No passenger data. Click Refresh to load.</p>
+            <p style={{ color: "#d9dcff" }}>No passenger data. Click Refresh to load.</p>
           ) : (
             <div style={{ overflowX: "auto" }}>
-              <p style={{ margin: "0 0 10px", fontSize: "13px", color: "#888" }}>
+              <p style={{ margin: "0 0 10px", fontSize: "13px", color: "#d9dcff" }}>
                 Showing <strong>{allPassengers.length}</strong> registered passenger{allPassengers.length !== 1 ? "s" : ""}
               </p>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
@@ -155,7 +155,7 @@ const EmployeeDashboard = ({
       {section === "bookings" && (
         <div>
           <h3>Find and Manage Bookings</h3>
-          <p style={{ color: "#666", marginBottom: "20px" }}>
+          <p style={{ color: "#d9dcff", marginBottom: "20px" }}>
             Search by User ID or by Passenger Name. Select a passenger to view their bookings.
           </p>
 
@@ -225,7 +225,7 @@ const EmployeeDashboard = ({
                         }}
                       >
                         <strong>{p.first_name} {p.last_name}</strong>
-                        <span style={{ marginLeft: "12px", color: "#666", fontSize: "13px" }}>
+                        <span style={{ marginLeft: "12px", color: "#d9dcff", fontSize: "13px" }}>
                           {p.email}
                         </span>
                       </div>
@@ -251,7 +251,7 @@ const EmployeeDashboard = ({
               <div className="result-card" style={{ marginBottom: "24px" }}>
                 <h4>Active Bookings ({activeBookings.length})</h4>
                 {activeBookings.length === 0 ? (
-                  <p style={{ color: "#888", padding: "20px", textAlign: "center" }}>No active bookings</p>
+                  <p style={{ color: "#d9dcff", padding: "20px", textAlign: "center" }}>No active bookings</p>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                     {activeBookings.map(booking => (
@@ -276,7 +276,7 @@ const EmployeeDashboard = ({
               <div className="result-card">
                 <h4>Past Bookings ({pastBookings.length})</h4>
                 {pastBookings.length === 0 ? (
-                  <p style={{ color: "#888", padding: "20px", textAlign: "center" }}>No past bookings</p>
+                  <p style={{ color: "#d9dcff", padding: "20px", textAlign: "center" }}>No past bookings</p>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                     {pastBookings.map(booking => (
@@ -301,7 +301,7 @@ const EmployeeDashboard = ({
 
           {searchResults.length === 0 && (searchByUserId || selectedPassenger) && (
             <div className="result-card">
-              <p style={{ color: "#888", textAlign: "center", padding: "40px" }}>
+              <p style={{ color: "#d9dcff", textAlign: "center", padding: "40px" }}>
                 No bookings found for the selected criteria.
               </p>
             </div>
@@ -348,13 +348,13 @@ const EmployeeDashboard = ({
               <h3 style={{ margin: 0 }}>Route Active / Inactive Status</h3>
               <RefreshBtn fetchFn={fetchRoutesWithStatus} loading={loadingRoutesStatus} />
             </div>
-            <p style={{ color: "#888", fontSize: "13px", marginBottom: "10px" }}>Click any row to see its scheduled flights.</p>
+            <p style={{ color: "#d9dcff", fontSize: "13px", marginBottom: "10px" }}>Click any row to see its scheduled flights.</p>
             {routeMsg.text && (
               <div style={{ marginBottom: "12px", padding: "10px 14px", borderRadius: "8px", fontWeight: "600", fontSize: "14px", background: routeMsg.type === "success" ? "#e8f5e9" : "#fce4ec", color: routeMsg.type === "success" ? "#1a6e3c" : "#b00020" }}>
                 {routeMsg.text}
               </div>
             )}
-            {routesWithStatus.length === 0 ? <p style={{ color: "#888" }}>No route data. Click Refresh.</p> : (
+            {routesWithStatus.length === 0 ? <p style={{ color: "#ffffff" }}>No route data. Click Refresh.</p> : (
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
                 <thead>
                   <tr style={{ background: "#1a1a2e", color: "#fff" }}>
@@ -418,7 +418,7 @@ const EmployeeDashboard = ({
           {/* Route Report */}
           <div className="result-card">
             <h3>Flight Route Data Report</h3>
-            <button className="nav-edit-btn" style={{ color: "#222", borderColor: "#222", margin: "10px 0" }} onClick={fetchReports}>{loadingReports ? "Generating..." : "Generate Report"}</button>
+            <button className="nav-edit-btn" style={{ color: "#ffffff", borderColor: "#19d50c", margin: "10px 0" }} onClick={fetchReports}>{loadingReports ? "Generating..." : "Generate Report"}</button>
             {reports.length > 0 && (
               <table style={{ width: "100%", textAlign: "left", marginTop: "10px", borderCollapse: "collapse" }}>
                 <thead>

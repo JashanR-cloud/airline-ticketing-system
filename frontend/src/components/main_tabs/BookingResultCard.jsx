@@ -23,14 +23,14 @@ const BookingResultCard = ({
     ? new Date(result.date_of_departure) 
     : new Date();
 
-  const duration = formatDuration(result.estimated_time_hours)
+  const duration = formatDuration(result.estimated_time_hours);
 
   return (
     <div style={{ 
-      border: "1px solid #ddd", 
+      border: "1px solid #3d5f89", 
       borderRadius: "12px", 
       padding: "20px", 
-      background: "#fff",
+      background: "#5d7790",
       marginBottom: "16px",
       width: "550px"
     }}>
@@ -38,8 +38,8 @@ const BookingResultCard = ({
       <div style={{ marginBottom: "16px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <strong style={{ fontSize: "18px" }}>{result.airline_name || "Flight"}</strong>
-            <span style={{ marginLeft: "12px", color: "#666" }}>Booking #{result.booking_id}</span>
+            <strong style={{ fontSize: "18px", color: "#e9f29b" }}>{result.airline_name || "Flight"}</strong>
+            <span style={{ marginLeft: "12px", color: "#ffffff" }}>Booking #{result.booking_id}</span>
           </div>
           <span style={{
             padding: "6px 14px",
@@ -53,20 +53,20 @@ const BookingResultCard = ({
             {result.booking_status}
           </span>
         </div>
-        <p style={{ color: "#444" }}>
+        <p style={{ color: "#d6d9f7" }}>
           {departureDate.toLocaleString([], { 
             weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
-          })}
+          })} 
         </p>
         <p style={{ fontSize: "16px", margin: "10px 0 6px", fontWeight: "500" }}>
           Flight ID: {result.flight_id}
         </p>
-
+        
         <p style={{ fontSize: "16px", margin: "10px 0 6px", fontWeight: "500" }}>
-          <strong>FROM {result.departure_city}, {result.departure_country}</strong><br/>{result.departure_name}
+          <strong>FROM {result.departure_city}, {result.departure_country}</strong> <br/> {result.departure_name}
         </p>
-        <p style={{ fontSize: "16px", margin: "10px 0 6px", fontWeight: "500" }}>
-          <strong>TO {result.arrival_city}, {result.arrival_country}</strong><br/>{result.arrival_name}
+        <p style={{ fontSize: "16px", margin: "15px 0 6px", fontWeight: "500" }}>
+          <strong>TO {result.arrival_city}, {result.arrival_country}</strong><br/> {result.arrival_name}
         </p>
         <p style={{ fontSize: "16px", margin: "10px 0 6px", fontWeight: "500" }}>
           Travel Time: {duration}
@@ -89,10 +89,10 @@ const BookingResultCard = ({
       {/* Preferences Section */}
       {showPrefs && (
         <>
-          <hr style={{ margin: "16px 0", borderTop: "1px solid #eee" }} />
+          <hr style={{ margin: "16px 0", borderTop: "1px solid #5b667c" }} />
           
           {isEditingPrefs ? (
-            <div style={{ background: "#f9f9f9", padding: "16px", borderRadius: "8px", marginBottom: "16px" }}>
+            <div style={{ background: "#35404a", padding: "16px", borderRadius: "8px", marginBottom: "16px" }}>
               <h4 style={{ marginBottom: "12px" }}>Edit Preferences</h4>
               
               <div className="form-group" style={{ marginBottom: "12px" }}>
@@ -123,7 +123,7 @@ const BookingResultCard = ({
                   <option value="Gluten-Free">Gluten-Free</option>
                   <option value="Diabetic">Diabetic</option>
                   <option value="Nut-Free">Nut-Free</option>
-                  <option value="Child Meal">Child Meal</option>
+                  <option value="Child Meal">Child</option>
                 </select>
               </div>
 
@@ -132,7 +132,7 @@ const BookingResultCard = ({
                   type="button" 
                   className="primary-btn" 
                   style={{ backgroundColor: "#1a6e3c" }}
-                  onClick={()=>handleUpdatePreferences(result.passenger_id)}
+                  onClick={() => handleUpdatePreferences(result.passenger_id)}
                 >
                   Save Changes
                 </button>

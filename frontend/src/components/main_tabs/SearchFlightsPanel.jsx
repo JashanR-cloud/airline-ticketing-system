@@ -423,16 +423,16 @@ const SearchFlightsPanel = ({
 
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px", marginBottom: "8px" }}>
                     <div>
-                        <p style={{ margin: "0 0 4px", paddingBottom: "10px" }}>
+                        <p style={{ margin: "0 0 4px", paddingBottom: "10px", color:"#d2fdca"  }}>
                         Fly with <strong>{flight.airline_name}</strong>
                         </p>
-                        <p style={{ margin: "0 0 4px" }}><strong>Flight ID:</strong> {flight.flight_id}</p>
-                        <p style={{ margin: "0 0 4px" }}><strong>Departure:</strong> {flight.departure_city}, {flight.departure_country} ({flight.departure_code})</p>
-                        <p style={{ margin: "0 0 4px" }}><strong>Date of Departure:</strong> {new Date(flight.date_of_departure).toLocaleString()}</p>
-                        <p style={{ margin: "0 0 4px" }}><strong>Arrival:</strong> {flight.arrival_city}, {flight.arrival_country} ({flight.arrival_code})</p>
-                        <p style={{ margin: "0 0 4px" }}><strong>Date of Arrival: </strong> {new Date(findArrivalDate(flight.date_of_departure, flight.estimated_time_hours)).toLocaleString()}</p>
-                        <p style={{ margin: "0 0 4px" }}><strong>Estimated Time: </strong>{formatDuration(flight.estimated_time_hours)}</p>
-                        <p style={{ margin: "0 0 4px" }}>
+                        <p style={{ margin: "0 0 4px", color:"#ffffff"  }}><strong>Flight ID:</strong> {flight.flight_id}</p>
+                        <p style={{ margin: "0 0 4px", color:"#ffffff"  }}><strong>Departure:</strong> {flight.departure_city}, {flight.departure_country} ({flight.departure_code})</p>
+                        <p style={{ margin: "0 0 4px", color:"#ffffff"  }}><strong>Date of Departure:</strong> {new Date(flight.date_of_departure).toLocaleString()}</p>
+                        <p style={{ margin: "0 0 4px", color:"#ffffff"  }}><strong>Arrival:</strong> {flight.arrival_city}, {flight.arrival_country} ({flight.arrival_code})</p>
+                        <p style={{ margin: "0 0 4px", color:"#ffffff"  }}><strong>Date of Arrival: </strong> {new Date(findArrivalDate(flight.date_of_departure, flight.estimated_time_hours)).toLocaleString()}</p>
+                        <p style={{ margin: "0 0 4px", color:"#ffffff"  }}><strong>Estimated Time: </strong>{formatDuration(flight.estimated_time_hours)}</p>
+                        <p style={{ margin: "0 0 4px", color:"#ffffff"  }}>
                         <strong>Aircraft:</strong> {flight.aircraft_name}
                         </p>
                     </div>
