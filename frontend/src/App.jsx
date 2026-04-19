@@ -2323,7 +2323,7 @@ const handleOpenLoyaltySignup = () => {
             <p className="hero-small">Check our current</p>
             <h1>FLIGHT SCHEDULES</h1>
             <p className="hero-tagline">Travel Beyond the Horizon</p>
-            <button className="hero-button">Learn More</button>
+            
           </div>
         </div>
       </header>
