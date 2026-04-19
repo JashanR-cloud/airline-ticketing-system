@@ -735,7 +735,7 @@ const SystemAdminDashboard = ({
 
           {/* UPDATE AIRCRAFT*/}
           {crudAction === "updateAircraft" && (
-            <form onSubmit={handleCrudSubmit} style={{ background: "#f5f5f5", padding: "15px", borderRadius: "6px" }}>
+            <form onSubmit={handleCrudSubmit} style={{ background: "#212b34", padding: "15px", borderRadius: "6px" }}>
               <h4 style={{ marginBottom: "15px" }}>Update Aircraft Capacity</h4>
               <div className="form-row" style={{ alignItems: "flex-end" }}>
                 <div className="form-group"><label>Aircraft ID</label><input type="number" required value={crudData.aircraftId} onChange={(e) => setCrudData({ ...crudData, aircraftId: e.target.value })} placeholder="e.g. 1" /></div>
