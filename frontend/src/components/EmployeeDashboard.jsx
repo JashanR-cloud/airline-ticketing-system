@@ -160,7 +160,7 @@ const EmployeeDashboard = ({
           </p>
 
           {/* Search Controls */}
-          <div className="result-card" style={{ marginBottom: "24px" }}>
+          <div className="result-card" style={{ marginBottom: "24px", position: "relative", zIndex:2000 }}>
             <div style={{ display: "flex", gap: "16px", marginBottom: "16px" }}>
               {/* User ID Search */}
               <div style={{ flex: 1 }}>
@@ -200,13 +200,13 @@ const EmployeeDashboard = ({
                     top: "100%",
                     left: 0,
                     right: 0,
-                    background: "#fff",
-                    border: "1px solid #ddd",
+                    background: "#22252e",
+                    border: "1px solid #ffffff",
                     borderRadius: "8px",
                     marginTop: "4px",
                     maxHeight: "240px",
                     overflowY: "auto",
-                    zIndex: 1000,
+                    zIndex: 99999,
                     boxShadow: "0 10px 20px rgba(0,0,0,0.1)"
                   }}>
                     {passengerSuggestions.map(p => (

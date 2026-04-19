@@ -250,12 +250,12 @@ const SystemAdminDashboard = ({
       {section === "bookings" && (
         <div>
           <h3>Find and Manage Bookings</h3>
-          <p style={{ color: "#b5c4ee", marginBottom: "20px" }}>
+          <p style={{ color: "#dfe2ff", marginBottom: "20px" }}>
             Search by User ID or by Passenger Name. Select a passenger to view their bookings.
           </p>
 
           {/* Search Controls */}
-          <div className="result-card" style={{ marginBottom: "24px" }}>
+          <div className="result-card" style={{ marginBottom: "24px", position: "relative", zIndex:2000 }}>
             <div style={{ display: "flex", gap: "16px", marginBottom: "16px" }}>
               {/* User ID Search */}
               <div style={{ flex: 1 }}>
@@ -295,13 +295,13 @@ const SystemAdminDashboard = ({
                     top: "100%",
                     left: 0,
                     right: 0,
-                    background: "#fff",
-                    border: "1px solid #ddd",
+                    background: "#22252e",
+                    border: "1px solid #ffffff",
                     borderRadius: "8px",
                     marginTop: "4px",
                     maxHeight: "240px",
                     overflowY: "auto",
-                    zIndex: 1000,
+                    zIndex: 99999,
                     boxShadow: "0 10px 20px rgba(0,0,0,0.1)"
                   }}>
                     {passengerSuggestions.map(p => (
@@ -648,15 +648,15 @@ const SystemAdminDashboard = ({
 
           {/* ADD NEW FLIGHT */}
           {crudAction === "addFlight" && (
-            <form onSubmit={handleCrudSubmit} style={{ background: "#f8f9fa", padding: "20px", borderRadius: "8px" }}>
+            <form onSubmit={handleCrudSubmit} style={{ background: "#212b34", padding: "20px", borderRadius: "8px" }}>
               <h4>Add New Flight</h4>
-              
+
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                 <div className="form-group">
                   <label>Airline</label>
-                  <select 
-                    value={crudData.airlineId} 
-                    onChange={(e) => setCrudData({ ...crudData, airlineId: e.target.value })} 
+                  <select
+                    value={crudData.airlineId}
+                    onChange={(e) => setCrudData({ ...crudData, airlineId: e.target.value })}
                     required
                   >
                     <option value="">Select Airline</option>
@@ -670,9 +670,9 @@ const SystemAdminDashboard = ({
 
                 <div className="form-group">
                   <label>Aircraft</label>
-                  <select 
-                    value={crudData.aircraftId} 
-                    onChange={(e) => setCrudData({ ...crudData, aircraftId: e.target.value })} 
+                  <select
+                    value={crudData.aircraftId}
+                    onChange={(e) => setCrudData({ ...crudData, aircraftId: e.target.value })}
                     required
                   >
                     <option value="">Select Aircraft</option>
@@ -686,9 +686,9 @@ const SystemAdminDashboard = ({
 
                 <div className="form-group">
                   <label>Departure Airport</label>
-                  <select 
-                    value={crudData.departureAirportId} 
-                    onChange={(e) => setCrudData({ ...crudData, departureAirportId: e.target.value })} 
+                  <select
+                    value={crudData.departureAirportId}
+                    onChange={(e) => setCrudData({ ...crudData, departureAirportId: e.target.value })}
                     required
                   >
                     <option value="">Select Departure</option>
@@ -702,9 +702,9 @@ const SystemAdminDashboard = ({
 
                 <div className="form-group">
                   <label>Arrival Airport</label>
-                  <select 
-                    value={crudData.arrivalAirportId} 
-                    onChange={(e) => setCrudData({ ...crudData, arrivalAirportId: e.target.value })} 
+                  <select
+                    value={crudData.arrivalAirportId}
+                    onChange={(e) => setCrudData({ ...crudData, arrivalAirportId: e.target.value })}
                     required
                   >
                     <option value="">Select Arrival</option>
@@ -718,11 +718,11 @@ const SystemAdminDashboard = ({
 
                 <div className="form-group">
                   <label>Departure Date & Time</label>
-                  <input 
-                    type="datetime-local" 
-                    required 
-                    value={crudData.departureDate} 
-                    onChange={(e) => setCrudData({ ...crudData, departureDate: e.target.value })} 
+                  <input
+                    type="datetime-local"
+                    required
+                    value={crudData.departureDate}
+                    onChange={(e) => setCrudData({ ...crudData, departureDate: e.target.value })}
                   />
                 </div>
               </div>
