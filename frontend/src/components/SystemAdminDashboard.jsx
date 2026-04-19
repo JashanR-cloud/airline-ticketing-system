@@ -778,7 +778,7 @@ const SystemAdminDashboard = ({
           {/* Analytics Reports */}
           <div style={{ marginTop: "40px", borderTop: "2px solid #eee", paddingTop: "20px" }}>
             <h3 style={{ marginBottom: "20px" }}>System Analytics & Reports</h3>
-            <AdminReports />
+            <AdminReports API={API}/>
           </div>
         </div>
       )}

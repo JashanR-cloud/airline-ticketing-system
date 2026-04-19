@@ -10,11 +10,9 @@ import {
     ResponsiveContainer,
 } from "recharts";
 
-const API = "http://localhost:8000";
-
 
 // MAIN COMPONENT
-const AdminReports = () => {
+const AdminReports = ({API}) => {
 
     // STATE MANAGEMENT
 
