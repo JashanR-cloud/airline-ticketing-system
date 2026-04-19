@@ -158,7 +158,7 @@ const SystemAdminDashboard = ({
   return (
     <div>
       <h2>System Admin Dashboard</h2>
-      <p style={{ color: "#666", marginBottom: "18px" }}>
+      <p style={{ color: "#ffffff", marginBottom: "18px" }}>
         Full system access — passenger, booking, flight operations, and platform oversight.
       </p>
 
@@ -250,7 +250,7 @@ const SystemAdminDashboard = ({
       {section === "bookings" && (
         <div>
           <h3>Find and Manage Bookings</h3>
-          <p style={{ color: "#666", marginBottom: "20px" }}>
+          <p style={{ color: "#b5c4ee", marginBottom: "20px" }}>
             Search by User ID or by Passenger Name. Select a passenger to view their bookings.
           </p>
 
@@ -443,13 +443,13 @@ const SystemAdminDashboard = ({
               <h3 style={{ margin: 0 }}>Route Active / Inactive Status</h3>
               <RefreshBtn fetchFn={fetchRoutesWithStatus} loading={loadingRoutesStatus} />
             </div>
-            <p style={{ color: "#888", fontSize: "13px", marginBottom: "10px" }}>Click Activate or Deactivate to change a route's status. Click any row to see its scheduled flights.</p>
+            <p style={{ color: "#e6e5ff", fontSize: "13px", marginBottom: "10px" }}>Click Activate or Deactivate to change a route's status. Click any row to see its scheduled flights.</p>
             {routeMsg.text && (
               <div style={{ marginBottom: "12px", padding: "10px 14px", borderRadius: "8px", fontWeight: "600", fontSize: "14px", background: routeMsg.type === "success" ? "#e8f5e9" : "#fce4ec", color: routeMsg.type === "success" ? "#1a6e3c" : "#b00020" }}>
                 {routeMsg.text}
               </div>
             )}
-            {routesWithStatus.length === 0 ? <p style={{ color: "#888" }}>No route data. Click Refresh.</p> : (
+            {routesWithStatus.length === 0 ? <p style={{ color: "#dde0ff" }}>No route data. Click Refresh.</p> : (
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
                 <thead>
                   <tr style={{ background: "#1a1a2e", color: "#fff" }}>
@@ -507,13 +507,13 @@ const SystemAdminDashboard = ({
                 </tbody>
               </table>
             )}
-            <p style={{ fontSize: "12px", color: "#aaa", marginTop: "8px" }}>Click any row to see its flights</p>
+            <p style={{ fontSize: "12px", color: "#e3dfff", marginTop: "8px" }}>Click any row to see its flights</p>
           </div>
 
           {/* Route Report */}
           <div className="result-card">
             <h3>Flight Route Data Report</h3>
-            <button className="nav-edit-btn" style={{ color: "#222", borderColor: "#222", margin: "10px 0" }} onClick={fetchReports}>{loadingReports ? "Generating..." : "Generate Report"}</button>
+            <button className="nav-edit-btn" style={{ color: "#ffffff", borderColor: "#13fd1e", margin: "10px 0" }} onClick={fetchReports}>{loadingReports ? "Generating..." : "Generate Report"}</button>
             {reports.length > 0 && (
               <table style={{ width: "100%", textAlign: "left", marginTop: "10px", borderCollapse: "collapse" }}>
                 <thead>
@@ -599,7 +599,7 @@ const SystemAdminDashboard = ({
       {section === "actions" && (
         <div className="result-card">
           <h3>Flight Admin Actions</h3>
-          <p style={{ color: "#666", marginBottom: "20px" }}>Add new flights, update aircraft, or delete existing flights.</p>
+          <p style={{ color: "#ffffff", marginBottom: "20px" }}>Add new flights, update aircraft, or delete existing flights.</p>
 
           <div style={{ display: "flex", gap: "10px", marginBottom: "24px", flexWrap: "wrap" }}>
             <button
@@ -747,14 +747,14 @@ const SystemAdminDashboard = ({
 
           {/* DELETE FLIGHT */}
           {crudAction === "deleteFlight" && (
-            <div style={{ background: "#ffebee", padding: "20px", borderRadius: "8px", border: "1px solid #ffcdd2" }}>
+            <div style={{ background: "#212b34", padding: "20px", borderRadius: "8px", border: "1px solid #ffcdd2" }}>
               <h4 style={{ color: "#b00020", marginBottom: "10px" }}>Delete Flight</h4>
-              <p style={{ color: "#666", marginBottom: "20px" }}>
+              <p style={{ color: "#ffffff", marginBottom: "20px" }}>
                 Enter the Flight ID you want to permanently delete.
               </p>
 
               <div className="form-group">
-                <label>Flight ID to Delete</label>
+                <label style={{ color: "#ffffff", marginBottom: "20px" }}>Flight ID to Delete</label>
                 <input
                   type="number"
                   placeholder="e.g. 12345"
@@ -791,7 +791,7 @@ const SystemAdminDashboard = ({
             Create or remove Employee and System Admin accounts.
           </p>
 
-          <button className="nav-edit-btn" style={{ color: "#222", borderColor: "#222", margin: "10px 0" }} onClick={fetchAllStaff}>
+          <button className="nav-edit-btn" style={{ color: "#ffffff", borderColor: "#15dd8d", margin: "10px 0" }} onClick={fetchAllStaff}>
             Load Staff List
           </button>
 
