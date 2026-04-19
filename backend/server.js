@@ -1278,19 +1278,105 @@ const server = http.createServer((req, res) => {
     return;
   }
  
-  // POST /add-flight → Employee, System Admin
+  // POST /add-flight → Employee / System Admin
   if (req.url === "/add-flight" && req.method === "POST") {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
       if (!isStaff(requester.role)) return deny(res);
-      db.query(
-        "INSERT INTO flights (route_id, date_of_departure, seats_available) VALUES (?, ?, ?)",
-        [body.routeId, body.departureDate, body.seats], (err) => {
-          if (err) return sendJson(res, 500, { error: err.message });
-          sendJson(res, 201, { message: "Flight added." });
-        }
-      );
-    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
+
+      const {
+        airline_id,
+        aircraft_id,
+        departure_airport_id,
+        arrival_airport_id,
+        date_of_departure
+      } = body;
+
+      if (!airline_id || !aircraft_id || !departure_airport_id || !arrival_airport_id || !date_of_departure) {
+        return sendJson(res, 400, { error: "Missing required fields" });
+      }
+
+      // Step 1: Get next flight_id (max + 1)
+      db.query("SELECT MAX(flight_id) AS max_id FROM flights", (maxErr, maxRows) => {
+        if (maxErr) return sendJson(res, 500, { error: maxErr.message });
+
+        const nextFlightId = (maxRows[0].max_id || 0) + 1;
+
+        // Step 2: Get aircraft details
+        db.query(
+          `SELECT seating_capacity, max_baggage_capacity 
+          FROM aircraft WHERE aircraft_id = ?`,
+          [aircraft_id],
+          (aircraftErr, aircraftRows) => {
+            if (aircraftErr || aircraftRows.length === 0) {
+              return sendJson(res, 400, { error: "Invalid aircraft selected" });
+            }
+
+            const total_seats = aircraftRows[0].seating_capacity || 150;
+            const baggage_availability = aircraftRows[0].max_baggage_capacity || 0;
+
+            // Step 3: Generate random staff_size between 5 and 15
+            const staff_size = Math.floor(Math.random() * 11) + 5; 
+
+            // Step 4. Generate prices based on airline (reasonable base + variation)
+            const basePrice = 180 + (Number(airline_id) * 25);   // different airlines have different base prices
+            const economy_price = Math.floor(basePrice * (0.9 + Math.random() * 0.3));     // ±15%
+            const business_price = Math.floor(economy_price * 2.2);
+            const first_class_price = Math.floor(economy_price * 3.8);
+
+            // Step 5: Find route_id
+            const routeSql = `
+              SELECT route_id 
+              FROM routes 
+              WHERE departure_airport_id = ? AND destination_airport_id = ? 
+              LIMIT 1
+            `;
+
+            db.query(routeSql, [departure_airport_id, arrival_airport_id], (routeErr, routeRows) => {
+              if (routeErr || routeRows.length === 0) {
+                return sendJson(res, 400, { error: "No matching route found between selected airports" });
+              }
+
+              const route_id = routeRows[0].route_id;
+
+              // Step 6: Insert the new flight
+              const insertSql = `
+                INSERT INTO flights 
+                  (flight_id, airline_id, aircraft_id, route_id, date_of_departure,
+                  total_seats, seats_available, staff_size, baggage_availability,
+                  economy_price, business_price, first_class_price)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              `;
+
+              db.query(insertSql, [
+                nextFlightId,
+                airline_id,
+                aircraft_id,
+                route_id,
+                date_of_departure,
+                total_seats,
+                total_seats,        
+                staff_size,
+                baggage_availability,
+                economy_price,
+                business_price,
+                first_class_price
+              ], (insertErr, result) => {
+                if (insertErr) {
+                  console.error("Insert flight error:", insertErr);
+                  return sendJson(res, 500, { error: insertErr.message });
+                }
+
+                sendJson(res, 201, { 
+                  message: "Flight added successfully", 
+                  flight_id: nextFlightId 
+                });
+              });
+            });
+          }
+        );
+      });
+    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body" }));
     return;
   }
  
@@ -1310,16 +1396,52 @@ const server = http.createServer((req, res) => {
     return;
   }
  
-  // DELETE /delete-route → Employee, System Admin
-  if (req.url === "/delete-route" && req.method === "DELETE") {
+  // DELETE /delete-flight → Employee / System Admin
+  if (req.url === "/delete-flight" && req.method === "DELETE") {
     parseBody(req).then((body) => {
       const requester = getRequestUser(req);
       if (!isStaff(requester.role)) return deny(res);
-      db.query("DELETE FROM routes WHERE route_id = ?", [body.routeId], (err) => {
-        if (err) return sendJson(res, 500, { error: err.message });
-        sendJson(res, 200, { message: "Route deleted." });
-      });
-    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body", details: err.message }));
+
+      const { flight_id } = body;
+
+      if (!flight_id) {
+        return sendJson(res, 400, { error: "flight_id is required" });
+      }
+
+      db.query(
+        "DELETE FROM flights WHERE flight_id = ?",
+        [flight_id],
+        (err, result) => {
+          if (err) return sendJson(res, 500, { error: err.message });
+          if (result.affectedRows === 0) {
+            return sendJson(res, 404, { error: "Flight not found" });
+          }
+
+          sendJson(res, 200, { message: "Flight deleted successfully" });
+        }
+      );
+    }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body" }));
+    return;
+  }
+
+  // GET /airlines → Employee / System Admin
+  if (req.url === "/airlines" && req.method === "GET") {
+    const requester = getRequestUser(req);
+    if (!isStaff(requester.role)) return deny(res);
+
+    const sql = `
+      SELECT airline_id, airline_name, airline_code 
+      FROM airline 
+      ORDER BY airline_name ASC
+    `;
+
+    db.query(sql, (err, results) => {
+      if (err) {
+        console.error("Error fetching airlines:", err);
+        return sendJson(res, 500, { error: err.message });
+      }
+      sendJson(res, 200, results);
+    });
     return;
   }
  

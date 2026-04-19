@@ -9,6 +9,9 @@ const SystemAdminDashboard = ({
   prefData,
   setPrefData,
   handleUpdatePreferences,
+  airlines,
+  fetchAirlines,
+  airports,
 
   // Passengers section
   allPassengers,
@@ -269,7 +272,7 @@ const SystemAdminDashboard = ({
               </div>
             </div>
 
-            <button 
+            <button
               onClick={() => handleSearchBookings()}
               className="primary-btn"
               disabled={!searchByUserId && !selectedPassenger}
@@ -399,50 +402,50 @@ const SystemAdminDashboard = ({
                 </thead>
                 <tbody>
                   {routesWithStatus.map((r) => (
-  <tr key={r.route_id} style={{ borderBottom: "1px solid #ddd", cursor: "pointer", height: "44px" }} onClick={() => fetchRouteFlights(r.route_id, `${r.departure} → ${r.arrival}`)}>
-    <td style={{ padding: "10px" }}>{r.route_id}</td>
-    <td style={{ padding: "10px" }}>{r.departure}</td>
-    <td style={{ padding: "10px" }}>{r.arrival}</td>
-    <td style={{ padding: "10px", textAlign: "center" }}>{r.total_flights}</td>
-    <td style={{ padding: "10px", textAlign: "center" }}>
-      <span style={{ background: r.is_active ? "#e8f5e9" : "#fce4ec", color: r.is_active ? "#1a6e3c" : "#b00020", padding: "3px 10px", borderRadius: "10px", fontSize: "12px", fontWeight: "700" }}>{r.is_active ? "Active" : "Inactive"}</span>
-    </td>
-    <td style={{ padding: "10px", textAlign: "center" }}>
-      
-      
-      <button 
-        type="button"
-        style={{
-          backgroundColor: r.is_active ? "#cf102d" : "#1a6e3c",
-          color: "white",
-          border: "none",
-          padding: "6px 12px",
-          borderRadius: "4px",
-          cursor: "pointer",
-          fontSize: "12px",
-          fontWeight: "bold"
-        }}
-        onClick={(e) => {
-          e.stopPropagation(); // Prevents the "fetchRouteFlights" row click from firing
-          
-          if (r.is_active) {
-            // Confirm before a negative action
-            const confirmed = window.confirm("Are you sure you want to deactivate this route?");
-            if (confirmed) {
-              handleToggleRouteStatus(r.route_id);
-            }
-          } else {
-            // Positive action: Activate immediately
-            handleToggleRouteStatus(r.route_id);
-          }
-        }}
-      >
-        {r.is_active ? "Deactivate" : "Activate"}
-      </button>
+                    <tr key={r.route_id} style={{ borderBottom: "1px solid #ddd", cursor: "pointer", height: "44px" }} onClick={() => fetchRouteFlights(r.route_id, `${r.departure} → ${r.arrival}`)}>
+                      <td style={{ padding: "10px" }}>{r.route_id}</td>
+                      <td style={{ padding: "10px" }}>{r.departure}</td>
+                      <td style={{ padding: "10px" }}>{r.arrival}</td>
+                      <td style={{ padding: "10px", textAlign: "center" }}>{r.total_flights}</td>
+                      <td style={{ padding: "10px", textAlign: "center" }}>
+                        <span style={{ background: r.is_active ? "#e8f5e9" : "#fce4ec", color: r.is_active ? "#1a6e3c" : "#b00020", padding: "3px 10px", borderRadius: "10px", fontSize: "12px", fontWeight: "700" }}>{r.is_active ? "Active" : "Inactive"}</span>
+                      </td>
+                      <td style={{ padding: "10px", textAlign: "center" }}>
 
-    </td>
-  </tr>
-))}
+
+                        <button
+                          type="button"
+                          style={{
+                            backgroundColor: r.is_active ? "#cf102d" : "#1a6e3c",
+                            color: "white",
+                            border: "none",
+                            padding: "6px 12px",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                            fontSize: "12px",
+                            fontWeight: "bold"
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevents the "fetchRouteFlights" row click from firing
+
+                            if (r.is_active) {
+                              // Confirm before a negative action
+                              const confirmed = window.confirm("Are you sure you want to deactivate this route?");
+                              if (confirmed) {
+                                handleToggleRouteStatus(r.route_id);
+                              }
+                            } else {
+                              // Positive action: Activate immediately
+                              handleToggleRouteStatus(r.route_id);
+                            }
+                          }}
+                        >
+                          {r.is_active ? "Deactivate" : "Activate"}
+                        </button>
+
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             )}
@@ -538,30 +541,141 @@ const SystemAdminDashboard = ({
       {section === "actions" && (
         <div className="result-card">
           <h3>Flight Admin Actions</h3>
-          <p style={{ color: "#666", marginBottom: "15px" }}>Add flights, update aircraft capacity, and delete routes.</p>
-          <div style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
-            <button type="button" className="primary-btn" style={{ fontSize: "14px", padding: "10px", backgroundColor: crudAction === "addFlight" ? "#a80d24" : "#cf102d" }} onClick={() => { setCrudAction("addFlight"); setCrudMsg({ text: "", type: "" }); }}>+ Add New Flight</button>
-            <button type="button" className="primary-btn" style={{ fontSize: "14px", padding: "10px", backgroundColor: crudAction === "updateAircraft" ? "#111" : "#333" }} onClick={() => { setCrudAction("updateAircraft"); setCrudMsg({ text: "", type: "" }); }}>Update Aircraft</button>
-            <button type="button" className="primary-btn" style={{ fontSize: "14px", padding: "10px", backgroundColor: crudAction === "deleteRoute" ? "#8a0018" : "#b00020" }} onClick={() => { setCrudAction("deleteRoute"); setCrudMsg({ text: "", type: "" }); }}>Delete Route</button>
+          <p style={{ color: "#666", marginBottom: "20px" }}>Add new flights, update aircraft, or delete existing flights.</p>
+
+          <div style={{ display: "flex", gap: "10px", marginBottom: "24px", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className="primary-btn"
+              style={{ backgroundColor: crudAction === "addFlight" ? "#a80d24" : "#cf102d" }}
+              onClick={() => { 
+                setCrudAction("addFlight"); 
+                setCrudMsg({ text: "", type: "" }); 
+                fetchAirlines();
+                fetchAllAircrafts();
+              }}
+            >
+              + Add New Flight
+            </button>
+            <button
+              type="button"
+              className="primary-btn"
+              style={{ backgroundColor: crudAction === "updateAircraft" ? "#111" : "#333" }}
+              onClick={() => { setCrudAction("updateAircraft"); setCrudMsg({ text: "", type: "" }); }}
+            >
+              Update Aircraft Capacity
+            </button>
+            <button
+              type="button"
+              className="primary-btn"
+              style={{ backgroundColor: crudAction === "deleteFlight" ? "#8a0018" : "#b00020" }}
+              onClick={() => { setCrudAction("deleteFlight"); setCrudMsg({ text: "", type: "" }); }}
+            >
+              Delete Flight
+            </button>
           </div>
+
           {crudMsg.text && (
-            <div style={{ marginBottom: "16px", padding: "10px 14px", borderRadius: "8px", fontWeight: "600", fontSize: "14px", background: crudMsg.type === "success" ? "#e8f5e9" : "#fce4ec", color: crudMsg.type === "success" ? "#1a6e3c" : "#b00020" }}>
+            <div style={{
+              marginBottom: "20px",
+              padding: "12px 16px",
+              borderRadius: "8px",
+              fontWeight: "600",
+              background: crudMsg.type === "success" ? "#e8f5e9" : "#fce4ec",
+              color: crudMsg.type === "success" ? "#1a6e3c" : "#b00020"
+            }}>
               {crudMsg.text}
             </div>
           )}
 
+          {/* ADD NEW FLIGHT */}
           {crudAction === "addFlight" && (
-            <form onSubmit={handleCrudSubmit} style={{ background: "#f5f5f5", padding: "15px", borderRadius: "6px" }}>
-              <h4 style={{ marginBottom: "15px" }}>Create a New Flight</h4>
-              <div className="form-row" style={{ alignItems: "flex-end" }}>
-                <div className="form-group"><label>Route ID</label><input type="number" required value={crudData.routeId} onChange={(e) => setCrudData({ ...crudData, routeId: e.target.value })} placeholder="e.g. 1" /></div>
-                <div className="form-group"><label>Departure Date</label><input type="datetime-local" required value={crudData.departureDate} onChange={(e) => setCrudData({ ...crudData, departureDate: e.target.value })} /></div>
-                <div className="form-group"><label>Seats Available</label><input type="number" required value={crudData.seats} onChange={(e) => setCrudData({ ...crudData, seats: e.target.value })} placeholder="e.g. 150" /></div>
-                <button type="submit" className="primary-btn" style={{ padding: "16px 20px" }}>Submit</button>
+            <form onSubmit={handleCrudSubmit} style={{ background: "#f8f9fa", padding: "20px", borderRadius: "8px" }}>
+              <h4>Add New Flight</h4>
+              
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div className="form-group">
+                  <label>Airline</label>
+                  <select 
+                    value={crudData.airlineId} 
+                    onChange={(e) => setCrudData({ ...crudData, airlineId: e.target.value })} 
+                    required
+                  >
+                    <option value="">Select Airline</option>
+                    {airlines && airlines.map(a => (
+                      <option key={a.airline_id} value={a.airline_id}>
+                        {a.airline_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Aircraft</label>
+                  <select 
+                    value={crudData.aircraftId} 
+                    onChange={(e) => setCrudData({ ...crudData, aircraftId: e.target.value })} 
+                    required
+                  >
+                    <option value="">Select Aircraft</option>
+                    {allAircrafts && allAircrafts.map(ac => (
+                      <option key={ac.aircraft_id} value={ac.aircraft_id}>
+                        {ac.model} ({ac.seating_capacity} seats)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Departure Airport</label>
+                  <select 
+                    value={crudData.departureAirportId} 
+                    onChange={(e) => setCrudData({ ...crudData, departureAirportId: e.target.value })} 
+                    required
+                  >
+                    <option value="">Select Departure</option>
+                    {airports && airports.map(ap => (
+                      <option key={ap.airport_id} value={ap.airport_id}>
+                        {ap.airport_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Arrival Airport</label>
+                  <select 
+                    value={crudData.arrivalAirportId} 
+                    onChange={(e) => setCrudData({ ...crudData, arrivalAirportId: e.target.value })} 
+                    required
+                  >
+                    <option value="">Select Arrival</option>
+                    {airports && airports.map(ap => (
+                      <option key={ap.airport_id} value={ap.airport_id}>
+                        {ap.airport_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Departure Date & Time</label>
+                  <input 
+                    type="datetime-local" 
+                    required 
+                    value={crudData.departureDate} 
+                    onChange={(e) => setCrudData({ ...crudData, departureDate: e.target.value })} 
+                  />
+                </div>
               </div>
+
+              <button type="submit" className="primary-btn" style={{ marginTop: "20px" }}>
+                Create Flight
+              </button>
             </form>
           )}
 
+          {/* UPDATE AIRCRAFT*/}
           {crudAction === "updateAircraft" && (
             <form onSubmit={handleCrudSubmit} style={{ background: "#f5f5f5", padding: "15px", borderRadius: "6px" }}>
               <h4 style={{ marginBottom: "15px" }}>Update Aircraft Capacity</h4>
@@ -573,14 +687,22 @@ const SystemAdminDashboard = ({
             </form>
           )}
 
-          {crudAction === "deleteRoute" && (
-            <form onSubmit={handleCrudSubmit} style={{ background: "#ffebee", padding: "15px", borderRadius: "6px", border: "1px solid #ffcdd2" }}>
-              <h4 style={{ marginBottom: "15px", color: "#b00020" }}>Delete an Existing Route</h4>
-              <p style={{ fontSize: "14px", color: "#666", marginBottom: "15px" }}>Warning: This permanently removes the route from the database.</p>
-              <div className="form-row" style={{ alignItems: "flex-end" }}>
-                <div className="form-group"><label>Route ID to Delete</label><input type="number" required value={crudData.routeId} onChange={(e) => setCrudData({ ...crudData, routeId: e.target.value })} placeholder="e.g. 5" /></div>
-                <button type="submit" className="primary-btn" style={{ padding: "16px 20px", backgroundColor: "#b00020" }}>Confirm Delete</button>
+          {/* DELETE FLIGHT */}
+          {crudAction === "deleteFlight" && (
+            <form onSubmit={handleCrudSubmit} style={{ background: "#ffebee", padding: "20px", borderRadius: "8px", border: "1px solid #ffcdd2" }}>
+              <h4 style={{ color: "#b00020" }}>Delete Flight</h4>
+              <p style={{ color: "#666" }}>This action cannot be undone.</p>
+              <div className="form-group">
+                <label>Flight ID to Delete</label>
+                <input
+                  type="number"
+                  required
+                  value={crudData.flightId}
+                  onChange={(e) => setCrudData({ ...crudData, flightId: e.target.value })}
+                  placeholder="e.g. 12345"
+                />
               </div>
+              <button type="submit" className="primary-btn" style={{ backgroundColor: "#b00020" }}>Delete Flight</button>
             </form>
           )}
 

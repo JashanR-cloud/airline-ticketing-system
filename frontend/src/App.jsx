@@ -134,7 +134,7 @@ function App() {
   const [isEditingPrefs, setIsEditingPrefs] = useState(false);
   const [prefData, setPrefData] = useState({ seat_preferences: "", meal_preferences: "" });
   const [crudAction, setCrudAction] = useState("");
-  const [crudData, setCrudData] = useState({ routeId: "", departureDate: "", seats: "", aircraftId: "", capacity: "" });
+  const [crudData, setCrudData] = useState({airlineId: "", aircraftId: "", departureAirportId: "", arrivalAirportId: "", departureDate: "", staffSize: "", flightId: "", routeId: "", capacity: ""});
 
   const [searchMessage, setSearchMessage] = useState("");
   const [loginMessage, setLoginMessage] = useState("");
@@ -219,6 +219,7 @@ function App() {
   // Loyalty tier discount
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
 
+  const [airlines, setAirlines] = useState([]);
   const [allAircrafts, setAllAircrafts] = useState([]);
   const [loadingAircrafts, setLoadingAircrafts] = useState(false);
   const [allFlights, setAllFlights] = useState([]);
@@ -460,6 +461,16 @@ const handleOpenLoyaltySignup = () => {
       setCities(data);
     } catch { setSearchMessage("Could not connect to backend."); }
     finally { setLoadingAirports(false); }
+  };
+
+  const fetchAirlines = async () => {
+    try {
+      const res = await fetch(`${API}/airlines`, { headers: getAuthHeaders(true) });
+      const data = await res.json();
+      if (res.ok) setAirlines(data);
+    } catch (err) {
+      console.error("Failed to fetch airlines", err);
+    }
   };
 
   const fetchUserBookings = async () => {
@@ -1053,24 +1064,73 @@ const handleOpenLoyaltySignup = () => {
 
   const handleCrudSubmit = async (e) => {
     e.preventDefault();
-    let endpoint = "", method = "", bodyData = {};
-    if (crudAction === "addFlight") { endpoint = "/add-flight"; method = "POST"; bodyData = { routeId: crudData.routeId, departureDate: crudData.departureDate, seats: crudData.seats }; }
-    else if (crudAction === "updateAircraft") { endpoint = "/update-aircraft"; method = "PUT"; bodyData = { aircraftId: crudData.aircraftId, capacity: crudData.capacity }; }
-    else if (crudAction === "deleteRoute") { endpoint = "/delete-route"; method = "DELETE"; bodyData = { routeId: crudData.routeId }; }
+    setCrudMsg({ text: "", type: "" });
+
+    let endpoint = "";
+    let method = "POST";
+    let bodyData = {};
+
+    if (crudAction === "addFlight") {
+      endpoint = "/add-flight";
+      method = "POST";
+
+      bodyData = {
+        airline_id: crudData.airlineId,
+        aircraft_id: crudData.aircraftId,
+        departure_airport_id: crudData.departureAirportId,
+        arrival_airport_id: crudData.arrivalAirportId,
+        date_of_departure: crudData.departureDate,
+        staff_size: Number(crudData.staffSize) || 8,
+      };
+    } 
+    else if (crudAction === "updateAircraft") {
+      endpoint = "/update-aircraft";
+      method = "PUT";
+      bodyData = {
+        aircraft_id: crudData.aircraftId,
+        capacity: Number(crudData.capacity)
+      };
+    } 
+    else if (crudAction === "deleteFlight") {
+      endpoint = "/delete-flight";
+      method = "DELETE";
+      bodyData = { flight_id: crudData.flightId };
+    }
+
     try {
-      const response = await fetch(`${API}${endpoint}`, { method, headers: getAuthHeaders(true), body: JSON.stringify(bodyData) });
+      const response = await fetch(`${API}${endpoint}`, {
+        method,
+        headers: getAuthHeaders(true),
+        body: JSON.stringify(bodyData)
+      });
+
       const data = await response.json();
+
       if (response.ok) {
-        const action = crudAction;
-        setCrudMsg({ text: "✅ " + data.message, type: "success" });
-        setCrudAction(""); setCrudData({ routeId: "", departureDate: "", seats: "", aircraftId: "", capacity: "" });
-        fetchReports(); fetchRoutesWithStatus();
-        if (action === "updateAircraft") fetchAllAircrafts();
-        setTimeout(() => setCrudMsg({ text: "", type: "" }), 4000);
+        setCrudMsg({ text: `✅ ${data.message || "Action completed successfully."}`, type: "success" });
+        
+        // Reset form
+        setCrudData({
+          airlineId: "", aircraftId: "", departureAirportId: "", arrivalAirportId: "",
+          departureDate: "", staffSize: "", flightId: "", routeId: "", capacity: ""
+        });
+        setCrudAction("");
+
+        // Refresh relevant data
+        fetchReports();
+        if (crudAction === "updateAircraft") fetchAllAircrafts();
+        if (crudAction === "addFlight" || crudAction === "deleteFlight") {
+          // Optional: refresh flights list if you have one
+        }
+        
+        setTimeout(() => setCrudMsg({ text: "", type: "" }), 5000);
       } else {
-        setCrudMsg({ text: "❌ " + (data.error || "Action failed."), type: "error" });
+        setCrudMsg({ text: `❌ ${data.error || "Action failed."}`, type: "error" });
       }
-    } catch { setCrudMsg({ text: "❌ Failed to connect to the server.", type: "error" }); }
+    } catch (err) {
+      console.error(err);
+      setCrudMsg({ text: "❌ Failed to connect to the server.", type: "error" });
+    }
   };
 
   const handleRegisterSuccess = async (regData) => {
@@ -2429,6 +2489,9 @@ const handleOpenLoyaltySignup = () => {
               prefData={prefData}
               setPrefData={setPrefData}
               handleUpdatePreferences={handleUpdatePreferences}
+              airlines={airlines}
+              fetchAirlines={fetchAirlines}
+              airports={airports}
 
               // Passengers
               allPassengers={allPassengers}
