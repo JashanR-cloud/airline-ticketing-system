@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import BookingResultCard from './main_tabs/BookingResultCard';
 import AdminReports from './AdminReports';
+import DeleteFlightModal from './DeleteFlightModal';
 
 const SystemAdminDashboard = ({
   setActiveTab,
@@ -12,6 +13,8 @@ const SystemAdminDashboard = ({
   airlines,
   fetchAirlines,
   airports,
+  API, 
+  getAuthHeaders,
 
   // Passengers section
   allPassengers,
@@ -96,6 +99,61 @@ const SystemAdminDashboard = ({
     const flightDate = new Date(b.date_of_departure);
     return b.booking_status === "Past" || flightDate < now;
   });
+
+  // Delete Flights Prompt States
+  const [showDeleteFlightModal, setShowDeleteFlightModal] = useState(false);
+  const [flightToDelete, setFlightToDelete] = useState(null);
+
+    // When user clicks "yes, Delete Flight" button
+  const handleDeleteFlightClick = (flightId) => {
+    setFlightToDelete(flightId);
+    setShowDeleteFlightModal(true);
+  };
+
+  // When password is confirmed in the modal
+  const handleConfirmDeleteFlight = async (adminPassword) => {
+    if (!flightToDelete) {
+      setCrudMsg({ text: "No flight selected", type: "error" });
+      return;
+    }
+
+    console.log("=== DELETE ATTEMPT ===");
+    console.log("Flight ID:", flightToDelete);
+    console.log("Password length:", adminPassword?.length);
+    console.log("getAuthHeaders prop received?", typeof getAuthHeaders);   // ← This will tell us
+    console.log("API prop received?", API);
+
+    try {
+      const payload = {
+        flight_id: flightToDelete,
+        admin_password: adminPassword
+      };
+
+      const response = await fetch(`${API}/delete-flight`, {
+        method: "DELETE",
+        headers: getAuthHeaders(true),        // ← Using the prop directly
+        body: JSON.stringify(payload)
+      });
+
+      console.log("Response status:", response.status);
+
+      const data = await response.json().catch(() => ({}));
+      console.log("Response data:", data);
+
+      if (response.ok) {
+        setCrudMsg({ text: `✅ Flight #${flightToDelete} has been permanently deleted.`, type: "success" });
+        setShowDeleteFlightModal(false);
+        setFlightToDelete(null);
+        setCrudData(prev => ({ ...prev, flightId: "" }));
+        if (typeof fetchReports === 'function') fetchReports();
+      } else {
+        setCrudMsg({ text: `❌ ${data.error || "Failed to delete flight"}`, type: "error" });
+      }
+    } catch (err) {
+      console.error("Full delete error:", err);
+      setCrudMsg({ text: "❌ Failed to connect to the server.", type: "error" });
+    }
+  };
 
   return (
     <div>
@@ -689,21 +747,32 @@ const SystemAdminDashboard = ({
 
           {/* DELETE FLIGHT */}
           {crudAction === "deleteFlight" && (
-            <form onSubmit={handleCrudSubmit} style={{ background: "#ffebee", padding: "20px", borderRadius: "8px", border: "1px solid #ffcdd2" }}>
-              <h4 style={{ color: "#b00020" }}>Delete Flight</h4>
-              <p style={{ color: "#666" }}>This action cannot be undone.</p>
+            <div style={{ background: "#ffebee", padding: "20px", borderRadius: "8px", border: "1px solid #ffcdd2" }}>
+              <h4 style={{ color: "#b00020", marginBottom: "10px" }}>Delete Flight</h4>
+              <p style={{ color: "#666", marginBottom: "20px" }}>
+                Enter the Flight ID you want to permanently delete.
+              </p>
+
               <div className="form-group">
                 <label>Flight ID to Delete</label>
                 <input
                   type="number"
-                  required
-                  value={crudData.flightId}
-                  onChange={(e) => setCrudData({ ...crudData, flightId: e.target.value })}
                   placeholder="e.g. 12345"
+                  value={crudData.flightId || ""}
+                  onChange={(e) => setCrudData({ ...crudData, flightId: e.target.value })}
+                  style={{ width: "100%", padding: "12px", borderRadius: "8px" }}
                 />
               </div>
-              <button type="submit" className="primary-btn" style={{ backgroundColor: "#b00020" }}>Delete Flight</button>
-            </form>
+
+              <button
+                type="button"
+                className="primary-btn"
+                style={{ backgroundColor: "#b00020", marginTop: "12px" }}
+                onClick={() => handleDeleteFlightClick(crudData.flightId)}
+              >
+                Delete This Flight
+              </button>
+            </div>
           )}
 
           {/* Analytics Reports */}
@@ -778,6 +847,16 @@ const SystemAdminDashboard = ({
           )}
         </div>
       )}
+
+      <DeleteFlightModal
+        isOpen={showDeleteFlightModal}
+        onClose={() => {
+          setShowDeleteFlightModal(false);
+          setFlightToDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteFlight}
+        flightId={flightToDelete}
+      />
     </div>
   );
 };

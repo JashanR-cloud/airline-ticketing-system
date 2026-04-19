@@ -2492,6 +2492,8 @@ const handleOpenLoyaltySignup = () => {
               airlines={airlines}
               fetchAirlines={fetchAirlines}
               airports={airports}
+              API={API}
+              getAuthHeaders={getAuthHeaders}
 
               // Passengers
               allPassengers={allPassengers}

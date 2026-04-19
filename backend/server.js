@@ -1402,22 +1402,42 @@ const server = http.createServer((req, res) => {
       const requester = getRequestUser(req);
       if (!isStaff(requester.role)) return deny(res);
 
-      const { flight_id } = body;
+      const { flight_id, admin_password } = body;
 
       if (!flight_id) {
         return sendJson(res, 400, { error: "flight_id is required" });
       }
 
+      if (!admin_password) {
+        return sendJson(res, 400, { error: "Admin password is required" });
+      }
+
+      // Verify admin password 
       db.query(
-        "DELETE FROM flights WHERE flight_id = ?",
-        [flight_id],
-        (err, result) => {
-          if (err) return sendJson(res, 500, { error: err.message });
-          if (result.affectedRows === 0) {
-            return sendJson(res, 404, { error: "Flight not found" });
+        "SELECT password FROM user_account WHERE user_id = ? AND role IN ('System Admin') LIMIT 1",
+        [requester.userId],
+        (pwErr, pwRows) => {
+          if (pwErr) return sendJson(res, 500, { error: pwErr.message });
+
+          if (pwRows.length === 0 || pwRows[0].password !== admin_password) {
+            return sendJson(res, 403, { error: "Incorrect admin password" });
           }
 
-          sendJson(res, 200, { message: "Flight deleted successfully" });
+          // Password correct → proceed with deletion
+          db.query(
+            "DELETE FROM flights WHERE flight_id = ?",
+            [flight_id],
+            (err, result) => {
+              if (err) return sendJson(res, 500, { error: err.message });
+              if (result.affectedRows === 0) {
+                return sendJson(res, 404, { error: "Flight not found" });
+              }
+
+              sendJson(res, 200, { 
+                message: `Flight #${flight_id} has been permanently deleted.` 
+              });
+            }
+          );
         }
       );
     }).catch((err) => sendJson(res, 400, { error: "Invalid JSON body" }));
