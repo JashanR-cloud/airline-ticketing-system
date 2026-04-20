@@ -1,8 +1,9 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import BookingResultCard from './main_tabs/BookingResultCard';
 import AdminReports from './AdminReports';
 import DeleteFlightModal from './DeleteFlightModal';
+import PassengerMyBookings from './main_tabs/PassengerMyBookings';
 
 const SystemAdminDashboard = ({
   setActiveTab,
@@ -79,8 +80,19 @@ const SystemAdminDashboard = ({
   handleDeleteStaff,
   loggedInUser,
 
+  // My Bookings section
+  userBookings,
+  loadingUserBookings,
+  fetchUserBookings,
+
 }) => {
   const [section, setSection] = useState("passengers");
+
+  useEffect(() => {
+    if (section === "myBookings" && typeof fetchUserBookings === "function") {
+      fetchUserBookings();
+    }
+  }, [section]);
 
   const now = new Date();
   const activeBookings = searchResults.filter(b => {
@@ -163,6 +175,7 @@ const SystemAdminDashboard = ({
         <SectionBtn label="✈️ Aircraft" active={section === "aircraft"} onClick={() => setSection("aircraft")} />
         <SectionBtn label="⚙️ Admin Actions" active={section === "actions"} onClick={() => setSection("actions")} />
         <SectionBtn label="👥 Manage Staff" active={section === "staff"} onClick={() => setSection("staff")} />
+        <SectionBtn label="✈️ My Bookings" active={section === "myBookings"} onClick={() => setSection("myBookings")} />
         <button
           type="button"
           onClick={() => setActiveTab("search")}
@@ -839,6 +852,28 @@ const SystemAdminDashboard = ({
               </tbody>
             </table>
           )}
+        </div>
+      )}
+
+      {/* My Bookings Section */}
+      {section === "myBookings" && (
+        <div>
+          <h3>My Bookings</h3>
+          <p style={{ color: "#ffffff", marginBottom: "20px" }}>
+            Flights you've booked on your own account.
+          </p>
+          <PassengerMyBookings
+            bookings={userBookings}
+            loading={loadingUserBookings}
+            onSearchFlights={() => setActiveTab("search")}
+            onCancelBooking={handleCancelBooking}
+            isEditingPrefs={isEditingPrefs}
+            setIsEditingPrefs={setIsEditingPrefs}
+            prefData={prefData}
+            setPrefData={setPrefData}
+            handleUpdatePreferences={handleUpdatePreferences}
+            actionMsg={actionMsg}
+          />
         </div>
       )}
 

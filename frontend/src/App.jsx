@@ -2499,6 +2499,13 @@ const handleOpenLoyaltySignup = () => {
               fetchReports={fetchReports}
               loadingReports={loadingReports}
               reports={reports}
+
+              // My Bookings
+              handleCancelBooking={handleCancelBooking}
+              actionMsg={actionMsg}
+              userBookings={userBookings}
+              loadingUserBookings={loadingUserBookings}
+              fetchUserBookings={fetchUserBookings}
             />
           )}
 
@@ -2578,6 +2585,11 @@ const handleOpenLoyaltySignup = () => {
               staffManageMessage={staffManageMessage}
               handleDeleteStaff={handleDeleteStaff}
               loggedInUser={loggedInUser}
+
+              // My Bookings
+              userBookings={userBookings}
+              loadingUserBookings={loadingUserBookings}
+              fetchUserBookings={fetchUserBookings}
             />
           )}
 

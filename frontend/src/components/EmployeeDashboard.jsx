@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import BookingResultCard from './main_tabs/BookingResultCard';
+import PassengerMyBookings from './main_tabs/PassengerMyBookings';
 
 const EmployeeDashboard = ({
   setActiveTab,
@@ -42,8 +43,19 @@ const EmployeeDashboard = ({
   fetchReports,
   loadingReports,
   reports,
+
+  // My Bookings section
+  userBookings,
+  loadingUserBookings,
+  fetchUserBookings,
 }) => {
   const [section, setSection] = useState("passengers");
+
+  useEffect(() => {
+    if (section === "myBookings" && typeof fetchUserBookings === "function") {
+      fetchUserBookings();
+    }
+  }, [section]);
 
   const now = new Date();
   const activeBookings = searchResults.filter(b => {
@@ -68,6 +80,7 @@ const EmployeeDashboard = ({
         <SectionBtn label="🧾 Flight Passengers" active={section === "flightManifest"} onClick={() => setSection("flightManifest")} />
         <SectionBtn label="📋 Bookings" active={section === "bookings"} onClick={() => setSection("bookings")} />
         <SectionBtn label="🗺️ Routes" active={section === "routes"} onClick={() => setSection("routes")} />
+        <SectionBtn label="✈️ My Bookings" active={section === "myBookings"} onClick={() => setSection("myBookings")} />
         <button
           type="button"
           onClick={() => setActiveTab("search")}
@@ -438,6 +451,28 @@ const EmployeeDashboard = ({
             )}
             <p style={{ fontSize: "12px", color: "#aaa", marginTop: "8px" }}>Click any row to see its flights</p>
           </div>
+        </div>
+      )}
+
+      {/* My Bookings Section */}
+      {section === "myBookings" && (
+        <div>
+          <h3>My Bookings</h3>
+          <p style={{ color: "#d9dcff", marginBottom: "20px" }}>
+            Flights you've booked on your own account.
+          </p>
+          <PassengerMyBookings
+            bookings={userBookings}
+            loading={loadingUserBookings}
+            onSearchFlights={() => setActiveTab("search")}
+            onCancelBooking={handleCancelBooking}
+            isEditingPrefs={isEditingPrefs}
+            setIsEditingPrefs={setIsEditingPrefs}
+            prefData={prefData}
+            setPrefData={setPrefData}
+            handleUpdatePreferences={handleUpdatePreferences}
+            actionMsg={actionMsg}
+          />
         </div>
       )}
     </div>
