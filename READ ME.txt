@@ -16,8 +16,7 @@ MySQL
 How to run the zip file
 Unzip the zip file
 Open the folder "backend" in terminal
-Run these commands in this order
-	- npm install
+Run this command
 	- npm start
 
 if entered successfully, you should see this line of text
@@ -30,8 +29,7 @@ if entered successfully, you should see this line of text
 	loyalty_program.tier enum — Diamond tier ready.
 
 Keep the backend terminal page open, and open the folder "frontend" in terminal
-Run these commands in this order
-	- npm install
+Run this command
 	- npm run dev
 
 if entered successfully, you should see this line of text
