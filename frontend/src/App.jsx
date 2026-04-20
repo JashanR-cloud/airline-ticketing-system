@@ -2001,7 +2001,7 @@ const handleOpenLoyaltySignup = () => {
               <button onClick={() => setShowRouteFlightsModal(false)} style={{ background: "none", border: "1px solid #ddd", borderRadius: "6px", padding: "6px 14px", cursor: "pointer" }}>✕ Close</button>
             </div>
             {loadingRouteFlights ? <p style={{ textAlign: "center", color: "#666" }}>Loading flights...</p> : routeFlights.length === 0 ? <p style={{ textAlign: "center", color: "#666" }}>No flights found for this route.</p> : (
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px", color: "#1a1a2e" }}>
                 <thead>
                   <tr style={{ background: "#f5f5f5" }}>
                     {["Flight ID", "Departure", "Arrival", "Date", "Seats"].map((h) => (
