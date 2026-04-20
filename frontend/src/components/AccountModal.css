@@ -182,7 +182,28 @@
   outline: none;
   width: 100%;
   transition: border-color 0.15s, box-shadow 0.15s;
-  background: #fafafa;
+  background: #fafafa !important;
+  background-color: #fafafa !important;
+  color: #000 !important;
+  appearance: auto !important;
+  -webkit-appearance: auto !important;
+}
+
+select.acct-input {
+  color: #000 !important;
+  background-color: #fafafa !important;
+}
+
+.acct-input option,
+select.acct-input option {
+  color: #000 !important;
+  background-color: #fff !important;
+}
+
+select.acct-input option:hover,
+select.acct-input option:checked {
+  color: #000 !important;
+  background-color: #f0f0f0 !important;
 }
 
 .acct-input:focus {
@@ -424,3 +445,4 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
