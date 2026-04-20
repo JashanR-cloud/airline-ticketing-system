@@ -1425,7 +1425,7 @@ const handleOpenLoyaltySignup = () => {
 
       <div style={{ padding: "34px 34px 24px" }}>
         <div style={{ fontSize: "18px", lineHeight: 1.9, color: "#333", marginBottom: "28px" }}>
-          <div>✈️&nbsp; Earn 500 miles per flight</div>
+          <div>✈️&nbsp; Earn Miles every flight</div>
           <div>🎟️&nbsp; Redeem flights from 1,000 miles</div>
           <div>⬆️&nbsp; Seat upgrades & lounge access</div>
           <div>🎁&nbsp; Exclusive member-only deals</div>
