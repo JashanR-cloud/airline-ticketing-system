@@ -534,36 +534,6 @@ const SystemAdminDashboard = ({
             <p style={{ fontSize: "12px", color: "#e3dfff", marginTop: "8px" }}>Click any row to see its flights</p>
           </div>
 
-          {/* Route Report */}
-          <div className="result-card">
-            <h3>Flight Route Data Report</h3>
-            <button className="nav-edit-btn" style={{ color: "#ffffff", borderColor: "#13fd1e", margin: "10px 0" }} onClick={fetchReports}>{loadingReports ? "Generating..." : "Generate Report"}</button>
-            {reports.length > 0 && (
-              <table style={{ width: "100%", textAlign: "left", marginTop: "10px", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom: "2px solid #ddd" }}>
-                    {["Route ID", "Departure", "Arrival", "Total Flights"].map((h) => <th key={h} style={{ padding: "10px" }}>{h}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {reports.map((r) => (
-                    <tr key={r.route_id} style={{ borderBottom: "1px solid #ddd", height: "40px", cursor: "pointer" }}
-                      onClick={() => fetchRouteFlights(r.route_id, `${r.departure} → ${r.arrival}`)}
-                      onMouseEnter={(e) => e.currentTarget.style.background = "#f5f5f5"}
-                      onMouseLeave={(e) => e.currentTarget.style.background = ""}>
-                      <td style={{ padding: "10px" }}>{r.route_id}</td>
-                      <td style={{ padding: "10px" }}>{r.departure}</td>
-                      <td style={{ padding: "10px" }}>{r.arrival}</td>
-                      <td style={{ padding: "10px" }}>
-                        <span style={{ background: "#e3f2fd", color: "#1565c0", padding: "3px 10px", borderRadius: "10px", fontWeight: "700", fontSize: "13px" }}>{r.total_flights}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            <p style={{ fontSize: "12px", color: "#aaa", marginTop: "8px" }}>Click any row to view its flights</p>
-          </div>
         </div>
       )}
 
