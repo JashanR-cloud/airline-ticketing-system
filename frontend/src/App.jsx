@@ -2312,7 +2312,7 @@ const handleOpenLoyaltySignup = () => {
       {showEditModal && loggedInUser && <EditAccountModal user={loggedInUser} onClose={() => setShowEditModal(false)} onSaved={handleEditSaved} onAccountDeleted={handleAccountDeleted} />}
 
       <div className="top-alert">
-        <span className="important">Important:</span> Welcome to Royal Horizon Airways — Travel Beyond the Horizon
+        Welcome to Royal Horizon Airways — Travel Beyond the Horizon
       </div>
 
       <nav className="navbar">
