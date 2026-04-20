@@ -928,7 +928,7 @@ const server = http.createServer((req, res) => {
         console.log("[3] Inserting booking...");
  
         db.query(
-          `INSERT INTO bookings (user_id, booking_date, booking_status, flight_id) VALUES (?, NOW(), 'Confirmed', ?)`,
+          `INSERT INTO bookings (user_id, booking_date, booking_status, flight_id, cabin_class, num_passengers) VALUES (?, NOW(), 'Confirmed', ?, 'Economy', 1)`,
           [userId, flightId || null],
           (err, result) => {
             if (err) {
@@ -1646,7 +1646,7 @@ const server = http.createServer((req, res) => {
       const { userId, passengerId } = body;
       if (!userId || !passengerId) return sendJson(res, 400, { error: "userId and passengerId are required." });
       db.query(
-        "INSERT INTO bookings (user_id, booking_date, booking_status) VALUES (?, NOW(), 'Confirmed')",
+        "INSERT INTO bookings (user_id, booking_date, booking_status, cabin_class, num_passengers) VALUES (?, NOW(), 'Confirmed', 'Economy', 1)",
         [userId], (err, result) => {
           if (err) return sendJson(res, 500, { error: err.message });
           const bookingId = result.insertId;
@@ -1745,8 +1745,8 @@ const server = http.createServer((req, res) => {
           else if (newMiles < 10000) newTier = "Platinum";
           else                       newTier = "Diamond";
           db.query(
-            "INSERT INTO bookings (user_id, booking_date, booking_status) VALUES (?, NOW(), 'Confirmed')",
-            [userId], (err, result) => {
+            "INSERT INTO bookings (user_id, flight_id, booking_date, booking_status, cabin_class, num_passengers) VALUES (?, ?, NOW(), 'Confirmed', 'Economy', 1)",
+            [userId, flightId || null], (err, result) => {
               if (err) return sendJson(res, 500, { error: err.message });
               const bookingId = result.insertId;
               db.query(
