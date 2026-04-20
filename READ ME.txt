@@ -1,0 +1,45 @@
+-----READ ME FILE-----
+
+What each folder means
+Frontend
+This is where we built the pages of the website. It contains our main React code, any images, and interactive comments of the website.
+Backend
+This is how we connected the website to our database. This folder contains our server files, database connection code, and features like login.
+Database
+This contains our code for populating certain parts of our database.
+
+What you must have installed to run locally
+Node.js
+NPM
+MySQL
+
+How to run the zip file
+Unzip the zip file
+Open the folder "backend" in terminal
+Run these commands in this order
+	- npm install
+	- npm start
+
+if entered successfully, you should see this line of text
+	> backend@1.0.0 start
+	> node server.js
+
+	Server running on port 8000
+	Connected to database.
+	booking_packages table ready.
+	loyalty_program.tier enum — Diamond tier ready.
+
+Keep the backend terminal page open, and open the folder "frontend" in terminal
+Run these commands in this order
+	- npm install
+	- npm run dev
+
+if entered successfully, you should see this line of text
+	
+  	VITE v7.3.1  ready in 179 ms
+
+  	➜  Local:   http://localhost:5173/  (the numbers at the end of the website address may be different)
+  	➜  Network: use --host to expose
+  	➜  press h + enter to show help
+
+copy and paste the website address provided in local into your internet browser. Make sure not to close either of the terminal pages!
