@@ -71,8 +71,21 @@ export function CreateAccountModal({ onClose, onSuccess }) {
     card_name: "", card_number: "", card_expiration_date: "", card_security_code: "",
   });
 
-  const set = (e) =>
-    setForm({ ...form, [e.target.name]: e.target.type === "checkbox" ? e.target.checked : e.target.value });
+  const set = (e) => {
+    const { name, type, value, checked } = e.target;
+
+    let finalValue =
+      type === "checkbox" ? checked : value;
+
+    if (name === "card_expiration_date" && value) {
+      finalValue = `${value}-01`;
+    }
+
+    setForm({
+      ...form,
+      [name]: finalValue
+    });
+  };
 
   const emailInvalid = emailTouched && form.email.trim() && !isValidEmail(form.email);
 
@@ -165,7 +178,7 @@ export function CreateAccountModal({ onClose, onSuccess }) {
               <input className="acct-input" type="password" name="confirmPassword" value={form.confirmPassword} onChange={set} placeholder="Repeat your password" />
             </Field>
 
-            
+
             <h3 className="acct-subsection">Payment Information</h3>
             <Field label="Name on Card">
               <input className="acct-input" type="text" name="card_name" value={form.card_name} onChange={set} placeholder="Name as shown on card" />
@@ -175,7 +188,15 @@ export function CreateAccountModal({ onClose, onSuccess }) {
                 <input className="acct-input" type="text" name="card_number" value={form.card_number} onChange={set} placeholder="1234 5678 9012 3456" />
               </Field>
               <Field label="Expiration Date">
-                <input className="acct-input" type="month" name="card_expiration_date" value={form.card_expiration_date} onChange={set} />
+                <input
+                  className="acct-input"
+                  type="month"
+                  name="card_expiration_date"
+                  value={form.card_expiration_date
+                    ? form.card_expiration_date.slice(0, 7)
+                    : ""}
+                  onChange={set}
+                />
               </Field>
             </div>
             <Field label="Security Code">
@@ -372,7 +393,7 @@ export function EditAccountModal({ user, onClose, onSaved, onAccountDeleted }) {
     }
   };
 
-    return (
+  return (
     <div className="acct-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="acct-modal">
         <button className="acct-close" onClick={onClose}>✕</button>
