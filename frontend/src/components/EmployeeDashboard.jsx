@@ -51,6 +51,24 @@ const EmployeeDashboard = ({
 }) => {
   const [section, setSection] = useState("passengers");
 
+  const [routeSearch, setRouteSearch] = useState("");
+  const [departureFilter, setDepartureFilter] = useState("");
+  const [arrivalFilter, setArrivalFilter] = useState("");
+
+  const uniqueDepartures = [...new Set(routesWithStatus.map(r => r.departure))].sort();
+  const uniqueArrivals = [...new Set(routesWithStatus.map(r => r.arrival))].sort();
+
+  const filteredRoutes = routesWithStatus.filter(r => {
+    if (departureFilter && r.departure !== departureFilter) return false;
+    if (arrivalFilter && r.arrival !== arrivalFilter) return false;
+    const q = routeSearch.trim().toLowerCase();
+    if (q) {
+      const text = `${r.route_id} ${r.departure} ${r.arrival}`.toLowerCase();
+      if (!text.includes(q)) return false;
+    }
+    return true;
+  });
+
   useEffect(() => {
     if (section === "myBookings" && typeof fetchUserBookings === "function") {
       fetchUserBookings();
@@ -391,7 +409,52 @@ const EmployeeDashboard = ({
                 {routeMsg.text}
               </div>
             )}
-            {routesWithStatus.length === 0 ? <p style={{ color: "#ffffff" }}>No route data. Click Refresh.</p> : (
+            {routesWithStatus.length > 0 && (
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "14px", alignItems: "flex-end" }}>
+                <div style={{ flex: "2 1 220px" }}>
+                  <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "13px", color: "#fff" }}>Search</label>
+                  <input
+                    type="text"
+                    placeholder="Route ID, departure or arrival"
+                    value={routeSearch}
+                    onChange={(e) => setRouteSearch(e.target.value)}
+                    style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #ddd" }}
+                  />
+                </div>
+                <div style={{ flex: "1 1 180px" }}>
+                  <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "13px", color: "#fff" }}>Departure</label>
+                  <select
+                    value={departureFilter}
+                    onChange={(e) => setDepartureFilter(e.target.value)}
+                    style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #ddd" }}
+                  >
+                    <option value="">All departures</option>
+                    {uniqueDepartures.map((d) => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+                <div style={{ flex: "1 1 180px" }}>
+                  <label style={{ display: "block", marginBottom: "6px", fontWeight: "600", fontSize: "13px", color: "#fff" }}>Arrival</label>
+                  <select
+                    value={arrivalFilter}
+                    onChange={(e) => setArrivalFilter(e.target.value)}
+                    style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #ddd" }}
+                  >
+                    <option value="">All arrivals</option>
+                    {uniqueArrivals.map((a) => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </div>
+                {(routeSearch || departureFilter || arrivalFilter) && (
+                  <button
+                    type="button"
+                    onClick={() => { setRouteSearch(""); setDepartureFilter(""); setArrivalFilter(""); }}
+                    style={{ padding: "10px 14px", borderRadius: "8px", border: "1px solid #ddd", background: "#fff", color: "#333", cursor: "pointer", fontWeight: "600", fontSize: "13px" }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
+            {routesWithStatus.length === 0 ? <p style={{ color: "#ffffff" }}>No route data. Click Refresh.</p> : filteredRoutes.length === 0 ? <p style={{ color: "#ffffff" }}>No routes match your filters.</p> : (
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
                 <thead>
                   <tr style={{ background: "#1a1a2e", color: "#fff" }}>
@@ -401,7 +464,7 @@ const EmployeeDashboard = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {routesWithStatus.map((r) => (
+                  {filteredRoutes.map((r) => (
                     <tr key={r.route_id} style={{ borderBottom: "1px solid #ddd", cursor: "pointer", height: "44px" }} onClick={() => fetchRouteFlights(r.route_id, `${r.departure} → ${r.arrival}`)}>
                       <td style={{ padding: "10px" }}>{r.route_id}</td>
                       <td style={{ padding: "10px" }}>{r.departure}</td>
